@@ -1,11 +1,161 @@
 const {useState,useEffect,useRef}=React;
 const shuffle=a=>{const x=[...a];for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]]}return x};
-const games=[['thermal','THERMAL ROUTING','Valve sequencing'],['power','POWER BUS','Wire matching'],['solar','SOLAR ALIGNMENT','Point at the sun'],['contact','MISSED CONTACT','Hunt the signal peak'],['comms','COMMS ALIGNMENT','Tune the carrier'],['process','PROCESS FAULT','Restart sequence'],['orbit','ORBITAL BURN','Plot a transfer burn'],['sensor','SENSOR FAULT','Find the outlier'],['attitude','ATTITUDE DRIFT','Stabilize pointing'],['battery','BATTERY CELLS','Balance the pack'],['impact','MODULE IMPACT','Isolate the breach'],['radiation','RADIATION EVENT','Wait it out']];
+const allSubsets=n=>{const res=[];for(let m=1;m<(1<<n);m++){const s=[];for(let b=0;b<n;b++)if(m&(1<<b))s.push(b);res.push(s)}return res};
+const PROCESS_POOL=['PACKET RETRY','TELEMETRY CACHE','IMAGE PIPELINE','LOG AGGREGATOR','PAYLOAD INDEXER','MEMORY SCRUBBER','ATTITUDE SOLVER','THERMAL DAEMON','STAR TRACKER FEED','DOWNLINK BUFFER','EPHEMERIS CACHE','FAULT MONITOR'];
+const games=[['thermal','THERMAL ROUTING','Valve sequencing'],['power','POWER BUS','Route power by the numbers'],['solar','SOLAR ALIGNMENT','Point at the sun'],['contact','MISSED CONTACT','Hunt the signal peak'],['wheel','REACTION WHEEL FAULT','Balance the torque'],['process','PROCESS FAULT','Contain the leak in time'],['orbit','ORBITAL BURN','Plot a transfer burn'],['sensor','SENSOR FAULT','Find the outlier'],['attitude','ATTITUDE DRIFT','Stabilize pointing'],['battery','BATTERY CELLS','Balance the pack'],['impact','MODULE IMPACT','Isolate the breach'],['radiation','RADIATION EVENT','Wait it out']];
 function Frame({type,setType,children}){const embedded=Boolean(new URLSearchParams(location.search).get('type'));return <div className="app"><header className="top"><span className="brand">SIX HUNDRED / REPAIR LAB</span><span className="eyebrow">SAT 421 · MANUAL OVERRIDE</span></header><div className={'layout '+(embedded?'embedded':'')} style={embedded?{display:'block',marginTop:0}:{}}>{!embedded&&<nav className="menu">{games.map(([id,name])=><button key={id} className={type===id?'active':''} onClick={()=>setType(id)}>{name}</button>)}</nav>}<main className="board" style={embedded?{minHeight:'100%',border:0}:{}}>{children}</main></div></div>}
 function Header({title,sub}){return <><div className="eyebrow">Critical subsystem interaction</div><h1>{title}</h1><div className="signal">{sub}</div></>}
 function Result({ok,children}){const [sent,setSent]=useState(false);const finish=()=>{if(!sent&&window.parent!==window){setSent(true);setTimeout(()=>window.parent.postMessage({type:'repair-complete'},'*'),1200)}};return children&&<div className={ok?'success':'failure'}>{sent?'SUCCESSFUL EXECUTION':children}{ok&&<div className="actions"><button className="action" onClick={finish} disabled={sent}>{sent?'SUCCESSFUL EXECUTION':'EXECUTE'}</button></div>}</div>}
-function Thermal(){const [routeValve]=useState(()=>Math.random()<.5?'VALVE A':'VALVE B'),[path,setPath]=useState([]),[dragging,setDragging]=useState(false),[error,setError]=useState('');const nodes={CORE:[40,110],PUMP:[105,110],'VALVE A':[170,52],'VALVE B':[170,168],RADIATOR:[258,110]},target=['CORE','PUMP',routeValve,'RADIATOR'];const temp=78-path.length*8,pressure=42+path.length*16,ok=path.length===4;const follow=e=>{if(!dragging||ok)return;const box=e.currentTarget.getBoundingClientRect(),x=(e.clientX-box.left)/box.width*300,y=(e.clientY-box.top)/box.height*220;const node=Object.keys(nodes).find(n=>Math.hypot(nodes[n][0]-x,nodes[n][1]-y)<23);if(!node||path.includes(node))return;if(node===target[path.length]){setPath(p=>[...p,node]);setError('')}else{setPath([]);setDragging(false);setError('FLOW LOST · COOLANT ENTERED HOT BYPASS')}};const start=e=>{setPath([]);setError('');setDragging(true);e.currentTarget.setPointerCapture?.(e.pointerId);const box=e.currentTarget.getBoundingClientRect(),x=(e.clientX-box.left)/box.width*300,y=(e.clientY-box.top)/box.height*220;if(Math.hypot(40-x,110-y)<28)setPath(['CORE']);else{setDragging(false);setError('START AT THE HOT CORE')}};const line=(a,b,on)=>{const [x1,y1]=nodes[a],[x2,y2]=nodes[b];return <line key={a+b} x1={x1} y1={y1} x2={x2} y2={y2} stroke={on?'#c9ff4d':'#34403a'} strokeWidth={on?7:4} strokeLinecap="round"/>};return <><Header title="THERMAL ROUTING" sub={`CORE ${temp}°C · COOLANT ${pressure} kPa`}/><p className="instructions">Hold and drag from the hot core through the pump, the safe valve, and into the radiator. The red route is a hot bypass.</p><svg viewBox="0 0 300 220" width="100%" style={{maxWidth:650,display:'block',margin:'28px 0',background:'#0c1210',border:'1px solid #34403a',cursor:dragging?'grabbing':'crosshair',touchAction:'none'}} onPointerDown={start} onPointerMove={follow} onPointerUp={()=>setDragging(false)} onPointerCancel={()=>setDragging(false)}>{line('CORE','PUMP',path.includes('PUMP'))}{line('PUMP','VALVE A',path.includes('VALVE A'))}{line('PUMP','VALVE B',path.includes('VALVE B'))}{line('VALVE A','RADIATOR',path.includes('VALVE A')&&path.includes('RADIATOR'))}{line('VALVE B','RADIATOR',path.includes('VALVE B')&&path.includes('RADIATOR'))}{Object.entries(nodes).map(([n,[x,y]])=><g key={n}><circle cx={x} cy={y} r="20" fill={n===routeValve?'#172714':n.startsWith('VALVE')?'#351518':'#13201b'} stroke={path.includes(n)?'#c9ff4d':n===routeValve?'#c9ff4d':n.startsWith('VALVE')?'#ff5964':'#738079'} strokeWidth="3"/><text x={x} y={y+4} textAnchor="middle" fill="#eef4eb" fontSize="8">{n==='RADIATOR'?'RADIATOR':n}</text></g>)}<text x="150" y="205" textAnchor="middle" fill={dragging?'#c9ff4d':'#89948d'} fontSize="10">{dragging?'DRAGGING COOLANT FLOW':'HOLD ON CORE · TRACE THE SAFE ROUTE'}</text></svg><div className="readout" style={{color:temp>70?'var(--red)':temp>55?'var(--yellow)':'var(--green)'}}>CORE {temp}°C · PRESSURE {pressure} kPa</div><button className="action" onClick={()=>{setPath([]);setError('')}}>RESET ROUTE</button><Result ok={ok}>{ok?'THERMAL LOOP STABLE · COOLANT FLOW CONFIRMED':error||'Drag a continuous coolant path through the system.'}</Result></>}
-function Power(){const [left,setLeft]=useState(null),[pairs,setPairs]=useState([]),[leftColors]=useState(()=>shuffle(['red','blue','green'])),[rightColors]=useState(()=>shuffle(['red','blue','green']));const colors={red:'#ff5964',blue:'#55b6ff',green:'#c9ff4d'},ys=[60,150,240];const connect=(side,c)=>{if(pairs.includes(c))return;if(!left)setLeft({side,c});else if(left.side!==side&&left.c===c){setPairs(p=>[...p,c]);setLeft(null)}else setLeft({side,c})};const socket=(side,c,i)=>{const x=side==='bus'?24:476,y=ys[i],chosen=left?.side===side&&left.c===c,done=pairs.includes(c);return <g key={side+c} onClick={()=>connect(side,c)} style={{cursor:'pointer'}}><rect x={x} y={y} width="100" height="48" rx="4" fill={chosen?'#f4f7ef':'#101614'} stroke={chosen?'#f4f7ef':colors[c]} strokeWidth="3"/><circle cx={side==='bus'?112:488} cy={y+24} r="6" fill={colors[c]}/><text x={x+50} y={y+20} textAnchor="middle" fill={chosen?'#070809':colors[c]} fontSize="12">{side.toUpperCase()}</text><text x={x+50} y={y+35} textAnchor="middle" fill={chosen?'#070809':colors[c]} fontSize="11">{c.toUpperCase()}{done?' ✓':''}</text></g>};return <><Header title="POWER BUS" sub="VOLTAGE OSCILLATION · BACKUP BUS AVAILABLE"/><p className="instructions">Patch each colored power bus to its matching load. Cable routing is independent of terminal position.</p><svg viewBox="0 0 600 310" width="100%" style={{maxWidth:720,display:'block',margin:'26px 0',background:'#0c1210',border:'1px solid #34403a'}}>{pairs.map(c=>{const from=leftColors.indexOf(c),to=rightColors.indexOf(c),y1=ys[from]+24,y2=ys[to]+24;return <path key={c} d={`M 124 ${y1} C 240 ${y1}, 360 ${y2}, 476 ${y2}`} fill="none" stroke={colors[c]} strokeWidth="7" strokeLinecap="round" style={{filter:`drop-shadow(0 0 6px ${colors[c]})`}}/>})}{leftColors.map((c,i)=>socket('bus',c,i))}{rightColors.map((c,i)=>socket('load',c,i))}<text x="300" y="295" textAnchor="middle" fill="#849089" fontSize="11">SELECT BUS SOCKET → MATCHING LOAD SOCKET</text></svg><Result ok={pairs.length===3}>{pairs.length===3?'POWER BUS BALANCED · 68% OUTPUT':'Select a colored bus socket, then its matching load socket.'}</Result></>}
+function Thermal(){
+  const nodes={CORE:[35,120],PUMP:[105,120],PURGE:[105,42],'VALVE A1':[185,62],'VALVE B1':[185,178],MANIFOLD:[255,120],'VALVE A2':[325,62],'VALVE B2':[325,178],RADIATOR:[375,120]};
+  const edges=[['CORE','PUMP'],['PUMP','PURGE'],['PUMP','VALVE A1'],['PUMP','VALVE B1'],['VALVE A1','MANIFOLD'],['VALVE B1','MANIFOLD'],['MANIFOLD','VALVE A2'],['MANIFOLD','VALVE B2'],['VALVE A2','RADIATOR'],['VALVE B2','RADIATOR']];
+  const [safe1]=useState(()=>Math.random()<.5?'VALVE A1':'VALVE B1');
+  const [safe2]=useState(()=>Math.random()<.5?'VALVE A2':'VALVE B2');
+  const [temps]=useState(()=>{
+    const hot=()=>Math.round(95+Math.random()*45),cool=()=>Math.round(18+Math.random()*16);
+    return {'VALVE A1':safe1==='VALVE A1'?cool():hot(),'VALVE B1':safe1==='VALVE B1'?cool():hot(),'VALVE A2':safe2==='VALVE A2'?cool():hot(),'VALVE B2':safe2==='VALVE B2'?cool():hot()};
+  });
+  const target=['CORE','PUMP',safe1,'MANIFOLD',safe2,'RADIATOR'];
+  const [path,setPath]=useState([]),[dragging,setDragging]=useState(false),[error,setError]=useState('');
+  const temp=78-path.length*6,pressure=42+path.length*11,ok=path.length===target.length;
+  const follow=e=>{
+    if(!dragging||ok)return;
+    const box=e.currentTarget.getBoundingClientRect(),x=(e.clientX-box.left)/box.width*400,y=(e.clientY-box.top)/box.height*240;
+    const node=Object.keys(nodes).find(n=>Math.hypot(nodes[n][0]-x,nodes[n][1]-y)<23);
+    if(!node||path.includes(node))return;
+    if(node===target[path.length]){setPath(p=>[...p,node]);setError('')}
+    else{setPath([]);setDragging(false);setError(node==='PURGE'?'DEAD END · PURGE LINE ISOLATED FROM RADIATOR LOOP':'FLOW LOST · COOLANT ENTERED HOT BYPASS')}
+  };
+  const start=e=>{
+    setPath([]);setError('');setDragging(true);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    const box=e.currentTarget.getBoundingClientRect(),x=(e.clientX-box.left)/box.width*400,y=(e.clientY-box.top)/box.height*240;
+    if(Math.hypot(35-x,120-y)<28)setPath(['CORE']);
+    else{setDragging(false);setError('START AT THE HOT CORE')}
+  };
+  const onPath=(a,b)=>path.includes(a)&&path.includes(b)&&Math.abs(path.indexOf(a)-path.indexOf(b))===1;
+  const line=(a,b)=>{const [x1,y1]=nodes[a],[x2,y2]=nodes[b],on=onPath(a,b);return <line key={a+b} x1={x1} y1={y1} x2={x2} y2={y2} stroke={on?'#c9ff4d':'#34403a'} strokeWidth={on?7:4} strokeLinecap="round"/>};
+  return <>
+    <Header title="THERMAL ROUTING" sub={`CORE ${temp}°C · COOLANT ${pressure} kPa`}/>
+    <p className="instructions">Hold and drag from the hot core through the pump. Two valve junctions block the loop — at each one, route through the cooler valve, or the coolant flashes in the hot bypass. A purge line branches off the pump but dead-ends before the manifold.</p>
+    <svg viewBox="0 0 400 240" width="100%" style={{maxWidth:760,display:'block',margin:'28px 0',background:'#0c1210',border:'1px solid #34403a',cursor:dragging?'grabbing':'crosshair',touchAction:'none'}} onPointerDown={start} onPointerMove={follow} onPointerUp={()=>setDragging(false)} onPointerCancel={()=>setDragging(false)}>
+      {edges.map(([a,b])=>line(a,b))}
+      {Object.entries(nodes).map(([n,[x,y]])=>{
+        const done=path.includes(n),isValve=n.startsWith('VALVE');
+        return <g key={n}>
+          <circle cx={x} cy={y} r="20" fill={done?'#172714':n==='CORE'?'#241512':'#141d1a'} stroke={done?'#c9ff4d':'#5c6b64'} strokeWidth="3"/>
+          <text x={x} y={y+3} textAnchor="middle" fill="#eef4eb" fontSize={isValve?7:8}>{n}</text>
+          {isValve&&<text x={x} y={y+34} textAnchor="middle" fill="#c7d1cb" fontSize="9">{temps[n]}°C</text>}
+        </g>;
+      })}
+      <text x="200" y="222" textAnchor="middle" fill={dragging?'#c9ff4d':'#89948d'} fontSize="10">{dragging?'DRAGGING COOLANT FLOW':'HOLD ON CORE · TRACE THE SAFE ROUTE'}</text>
+    </svg>
+    <div className="readout" style={{color:temp>70?'var(--red)':temp>55?'var(--yellow)':'var(--green)'}}>CORE {temp}°C · PRESSURE {pressure} kPa</div>
+    <button className="action" onClick={()=>{setPath([]);setError('')}}>RESET ROUTE</button>
+    <Result ok={ok}>{ok?'THERMAL LOOP STABLE · COOLANT FLOW CONFIRMED':error||'Drag a continuous coolant path through the system.'}</Result>
+  </>;
+}
+function Power(){
+  const BUS_N=4;
+  const [setup]=useState(()=>{
+    const build=()=>{
+      const roleTags=shuffle(['L0','L1','L2','L2']);
+      const loadAssign=[[],[],[]];
+      roleTags.forEach((role,idx)=>{
+        if(role==='L0')loadAssign[0].push(idx);
+        else if(role==='L1')loadAssign[1].push(idx);
+        else if(role==='L2')loadAssign[2].push(idx);
+      });
+      const voltages=Array.from({length:BUS_N},()=>3+Math.floor(Math.random()*10));
+      const loads=loadAssign.map(idxs=>{
+        const V=idxs.reduce((s,i)=>s+voltages[i],0);
+        const targetI=Math.round((1.5+Math.random()*2)*10)/10;
+        const Ri=Math.round((V/targetI)*10)/10;
+        const trueI=V/Ri,tol=.25;
+        const rangeLo=Math.round((trueI-tol)*10)/10,rangeHi=Math.round((trueI+tol)*10)/10;
+        return {idxs,Ri,rangeLo,rangeHi,vLo:Math.round(rangeLo*Ri*10)/10,vHi:Math.round(rangeHi*Ri*10)/10};
+      });
+      return {voltages,loads};
+    };
+    const subsets=allSubsets(BUS_N);
+    const isUnique=cand=>{
+      for(const load of cand.loads){
+        const correctKey=load.idxs.slice().sort().join(',');
+        for(const s of subsets){
+          if(s.slice().sort().join(',')===correctKey)continue;
+          const sv=s.reduce((sum,i)=>sum+cand.voltages[i],0);
+          const cur=Math.round((sv/load.Ri)*10)/10;
+          if(cur>=load.rangeLo&&cur<=load.rangeHi)return false;
+        }
+      }
+      return true;
+    };
+    for(let attempt=0;attempt<60;attempt++){
+      const cand=build();
+      if(isUnique(cand))return cand;
+    }
+    return build();
+  });
+  const [staged,setStaged]=useState([]);
+  const [usedBuses,setUsedBuses]=useState([]);
+  const [connections,setConnections]=useState({});
+  const [powered,setPowered]=useState([]);
+  const [error,setError]=useState('');
+  const busYs=[30,110,190,270],loadYs=[30,140,250];
+
+  const toggleBus=i=>{if(usedBuses.includes(i))return;setStaged(s=>s.includes(i)?s.filter(x=>x!==i):[...s,i]);setError('')};
+  const attemptLoad=li=>{
+    if(powered.includes(li))return;
+    if(staged.length===0){setError('SELECT ONE OR MORE BUSES FIRST');return}
+    const load=setup.loads[li];
+    const V=staged.reduce((s,i)=>s+setup.voltages[i],0);
+    const current=Math.round((V/load.Ri)*10)/10;
+    if(current>=load.rangeLo&&current<=load.rangeHi){
+      setUsedBuses(u=>[...u,...staged]);
+      setConnections(c=>({...c,[li]:staged}));
+      setPowered(p=>[...p,li]);
+      setStaged([]);setError('');
+    } else {
+      setError(current>load.rangeHi?'OVERCURRENT · TRIP · REDUCE STAGED VOLTAGE':'UNDERPOWERED · INSUFFICIENT CURRENT');
+      setStaged([]);
+    }
+  };
+  const stagedV=staged.reduce((s,i)=>s+setup.voltages[i],0);
+  const ok=powered.length===3;
+
+  return <>
+    <Header title="POWER BUS" sub="VOLTAGE OSCILLATION · MULTI-RAIL FEED REQUIRED"/>
+    <p className="instructions">Each load needs its combined bus voltage inside the range shown. Two loads need just one bus each; the two buses left over are the pair for the third. Stage one or more buses, then click a load to commit them — click a staged bus again to remove it, or clear the selection outright.</p>
+    <svg viewBox="0 0 620 340" width="100%" style={{maxWidth:720,display:'block',margin:'26px 0',background:'#0c1210',border:'1px solid #34403a'}}>
+      {Object.entries(connections).flatMap(([li,busIdxs])=>busIdxs.map(bi=>{
+        const y1=busYs[bi]+26,y2=loadYs[+li]+42;
+        return <path key={li+'-'+bi} d={`M 150 ${y1} C 260 ${y1}, 340 ${y2}, 450 ${y2}`} fill="none" stroke="#c9ff4d" strokeWidth="6" strokeLinecap="round" style={{filter:'drop-shadow(0 0 6px #c9ff4d)'}}/>;
+      }))}
+      {setup.voltages.map((v,i)=>{
+        const stagedOn=staged.includes(i),used=usedBuses.includes(i);
+        return <g key={'b'+i} onClick={()=>toggleBus(i)} style={{cursor:used?'default':'pointer'}}>
+          <rect x="20" y={busYs[i]} width="130" height="52" rx="4" fill={used?'#0f1513':stagedOn?'#f4f7ef':'#101614'} stroke={used?'#39453f':stagedOn?'#f4f7ef':'#55b6ff'} strokeWidth="3"/>
+          <text x="85" y={busYs[i]+22} textAnchor="middle" fill={stagedOn?'#070809':used?'#4c5750':'#89948d'} fontSize="10">BUS {i+1}{used?' · IN USE':''}</text>
+          <text x="85" y={busYs[i]+40} textAnchor="middle" fill={stagedOn?'#070809':used?'#4c5750':'#55b6ff'} fontSize="14">{v}V</text>
+        </g>;
+      })}
+      {setup.loads.map((load,i)=>{
+        const done=powered.includes(i);
+        return <g key={'l'+i} onClick={()=>attemptLoad(i)} style={{cursor:done?'default':'pointer'}}>
+          <rect x="450" y={loadYs[i]} width="150" height="84" rx="4" fill={done?'var(--green)':'#101614'} stroke={done?'var(--green)':'#ffd166'} strokeWidth="3"/>
+          <text x="525" y={loadYs[i]+18} textAnchor="middle" fill={done?'#070809':'#eef4eb'} fontSize="11">LOAD {i+1}{done?' ✓':''}</text>
+          <text x="525" y={loadYs[i]+38} textAnchor="middle" fill={done?'#070809':'#c9ff4d'} fontSize="13">NEEDS {load.vLo}–{load.vHi}V</text>
+          <text x="525" y={loadYs[i]+56} textAnchor="middle" fill={done?'#070809':'#89948d'} fontSize="9">R {load.Ri}Ω · {load.rangeLo}–{load.rangeHi}A</text>
+          <text x="525" y={loadYs[i]+71} textAnchor="middle" fill={done?'#070809':'#89948d'} fontSize="8">CLICK TO COMMIT</text>
+        </g>;
+      })}
+      <text x="300" y="320" textAnchor="middle" fill="#849089" fontSize="10">SELECT BUS SOCKETS · THEN CLICK A LOAD TO COMMIT</text>
+    </svg>
+    <div className="readout">STAGED {stagedV}V · {staged.length} BUS{staged.length===1?'':'ES'} SELECTED</div>
+    <button className="action" onClick={()=>{setStaged([]);setError('')}}>CLEAR SELECTION</button>
+    <Result ok={ok}>{ok?'POWER BUS BALANCED · ALL LOADS NOMINAL':error||'Select bus sockets, then commit them to a load.'}</Result>
+  </>;
+}
 function Solar(){
   const CHARGE_RATE=100/9,DRAIN_RATE=100/25,TOL=14,SUN_R=108,CX=150,CY=150;
   const ASSETS='600_solar_assets/';
@@ -140,8 +290,222 @@ function Contact(){
     {locked?<div className="success">DOWNLINK ESTABLISHED · TELEMETRY RECEIVED</div>:message?<div className="failure">{message}</div>:null}
   </>;
 }
-function Comms(){const [target]=useState(()=>55+Math.floor(Math.random()*35)),[f,setF]=useState(()=>target-18);const ok=Math.abs(f-target)<=3;return <><Header title="COMMS ALIGNMENT" sub="RSSI -96 dBm · CARRIER LOCK LOST"/><p className="instructions">Tune the carrier into the ground-station window. The target frequency is somewhere in the highlighted band.</p><div className="readout">{f}.0 MHz · TARGET {target}±3</div><input className="range" type="range" min="0" max="100" value={f} onChange={e=>setF(+e.target.value)}/><div className="bar"><i style={{width:`${f}%`,background:ok?'var(--green)':'var(--blue)'}}/></div><Result ok={ok}>{ok?'CARRIER LOCKED · CONTACT RESTORED':'Sweep the band until the carrier locks.'}</Result></>}
-function Process(){const [processes]=useState(()=>shuffle(['PACKET RETRY','TELEMETRY CACHE','IMAGE PIPELINE','LOG AGGREGATOR','PAYLOAD INDEXER','MEMORY SCRUBBER'])),[leaks]=useState(()=>new Set(shuffle(['PACKET RETRY','TELEMETRY CACHE','IMAGE PIPELINE','LOG AGGREGATOR','PAYLOAD INDEXER','MEMORY SCRUBBER']).slice(0,3))),[warnings]=useState(()=>new Set([...leaks,processes.find(p=>!leaks.has(p))])),[stopped,setStopped]=useState([]);const correct=stopped.filter(p=>leaks.has(p)).length,wrong=stopped.length-correct,cpu=98-correct*12+wrong*6,rssi=82-wrong*12,ok=correct===3&&wrong===0&&cpu<70;const toggle=p=>setStopped(s=>s.includes(p)?s.filter(x=>x!==p):[...s,p]);return <><Header title="MEMORY LEAK" sub={`CPU ${cpu}% · RSSI ${rssi} dBm · ${correct}/3 LEAKS ISOLATED`}/><p className="instructions">Three subprocesses are leaking memory. Isolate the right combination until CPU falls below 70%. One warning is a decoy; stopping a healthy service raises CPU and reduces RSSI.</p><div className="pixel-grid">{processes.map(p=>{const off=stopped.includes(p),actual=leaks.has(p),suspect=warnings.has(p);return <button className={'node '+(off?(actual?'done':'fail'):'')} onClick={()=>toggle(p)} key={p}>{p}<br/><small>{off?(actual?'ISOLATED':'HEALTHY SERVICE OFFLINE'):(suspect?'ALLOC WARN · HIGH':'NOMINAL LOAD')}</small></button>})}</div><div className="bar"><i style={{width:`${cpu}%`,background:cpu<70?'var(--green)':'var(--red)'}}/></div><div className="readout" style={{color:cpu<70?'var(--green)':'var(--red)'}}>CPU {cpu}% · RSSI {rssi} dBm</div><div className="eyebrow">LIVE LOG</div><p className="instructions" style={{color:'#ff9d9d'}}>allocation spikes are correlated with packet retries · one warning is a false positive · healthy service shutdowns degrade downlink</p><Result ok={ok}>{ok?'LEAKS CONTAINED · CPU BELOW SAFE THRESHOLD':'Isolate three leaking services, and restore every healthy service.'}</Result></>}
+function ReactionWheel(){
+  const ASSETS='600_wheel_assets/';
+  const WHEEL_ANGLES=[45,135,225,315];
+  const WHEEL_ASSETS=[{file:'wheel_nominal.png',w:294,h:340},{file:'wheel_failed.png',w:303,h:340}];
+  const LEVELS=[0,.5,1];
+  const angleDelta=(a,b)=>{const d=Math.abs(a-b)%360;return d>180?360-d:d};
+  const ANGLE_TOL=14,MAG_TOL=(m)=>m*0.2+0.12;
+  const vecOf=lv=>WHEEL_ANGLES.reduce((acc,ang,i)=>{const p=lv[i]||0;if(!p)return acc;const r=ang*Math.PI/180;return {x:acc.x+Math.cos(r)*p,y:acc.y+Math.sin(r)*p}},{x:0,y:0});
+  const allAssignments=avail=>{
+    let res=[{}];
+    avail.forEach(i=>{
+      const next=[];
+      res.forEach(base=>LEVELS.forEach(p=>next.push({...base,[i]:p})));
+      res=next;
+    });
+    return res.filter(lv=>Object.values(lv).some(p=>p>0));
+  };
+  const keyOf=(lv,avail)=>avail.map(i=>lv[i]||0).join(',');
+
+  const [setup]=useState(()=>{
+    for(let attempt=0;attempt<200;attempt++){
+      const failedIdx=Math.floor(Math.random()*4);
+      const available=[0,1,2,3].filter(i=>i!==failedIdx);
+      const assignments=allAssignments(available);
+      const target=assignments[Math.floor(Math.random()*assignments.length)];
+      const tv=vecOf(target);
+      const mag=Math.hypot(tv.x,tv.y);
+      if(mag<0.5)continue;
+      const targetAngle=(Math.atan2(tv.y,tv.x)*180/Math.PI+360)%360;
+      const correctKey=keyOf(target,available);
+      let unique=true;
+      for(const a of assignments){
+        if(keyOf(a,available)===correctKey)continue;
+        const v=vecOf(a),m=Math.hypot(v.x,v.y),ang=(Math.atan2(v.y,v.x)*180/Math.PI+360)%360;
+        if(Math.abs(m-mag)<=MAG_TOL(mag)&&angleDelta(ang,targetAngle)<=ANGLE_TOL){unique=false;break}
+      }
+      if(unique)return {failedIdx,available,mag,targetAngle};
+    }
+    const failedIdx=0,available=[1,2,3],tv=vecOf({1:1,2:.5});
+    return {failedIdx,available,mag:Math.hypot(tv.x,tv.y),targetAngle:(Math.atan2(tv.y,tv.x)*180/Math.PI+360)%360};
+  });
+
+  const [levels,setLevels]=useState({});
+  const cycle=i=>{if(i===setup.failedIdx)return;setLevels(lv=>{const cur=lv[i]||0,idx=LEVELS.indexOf(cur);return {...lv,[i]:LEVELS[(idx+1)%LEVELS.length]}})};
+
+  const resultant=vecOf(levels);
+  const resMag=Math.hypot(resultant.x,resultant.y);
+  const resAngle=resMag>0.01?(Math.atan2(resultant.y,resultant.x)*180/Math.PI+360)%360:0;
+  const anySelected=Object.values(levels).some(p=>p>0);
+  const closeEnough=anySelected&&Math.abs(resMag-setup.mag)<=MAG_TOL(setup.mag)&&angleDelta(resAngle,setup.targetAngle)<=ANGLE_TOL;
+
+  const CX=150,CY=150;
+  const polar=(deg,r)=>{const a=deg*Math.PI/180;return [CX+Math.cos(a)*r,CY-Math.sin(a)*r]};
+  const arrow=(angleDeg,length,color)=>{
+    if(length<4)return null;
+    const [x2,y2]=polar(angleDeg,length);
+    const [h1x,h1y]=polar(angleDeg+150,10),[h2x,h2y]=polar(angleDeg-150,10);
+    return <g>
+      <line x1={CX} y1={CY} x2={x2} y2={y2} stroke={color} strokeWidth="4" strokeLinecap="round"/>
+      <polygon points={`${x2},${y2} ${x2+h1x-CX},${y2+h1y-CY} ${x2+h2x-CX},${y2+h2y-CY}`} fill={color}/>
+    </g>;
+  };
+  const driftAngle=(setup.targetAngle+180)%360;
+
+  return <>
+    <Header title="REACTION WHEEL FAULT" sub={`WHEEL ${setup.failedIdx+1} OFFLINE · UNCOMMANDED TUMBLE`}/>
+    <p className="instructions">One reaction wheel has failed and can't be commanded. The satellite is drifting — click each working wheel to cycle its commanded speed (OFF · HALF · FULL) until the combined torque cancels the drift. Direction and magnitude both have to line up.</p>
+    <div style={{display:'grid',placeItems:'center',margin:'24px 0'}}>
+      <svg viewBox="0 0 300 300" width="320" height="320" style={{background:'#0c1210',border:'1px solid #34403a'}}>
+        <circle cx={CX} cy={CY} r="104" fill="none" stroke="#242c29" strokeDasharray="3 5"/>
+        {arrow(driftAngle,72,'#ff5964')}
+        {resMag>0.05&&arrow(resAngle,Math.min(90,resMag*45),closeEnough?'#c9ff4d':'#ffd166')}
+        <circle cx={CX} cy={CY} r="20" fill="#141d1a" stroke="#5c6b64" strokeWidth="3"/>
+        {WHEEL_ANGLES.map((ang,i)=>{
+          const failed=i===setup.failedIdx,p=levels[i]||0;
+          const asset=WHEEL_ASSETS[failed?1:0];
+          const dispH=64,dispW=dispH*asset.w/asset.h;
+          const [wx,wy]=polar(ang,104);
+          const ringColor=p===1?'#c9ff4d':p===.5?'#ffd166':null;
+          return <g key={i} onClick={()=>cycle(i)} style={{cursor:failed?'default':'pointer'}}>
+            {ringColor&&<circle cx={wx} cy={wy} r={dispH*0.62} fill={p===1?'rgba(201,255,77,.22)':'rgba(255,209,102,.16)'} stroke={ringColor} strokeWidth="2"/>}
+            <image href={ASSETS+asset.file} x={wx-dispW/2} y={wy-dispH/2} width={dispW} height={dispH}/>
+            {!failed&&<text x={wx} y={wy+dispH/2+16} textAnchor="middle" fontSize="9" fill={ringColor||'#5c6b64'}>{p===1?'FULL':p===.5?'HALF':'OFF'}</text>}
+          </g>;
+        })}
+        <text x="150" y="292" textAnchor="middle" fontSize="9" fill={closeEnough?'#c9ff4d':'#89948d'}>{closeEnough?'CORRECTION ALIGNED · READY TO FIRE':'CYCLE WHEEL SPEED · MATCH DIRECTION AND MAGNITUDE'}</text>
+      </svg>
+    </div>
+    <div className="legend"><span><i className="dot redbg"/>DRIFT VECTOR</span><span><i className="dot green"/>COMMANDED CORRECTION</span></div>
+    <Result ok={closeEnough}>{closeEnough?'RESIDUAL DRIFT NULLED · ATTITUDE STABLE':'Toggle wheels until the correction vector cancels the drift.'}</Result>
+  </>;
+}
+function Process(){
+  const BASE=30,RATE=70/180,WRONG_PENALTY=16;
+  const [setup]=useState(()=>{
+    const six=shuffle(PROCESS_POOL).slice(0,6);
+    const leakArr=shuffle(six).slice(0,3);
+    const leakSet=new Set(leakArr);
+    const nonLeak=six.filter(p=>!leakSet.has(p));
+    const decoy=shuffle(nonLeak)[0];
+    const seeds={};
+    six.forEach(p=>seeds[p]=Math.random()*Math.PI*2);
+    return {six,leakSet,decoy,seeds};
+  });
+  const [phase,setPhase]=useState('run'); // run | won | lost
+  const [retriesLeft,setRetriesLeft]=useState(1);
+  const retriesRef=useRef(1);
+  const [flash,setFlash]=useState(false);
+  const [stopped,setStopped]=useState([]);
+  const stoppedRef=useRef(stopped);
+  useEffect(()=>{stoppedRef.current=stopped},[stopped]);
+  const [displayCPU,setDisplayCPU]=useState(BASE);
+  const [series,setSeries]=useState(()=>{const o={};setup.six.forEach(p=>o[p]=[]);return o});
+  const [rate,setRateInfo]=useState({text:'READING',stable:true});
+
+  useEffect(()=>{
+    if(phase!=='run')return;
+    let raf,t0=null,lastSampleT=-1,localSeries={};
+    setup.six.forEach(p=>localSeries[p]=[]);
+    let cpuHist=[],curCPU=BASE;
+    const step=ts=>{
+      if(t0==null)t0=ts;
+      const elapsed=(ts-t0)/1000;
+      let target=BASE;
+      const vals={};
+      setup.six.forEach(p=>{
+        const seed=setup.seeds[p];
+        let v;
+        if(setup.leakSet.has(p)){
+          v=16+elapsed*1.05+Math.sin(elapsed*1.3+seed)*2.2+Math.sin(elapsed*.7+seed*1.7)*1.3;
+          if(!stoppedRef.current.includes(p))target+=Math.max(0,elapsed*RATE);
+        } else if(p===setup.decoy){
+          v=elapsed<9?16+elapsed*4.9:60+Math.sin(elapsed*1.1+seed)*3;
+          if(stoppedRef.current.includes(p))target+=WRONG_PENALTY;
+        } else {
+          v=18+Math.sin(elapsed*.9+seed)*4;
+          if(stoppedRef.current.includes(p))target+=WRONG_PENALTY;
+        }
+        vals[p]=Math.max(2,Math.min(99,v));
+      });
+      curCPU+=(Math.min(140,target)-curCPU)*.06;
+      const dispCPU=Math.max(0,Math.min(100,curCPU));
+      setDisplayCPU(dispCPU);
+      if(elapsed-lastSampleT>=.35){
+        lastSampleT=elapsed;
+        setup.six.forEach(p=>{localSeries[p]=[...localSeries[p],vals[p]].slice(-36)});
+        setSeries({...localSeries});
+        cpuHist.push({t:elapsed,cpu:dispCPU});
+        if(cpuHist.length>6)cpuHist.shift();
+        if(cpuHist.length>=2){
+          const a=cpuHist[0],b=cpuHist[cpuHist.length-1];
+          const r=(b.cpu-a.cpu)/((b.t-a.t)||1);
+          if(r<=.15)setRateInfo({text:'STABLE',stable:true});
+          else{
+            const secs=(100-dispCPU)/r;
+            setRateInfo({text:secs>599?'>10:00':`${Math.floor(secs/60)}:${String(Math.floor(secs%60)).padStart(2,'0')}`,stable:false});
+          }
+        }
+      }
+      const allLeaksStopped=[...setup.leakSet].every(p=>stoppedRef.current.includes(p));
+      const onlyLeaksStopped=stoppedRef.current.length===setup.leakSet.size;
+      if(allLeaksStopped&&onlyLeaksStopped&&dispCPU<50&&elapsed>1){setPhase('won');return}
+      if(curCPU>=100){
+        if(retriesRef.current>0){
+          retriesRef.current-=1;
+          setRetriesLeft(retriesRef.current);
+          setStopped([]);
+          setFlash(true);
+          setTimeout(()=>setFlash(false),1600);
+          t0=null;lastSampleT=-1;curCPU=BASE;cpuHist=[];
+          localSeries={};setup.six.forEach(p=>localSeries[p]=[]);
+          setSeries({...localSeries});
+          setDisplayCPU(BASE);
+        } else {setPhase('lost');return}
+      }
+      raf=requestAnimationFrame(step);
+    };
+    raf=requestAnimationFrame(step);
+    return()=>cancelAnimationFrame(raf);
+  },[phase]);
+
+  useEffect(()=>{
+    if(phase!=='won')return;
+    if(window.parent!==window){const id=setTimeout(()=>window.parent.postMessage({type:'repair-complete'},'*'),1200);return()=>clearTimeout(id)}
+  },[phase]);
+  useEffect(()=>{
+    if(phase!=='lost')return;
+    if(window.parent!==window){const id=setTimeout(()=>window.parent.postMessage({type:'repair-failed'},'*'),1200);return()=>clearTimeout(id)}
+  },[phase]);
+
+  const toggle=p=>{if(phase!=='run')return;setStopped(s=>s.includes(p)?s.filter(x=>x!==p):[...s,p])};
+  const leaksStoppedCount=[...setup.leakSet].filter(p=>stopped.includes(p)).length;
+  const spark=p=>{const arr=series[p]||[];if(arr.length<2)return'';return arr.map((v,i)=>`${(i/(arr.length-1||1)*80).toFixed(1)},${(30-v/100*28).toFixed(1)}`).join(' ')};
+
+  return <>
+    <Header title="MEMORY LEAK" sub={`CPU ${Math.round(displayCPU)}% · ${leaksStoppedCount}/3 LEAKS ISOLATED · ${retriesLeft} RETRY LEFT`}/>
+    <p className="instructions">Three of these six subprocesses are leaking memory and driving CPU toward critical. Watch each one's live trend — a real leak climbs continuously; a decoy spikes early then flattens out. Isolate the three real leaks before CPU breaches 100%. You get one emergency restart — a second breach loses the satellite for good.</p>
+    <div className="pixel-grid">
+      {setup.six.map(p=>{
+        const off=stopped.includes(p),actual=setup.leakSet.has(p);
+        return <button className={'node '+(off?(actual?'done':'fail'):'')} onClick={()=>toggle(p)} key={p} disabled={phase!=='run'}>
+          {p}
+          <svg viewBox="0 0 80 30" width="100%" height="30" style={{display:'block',margin:'8px 0 4px'}}>
+            <polyline points={spark(p)} fill="none" stroke={off?(actual?'#0c1210':'#0c1210'):'#8fd9ff'} strokeWidth="1.6"/>
+          </svg>
+          <small>{off?(actual?'ISOLATED':'SERVICE OFFLINE'):'MONITORING'}</small>
+        </button>;
+      })}
+    </div>
+    <div className="bar"><i style={{width:`${displayCPU}%`,background:displayCPU>80?'var(--red)':displayCPU>55?'var(--yellow)':'var(--green)'}}/></div>
+    <div className="readout" style={{color:displayCPU>80?'var(--red)':displayCPU>55?'var(--yellow)':'var(--green)'}}>CPU {Math.round(displayCPU)}% · TIME TO CRITICAL {rate.stable?'STABLE':rate.text}</div>
+    {flash&&<div className="failure">CPU CRITICAL · EMERGENCY RESTART · {retriesLeft} RETRY REMAINING</div>}
+    {phase==='won'&&<div className="success">LEAKS CONTAINED · CPU BELOW SAFE THRESHOLD</div>}
+    {phase==='lost'&&<div className="failure">SATELLITE LOST · CPU OVERRUN</div>}
+  </>;
+}
 function Orbit(){
   const cx=150,cy=150;
   const [cfg]=useState(()=>{
@@ -270,7 +634,7 @@ function Attitude(){const [a,setA]=useState(-28);const ok=Math.abs(a)<=3;return 
 function Battery(){const [cells,setCells]=useState([92,48,76]);const ok=Math.max(...cells)-Math.min(...cells)<10;return <><Header title="BATTERY CELLS" sub="CELL IMBALANCE · BUS PROTECTION ACTIVE"/><p className="instructions">Click the highest cell to bleed charge into the lowest cell. Balance all three without dropping below 40%.</p><div className="pixel-grid">{cells.map((n,i)=><button className={'cell '+(ok?'done':'')} onClick={()=>{const hi=cells.indexOf(Math.max(...cells)),lo=cells.indexOf(Math.min(...cells));if(n===cells[hi]&&n-cells[lo]>2){let c=[...cells];c[hi]-=4;c[lo]+=4;setCells(c)}}} key={i}>CELL {i+1}<br/><b>{n}%</b></button>)}</div><Result ok={ok}>{ok?'CELL BALANCE RESTORED · BATTERY ONLINE':'Select the highest cell repeatedly to balance the pack.'}</Result></>}
 function Impact(){const [pick,setPick]=useState(null),[fault]=useState(()=>shuffle(['COMMS','POWER','THERMAL','PAYLOAD','GUIDANCE','BATTERY'])[0]);return <><Header title="MODULE IMPACT" sub="PRESSURE LOSS · STRUCTURAL BREACH DETECTED"/><p className="instructions">Isolate the damaged module before the pressure loss spreads. The breach location varies by incident.</p><div className="pixel-grid">{['COMMS','POWER','THERMAL','PAYLOAD','GUIDANCE','BATTERY'].map(x=><button className={'module '+(pick===x?(x===fault?'done':'fail'):'')} onClick={()=>setPick(x)} key={x}>{x}</button>)}</div><Result ok={pick===fault}>{pick===fault?'MODULE ISOLATED · PRESSURE STABLE':'Trace the pressure-loss indicator to the damaged module.'}</Result></>}
 function Radiation(){const [t,setT]=useState(0);useEffect(()=>{if(t>0){const id=setTimeout(()=>setT(t-1),1000);return()=>clearTimeout(id)}},[t]);return <><Header title="RADIATION EVENT" sub="SOLAR PARTICLE FLUX ELEVATED"/><p className="instructions">This is a transient event. Enter shielding protocol, then wait. Intervening too early risks unnecessary degradation.</p><div className="readout">{t?`FLUX FALLING · ${t}s`:'FLUX NOMINAL'}</div><button className="action" onClick={()=>setT(8)} disabled={t>0}>{t?'WAITING FOR CLEAR':'ENTER SHIELDING PROTOCOL'}</button><Result ok={t===0&&false}>{t===0?'Wait for the event to pass without cycling power.':''}</Result></>}
-function App(){const requested=new URLSearchParams(location.search).get('type');const [type,setType]=useState(games.some(g=>g[0]===requested)?requested:'thermal');const C={thermal:Thermal,power:Power,solar:Solar,contact:Contact,comms:Comms,process:Process,orbit:Orbit,sensor:Sensor,attitude:Attitude,battery:Battery,impact:Impact,radiation:Radiation}[type];return <Frame type={type} setType={setType}><C/></Frame>};ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+function App(){const requested=new URLSearchParams(location.search).get('type');const [type,setType]=useState(games.some(g=>g[0]===requested)?requested:'thermal');const C={thermal:Thermal,power:Power,solar:Solar,contact:Contact,wheel:ReactionWheel,process:Process,orbit:Orbit,sensor:Sensor,attitude:Attitude,battery:Battery,impact:Impact,radiation:Radiation}[type];return <Frame type={type} setType={setType}><C/></Frame>};ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 
 
 
