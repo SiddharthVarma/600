@@ -625,7 +625,7 @@ function Orbit() {
         </div>
         <div className="readout" style={{ color: readoutColor }}>{readoutText}</div>
         <div className="legend"><span><i className="dot green" />INSERTION WINDOW</span><span><i className="dot redbg" />MIN SAFE ALTITUDE</span></div>
-        {stage === 'plot' && locked && <div className="actions"><button className="action" onClick={() => setStage('approach')}>IGNITE TRANSFER BURN</button><button className="action" onClick={() => { setLocked(null); setError('') }}>REPLOT</button></div>}
+        {stage === 'plot' && locked && <div className="actions"><button className="action" onClick={() => setStage('approach')}>ORBIT RAISING MANEUVER</button><button className="action" onClick={() => { setLocked(null); setError('') }}>REPLOT</button></div>}
         {stage === 'coast' && <div className="actions"><button className="action" style={{ borderColor: inWindow ? 'var(--green)' : nearWindow ? 'var(--yellow)' : '#39453f', color: inWindow ? 'var(--green)' : nearWindow ? 'var(--yellow)' : '#85908a' }} onClick={fireCircularization}>FIRE CIRCULARIZATION BURN</button></div>}
         {stage === 'success' ? <div className="success">CIRCULARIZATION ACCURATE · ORBIT {cfg.raiseMode ? 'RAISED' : 'LOWERED'} INTO HOME PLANE</div> : (error && stage === 'plot') ? <div className="failure">{error}</div> : null}
     </>;
