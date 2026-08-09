@@ -385,7 +385,7 @@ function ReactionWheel() {
     </>;
 }
 function Process() {
-    const BASE = 30, RATE = 70 / 180, WRONG_PENALTY = 16;
+    const BASE = 30, RATE = 70 / 180, WRONG_PENALTY = 28;
     const [setup] = useState(() => {
         const six = shuffle(PROCESS_POOL).slice(0, 6);
         const leakArr = shuffle(six).slice(0, 3);
@@ -444,7 +444,8 @@ function Process() {
                 if (cpuHist.length >= 2) {
                     const a = cpuHist[0], b = cpuHist[cpuHist.length - 1];
                     const r = (b.cpu - a.cpu) / ((b.t - a.t) || 1);
-                    if (r <= .15) setRateInfo({ text: 'STABLE', stable: true });
+                    if (r <= .15 && dispCPU < 55) setRateInfo({ text: 'STABLE', stable: true });
+                    else if (r <= .15) setRateInfo({ text: 'ELEVATED · NO MARGIN', stable: false });
                     else {
                         const secs = (100 - dispCPU) / r;
                         setRateInfo({ text: secs > 599 ? '>10:00' : `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`, stable: false });

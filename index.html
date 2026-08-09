@@ -429,12 +429,30 @@
   <div class="repair-modal" id="repairModal"><button class="repair-close" id="repairClose"
       aria-label="Close repair">×</button><iframe class="repair-frame" id="repairFrame"
       title="Manual spacecraft repair"></iframe></div>
+  <div class="modal" id="gameOver">
+    <div class="modal-box">
+      <div class="eyebrow">Constellation status</div>
+      <h1 style="font-size:17px;color:var(--danger)">TOTAL LOSS</h1>
+      <p>All 600 satellites have been lost. Signal from the constellation is gone.</p>
+      <div class="modal-actions"><button class="command" id="restartAll"
+          style="color:var(--danger);border-color:var(--danger)">RELAUNCH CONSTELLATION</button></div>
+    </div>
+  </div>
   <script>
     const canvas = document.getElementById('constellation'), ctx = canvas.getContext('2d'), panel = document.getElementById('panel');
     const chart = document.getElementById('chart'), cctx = chart.getContext('2d');
     let W, H, dpr, selected = null, targetCommand = null, paused = 0, lastAnomalyType = 'thermal', anomalyBag = [];
     const satellites = Array.from({ length: 600 }, (_, i) => ({ id: i + 1, a: (Math.floor(i / 10) / 60) * Math.PI * 2 + (i % 10) * .018, ring: i % 10, r: .15 + (i % 10) * .038, speed: (.00006 + (i % 10) * .000004) * (i % 2 ? -1 : 1), phase: 0, anomaly: false, anomalyType: null, countdown: 0, lost: false, rejoining: false, rejoinProgress: 0, values: { RSSI: 82, TEMPERATURE: 71, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 } }));
-    function updateNetwork() { const active = satellites.filter(s => !s.lost).length; const network = document.getElementById('network'); network.textContent = `CONSTELLATION ${active === 600 ? 'NOMINAL' : 'DEGRADED'} · ${active}/600`; }
+    function updateNetwork() { const active = satellites.filter(s => !s.lost).length; const network = document.getElementById('network'); network.textContent = `CONSTELLATION ${active === 600 ? 'NOMINAL' : 'DEGRADED'} · ${active}/600`; if (active === 0) document.getElementById('gameOver').classList.add('show'); }
+    document.getElementById('restartAll').onclick = () => {
+      satellites.forEach(s => { s.anomaly = false; s.anomalyType = null; s.countdown = 0; s.lost = false; s.rejoining = false; s.rejoinProgress = 0; s.values = { RSSI: 82, TEMPERATURE: 71, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 }; });
+      anomalyBag = []; lastAnomalyType = 'thermal'; selected = null;
+      document.getElementById('gameOver').classList.remove('show');
+      panel.classList.remove('open');
+      document.getElementById('hint').textContent = 'select a satellite to investigate';
+      document.getElementById('hint').style.opacity = 1;
+      updateNetwork();
+    };
     updateNetwork();
     function nextAnomalyType() { if (!anomalyBag.length) anomalyBag = ['thermal', 'wheel', 'power', 'process', 'orbit', 'solar', 'startracker', 'contact'].sort(() => Math.random() - .5); let next = anomalyBag.pop(); if (next === lastAnomalyType) { anomalyBag.unshift(next); next = anomalyBag.pop() || 'solar'; } return next; }
     function resize() { dpr = devicePixelRatio || 1; W = innerWidth; H = innerHeight; canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); chart.width = chart.clientWidth * dpr; chart.height = 90 * dpr; cctx.setTransform(dpr, 0, 0, dpr, 0, 0); } addEventListener('resize', resize); resize();
