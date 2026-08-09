@@ -295,9 +295,9 @@ function ReactionWheel() {
     const ASSETS = '600_wheel_assets/';
     const WHEEL_ANGLES = [45, 135, 225, 315];
     const WHEEL_ASSETS = [{ file: 'wheel_nominal.png', w: 294, h: 340 }, { file: 'wheel_failed.png', w: 303, h: 340 }];
-    const LEVELS = [0, .5, 1];
+    const LEVELS = [0, .25, .5, .75, 1];
     const angleDelta = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d };
-    const ANGLE_TOL = 14, MAG_TOL = (m) => m * 0.2 + 0.12;
+    const ANGLE_TOL = 0.5, MAG_TOL = () => 0.01;
     const vecOf = lv => WHEEL_ANGLES.reduce((acc, ang, i) => { const p = lv[i] || 0; if (!p) return acc; const r = ang * Math.PI / 180; return { x: acc.x + Math.cos(r) * p, y: acc.y + Math.sin(r) * p } }, { x: 0, y: 0 });
     const allAssignments = avail => {
         let res = [{}];
@@ -357,23 +357,24 @@ function ReactionWheel() {
 
     return <>
         <Header title="REACTION WHEEL FAULT" sub={`WHEEL ${setup.failedIdx + 1} OFFLINE · UNCOMMANDED TUMBLE`} />
-        <p className="instructions">One reaction wheel has failed and can't be commanded. The satellite is drifting — click each working wheel to cycle its commanded speed (OFF · HALF · FULL) until the combined torque cancels the drift. Direction and magnitude both have to line up.</p>
+        <p className="instructions">One reaction wheel has failed and can't be commanded. The satellite is drifting — click each working wheel to cycle its commanded speed (OFF · 25% · 50% · 75% · 100%) until the combined torque cancels the drift. Direction and magnitude both have to line up.</p>
         <div style={{ display: 'grid', placeItems: 'center', margin: '24px 0' }}>
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: '#0c1210', border: '1px solid #34403a' }}>
                 <circle cx={CX} cy={CY} r="104" fill="none" stroke="#242c29" strokeDasharray="3 5" />
                 {arrow(driftAngle, 72, '#ff5964')}
-                {resMag > 0.05 && arrow(resAngle, Math.min(90, resMag * 45), closeEnough ? '#c9ff4d' : '#ffd166')}
-                <circle cx={CX} cy={CY} r="20" fill="#141d1a" stroke="#5c6b64" strokeWidth="3" />
+                {resMag > 0.05 && arrow(resAngle, Math.min(56, 22 + resMag * 38), closeEnough ? '#c9ff4d' : '#ffd166')}
+                <circle cx={CX} cy={CY} r="16" fill="#141d1a" stroke="#5c6b64" strokeWidth="3" />
                 {WHEEL_ANGLES.map((ang, i) => {
                     const failed = i === setup.failedIdx, p = levels[i] || 0;
                     const asset = WHEEL_ASSETS[failed ? 1 : 0];
                     const dispH = 64, dispW = dispH * asset.w / asset.h;
                     const [wx, wy] = polar(ang, 104);
-                    const ringColor = p === 1 ? '#c9ff4d' : p === .5 ? '#ffd166' : null;
+                    const ringColor = p === 1 ? '#c9ff4d' : p === .75 ? '#d9f75f' : p === .5 ? '#ffd166' : p === .25 ? '#ff9f5a' : null;
+                    const ringFill = p === 1 ? 'rgba(201,255,77,.22)' : p === .75 ? 'rgba(217,247,95,.2)' : p === .5 ? 'rgba(255,209,102,.16)' : p === .25 ? 'rgba(255,159,90,.14)' : null;
                     return <g key={i} onClick={() => cycle(i)} style={{ cursor: failed ? 'default' : 'pointer' }}>
-                        {ringColor && <circle cx={wx} cy={wy} r={dispH * 0.62} fill={p === 1 ? 'rgba(201,255,77,.22)' : 'rgba(255,209,102,.16)'} stroke={ringColor} strokeWidth="2" />}
+                        {ringColor && <circle cx={wx} cy={wy} r={dispH * 0.62} fill={ringFill} stroke={ringColor} strokeWidth="2" />}
                         <image href={ASSETS + asset.file} x={wx - dispW / 2} y={wy - dispH / 2} width={dispW} height={dispH} />
-                        {!failed && <text x={wx} y={wy + dispH / 2 + 16} textAnchor="middle" fontSize="9" fill={ringColor || '#5c6b64'}>{p === 1 ? 'FULL' : p === .5 ? 'HALF' : 'OFF'}</text>}
+                        {!failed && <text x={wx} y={wy + dispH / 2 + 16} textAnchor="middle" fontSize="9" fill={ringColor || '#5c6b64'}>{p === 1 ? '100%' : p === .75 ? '75%' : p === .5 ? '50%' : p === .25 ? '25%' : 'OFF'}</text>}
                     </g>;
                 })}
                 <text x="150" y="292" textAnchor="middle" fontSize="9" fill={closeEnough ? '#c9ff4d' : '#89948d'}>{closeEnough ? 'CORRECTION ALIGNED · READY TO FIRE' : 'CYCLE WHEEL SPEED · MATCH DIRECTION AND MAGNITUDE'}</text>
