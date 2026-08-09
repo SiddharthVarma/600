@@ -3,7 +3,7 @@ const shuffle = a => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) 
 const allSubsets = n => { const res = []; for (let m = 1; m < (1 << n); m++) { const s = []; for (let b = 0; b < n; b++)if (m & (1 << b)) s.push(b); res.push(s) } return res };
 const PROCESS_POOL = ['PACKET RETRY', 'TELEMETRY CACHE', 'IMAGE PIPELINE', 'LOG AGGREGATOR', 'PAYLOAD INDEXER', 'MEMORY SCRUBBER', 'ATTITUDE SOLVER', 'MOTION SCHEDULE', 'STAR TRACKER FEED', 'DOWNLINK BUFFER', 'EPHEMERIS CALCULATOR', 'FAULT MONITOR'];
 const games = [['thermal', 'THERMAL ROUTING', 'Valve sequencing'], ['power', 'POWER BUS', 'Route power by the numbers'], ['solar', 'SOLAR ALIGNMENT', 'Point at the sun'], ['contact', 'MISSED CONTACT', 'Hunt the signal peak'], ['wheel', 'REACTION WHEEL FAULT', 'Balance the torque'], ['process', 'PROCESS FAULT', 'Contain the leak in time'], ['orbit', 'ORBITAL BURN', 'Plot a transfer burn'], ['sensor', 'SENSOR FAULT', 'Find the outlier'], ['attitude', 'ATTITUDE DRIFT', 'Stabilize pointing'], ['startracker', 'STAR TRACKER LOCK', 'Rebuild the star field'], ['impact', 'MODULE IMPACT', 'Isolate the breach'], ['radiation', 'RADIATION EVENT', 'Wait it out']];
-function Frame({ type, setType, children }) { const embedded = Boolean(new URLSearchParams(location.search).get('type')); return <div className="app"><header className="top"><span className="brand">SIX HUNDRED / REPAIR LAB</span><span className="eyebrow">SAT 421 · MANUAL OVERRIDE</span></header><div className={'layout ' + (embedded ? 'embedded' : '')} style={embedded ? { display: 'block', marginTop: 0 } : {}}>{!embedded && <nav className="menu">{games.map(([id, name]) => <button key={id} className={type === id ? 'active' : ''} onClick={() => setType(id)}>{name}</button>)}</nav>}<main className="board" style={embedded ? { minHeight: '100%', border: 0 } : {}}>{children}</main></div></div> }
+function Frame({ type, setType, children, remaining, timedOut }) { const embedded = Boolean(new URLSearchParams(location.search).get('type')); return <div className="app"><header className="top"><span className="brand">SIX HUNDRED / REPAIR LAB</span><span className="eyebrow">SAT 421 · MANUAL OVERRIDE{remaining != null && !timedOut && <span style={{ color: remaining <= 10 ? 'var(--red)' : undefined, marginLeft: 10 }}>· REPAIR WINDOW {remaining}s</span>}</span></header><div className={'layout ' + (embedded ? 'embedded' : '')} style={embedded ? { display: 'block', marginTop: 0 } : {}}>{!embedded && <nav className="menu">{games.map(([id, name]) => <button key={id} className={type === id ? 'active' : ''} onClick={() => setType(id)}>{name}</button>)}</nav>}<main className="board" style={embedded ? { minHeight: '100%', border: 0 } : {}}>{children}</main></div></div> }
 function Header({ title, sub }) { return <><div className="eyebrow">Critical subsystem interaction</div><h1>{title}</h1><div className="signal">{sub}</div></> }
 function Result({ ok, children }) { const [sent, setSent] = useState(false); const finish = () => { if (!sent && window.parent !== window) { setSent(true); setTimeout(() => window.parent.postMessage({ type: 'repair-complete' }, '*'), 1200) } }; return children && <div className={ok ? 'success' : 'failure'}>{sent ? 'SUCCESSFUL EXECUTION' : children}{ok && <div className="actions"><button className="action" onClick={finish} disabled={sent}>{sent ? 'SUCCESSFUL EXECUTION' : 'EXECUTE'}</button></div>}</div> }
 function Thermal() {
@@ -721,5 +721,28 @@ function StarTracker() {
 }
 function Impact() { const [pick, setPick] = useState(null), [fault] = useState(() => shuffle(['COMMS', 'POWER', 'THERMAL', 'PAYLOAD', 'GUIDANCE', 'BATTERY'])[0]); return <><Header title="MODULE IMPACT" sub="PRESSURE LOSS · STRUCTURAL BREACH DETECTED" /><p className="instructions">Isolate the damaged module before the pressure loss spreads. The breach location varies by incident.</p><div className="pixel-grid">{['COMMS', 'POWER', 'THERMAL', 'PAYLOAD', 'GUIDANCE', 'BATTERY'].map(x => <button className={'module ' + (pick === x ? (x === fault ? 'done' : 'fail') : '')} onClick={() => setPick(x)} key={x}>{x}</button>)}</div><Result ok={pick === fault}>{pick === fault ? 'MODULE ISOLATED · PRESSURE STABLE' : 'Trace the pressure-loss indicator to the damaged module.'}</Result></> }
 function Radiation() { const [t, setT] = useState(0); useEffect(() => { if (t > 0) { const id = setTimeout(() => setT(t - 1), 1000); return () => clearTimeout(id) } }, [t]); return <><Header title="RADIATION EVENT" sub="SOLAR PARTICLE FLUX ELEVATED" /><p className="instructions">This is a transient event. Enter shielding protocol, then wait. Intervening too early risks unnecessary degradation.</p><div className="readout">{t ? `FLUX FALLING · ${t}s` : 'FLUX NOMINAL'}</div><button className="action" onClick={() => setT(8)} disabled={t > 0}>{t ? 'WAITING FOR CLEAR' : 'ENTER SHIELDING PROTOCOL'}</button><Result ok={t === 0 && false}>{t === 0 ? 'Wait for the event to pass without cycling power.' : ''}</Result></> }
-function App() { const requested = new URLSearchParams(location.search).get('type'); const [type, setType] = useState(games.some(g => g[0] === requested) ? requested : 'thermal'); const C = { thermal: Thermal, power: Power, solar: Solar, contact: Contact, wheel: ReactionWheel, process: Process, orbit: Orbit, sensor: Sensor, attitude: Attitude, startracker: StarTracker, impact: Impact, radiation: Radiation }[type]; return <Frame type={type} setType={setType}><C /></Frame> }; ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+function App() {
+  const params = new URLSearchParams(location.search);
+  const requested = params.get('type');
+  const [type, setType] = useState(games.some(g => g[0] === requested) ? requested : 'thermal');
+  const [remaining, setRemaining] = useState(() => { const n = parseInt(params.get('deadline'), 10); return Number.isFinite(n) && n > 0 ? n : null });
+  const [timedOut, setTimedOut] = useState(false);
+  useEffect(() => {
+    if (remaining == null || timedOut) return;
+    const id = setTimeout(() => {
+      if (remaining <= 1) { setTimedOut(true); setRemaining(0) }
+      else setRemaining(remaining - 1);
+    }, 1000);
+    return () => clearTimeout(id);
+  }, [remaining, timedOut]);
+  useEffect(() => {
+    if (!timedOut) return;
+    if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-failed' }, '*'), 2200); return () => clearTimeout(id) }
+  }, [timedOut]);
+  const C = { thermal: Thermal, power: Power, solar: Solar, contact: Contact, wheel: ReactionWheel, process: Process, orbit: Orbit, sensor: Sensor, attitude: Attitude, startracker: StarTracker, impact: Impact, radiation: Radiation }[type];
+  return <Frame type={type} setType={setType} remaining={remaining} timedOut={timedOut}>
+    {timedOut ? <div className="failure" style={{ margin: '60px 0', fontSize: 14, letterSpacing: '.03em' }}>SATELLITE COMMANDED TOO LATE · SATELLITE LOST</div> : <C />}
+  </Frame>
+};
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 
