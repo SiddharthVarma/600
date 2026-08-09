@@ -1,346 +1,465 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Six Hundred — Mission Control</title>
   <style>
-    :root { --bg:#050607; --ink:#e6e7e4; --muted:#7e8583; --dim:#343a39; --line:#222826; --accent:#c9f75f; --warn:#ffb55c; --danger:#ff6f61; }
-    * { box-sizing:border-box; }
-    html,body { margin:0; min-height:100%; background:var(--bg); color:var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
-    body { overflow:hidden; }
-    #stage { position:fixed; inset:0; }
-    canvas { width:100%; height:100%; display:block; cursor:crosshair; }
-    .topline { position:fixed; top:24px; left:30px; right:30px; display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:10px; letter-spacing:.18em; text-transform:uppercase; pointer-events:none; }
-    .brand { color:var(--ink); font-size:12px; letter-spacing:.28em; }
-    .signal { display:flex; align-items:center; gap:9px; }
-    .pulse { width:6px; height:6px; border-radius:50%; background:var(--accent); box-shadow:0 0 12px var(--accent); }
-    .hint { position:fixed; left:30px; bottom:24px; color:var(--dim); font-size:10px; letter-spacing:.12em; text-transform:uppercase; transition:opacity .5s; }
-    .impact { position:fixed; left:50%; top:72px; transform:translateX(-50%); color:var(--danger); font-size:11px; letter-spacing:.2em; text-transform:uppercase; opacity:0; transition:opacity .25s; pointer-events:none; text-shadow:0 0 14px rgba(255,77,77,.45); }
-    .impact.show { opacity:1; }
-    .panel { position:fixed; top:0; right:0; width:min(410px,100vw); height:100%; padding:92px 34px 32px; background:rgba(7,9,9,.94); border-left:1px solid var(--line); transform:translateX(102%); transition:transform .55s cubic-bezier(.22,.8,.2,1); overflow:auto; }
-    .panel.open { transform:translateX(0); }
-    .close { position:absolute; top:28px; right:30px; border:0; background:none; color:var(--muted); font:inherit; font-size:18px; cursor:pointer; }
-    .eyebrow { color:var(--muted); font-size:10px; letter-spacing:.22em; text-transform:uppercase; }
-    h1 { margin:9px 0 4px; font-size:25px; font-weight:400; letter-spacing:.05em; }
-    .status { color:var(--warn); font-size:10px; letter-spacing:.18em; text-transform:uppercase; }
-    .status.degraded { color:var(--danger); }
-    .status.ok { color:var(--accent); }
-    .rule { height:1px; background:var(--line); margin:28px 0 20px; }
-    .telemetry { display:grid; gap:15px; }
-    .metric { cursor:pointer; }
-    .metric-head { display:flex; justify-content:space-between; font-size:11px; margin-bottom:7px; }
-    .metric-name { color:var(--muted); letter-spacing:.14em; }
-    .metric-value { color:var(--ink); }
-    .bar { height:4px; background:#1d2221; overflow:hidden; }
-    .bar i { display:block; height:100%; background:var(--accent); transition:width .7s; }
-    .metric.hot .bar i { background:var(--danger); }
-    .metric.hot .metric-value { color:var(--danger); }
-    .meta { display:grid; grid-template-columns:1fr 1fr; gap:16px; color:var(--muted); font-size:10px; line-height:1.8; }
-    .meta b { display:block; color:var(--ink); font-weight:400; }
-    .chart-wrap { margin-top:24px; border-top:1px solid var(--line); padding-top:16px; }
-    .chart-title { color:var(--muted); font-size:10px; letter-spacing:.16em; margin-bottom:10px; }
-    #chart { width:100%; height:90px; display:block; }
-    .commands { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    button.command { border:1px solid #303735; color:var(--muted); background:transparent; padding:12px 10px; font:inherit; font-size:10px; letter-spacing:.1em; cursor:pointer; transition:.2s; }
-    button.command:hover { color:var(--ink); border-color:var(--accent); }
-    .log { min-height:40px; margin-top:18px; color:var(--muted); font-size:10px; line-height:1.6; }
-    .modal { position:fixed; inset:0; display:grid; place-items:center; pointer-events:none; opacity:0; transition:opacity .25s; background:rgba(0,0,0,.45); }
-    .modal.show { pointer-events:auto; opacity:1; }
-    .repair-modal { position:fixed; inset:0; z-index:20; display:grid; place-items:center; padding:24px; background:rgba(0,0,0,.78); opacity:0; pointer-events:none; transition:opacity .25s; }
-    .repair-modal.show { opacity:1; pointer-events:auto; }
-    .repair-frame { width:min(1080px,96vw); height:min(760px,92vh); border:1px solid #39403c; background:#070809; box-shadow:0 0 40px rgba(0,0,0,.8); }
-    .repair-close { position:absolute; top:22px; right:28px; border:0; background:none; color:var(--muted); font:inherit; font-size:24px; cursor:pointer; }
-    .modal-box { width:min(390px,calc(100vw - 40px)); border:1px solid #39403c; background:#0a0d0c; padding:26px; }
-    .modal-box p { color:var(--muted); font-size:11px; line-height:1.7; }
-    .modal-actions { display:flex; gap:8px; margin-top:24px; }
-    .modal-actions button { flex:1; }
-    @media (max-width:600px) { .topline { left:18px; right:18px; top:18px; } .hint { left:18px; bottom:18px; } .panel { padding-left:24px; padding-right:24px; } }
+    :root {
+      --bg: #050607;
+      --ink: #e6e7e4;
+      --muted: #7e8583;
+      --dim: #343a39;
+      --line: #222826;
+      --accent: #c9f75f;
+      --warn: #ffb55c;
+      --danger: #ff6f61;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    body {
+      overflow: hidden;
+    }
+
+    #stage {
+      position: fixed;
+      inset: 0;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+
+    .topline {
+      position: fixed;
+      top: 24px;
+      left: 30px;
+      right: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+
+    .brand {
+      color: var(--ink);
+      font-size: 12px;
+      letter-spacing: .28em;
+    }
+
+    .signal {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent);
+    }
+
+    .hint {
+      position: fixed;
+      left: 30px;
+      bottom: 24px;
+      color: var(--dim);
+      font-size: 10px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      transition: opacity .5s;
+    }
+
+    .impact {
+      position: fixed;
+      left: 50%;
+      top: 72px;
+      transform: translateX(-50%);
+      color: var(--danger);
+      font-size: 11px;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      opacity: 0;
+      transition: opacity .25s;
+      pointer-events: none;
+      text-shadow: 0 0 14px rgba(255, 77, 77, .45);
+    }
+
+    .impact.show {
+      opacity: 1;
+    }
+
+    .panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: min(410px, 100vw);
+      height: 100%;
+      padding: 92px 34px 32px;
+      background: rgba(7, 9, 9, .94);
+      border-left: 1px solid var(--line);
+      transform: translateX(102%);
+      transition: transform .55s cubic-bezier(.22, .8, .2, 1);
+      overflow: auto;
+    }
+
+    .panel.open {
+      transform: translateX(0);
+    }
+
+    .close {
+      position: absolute;
+      top: 28px;
+      right: 30px;
+      border: 0;
+      background: none;
+      color: var(--muted);
+      font: inherit;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .eyebrow {
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 9px 0 4px;
+      font-size: 25px;
+      font-weight: 400;
+      letter-spacing: .05em;
+    }
+
+    .status {
+      color: var(--warn);
+      font-size: 10px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .status.degraded {
+      color: var(--danger);
+    }
+
+    .status.ok {
+      color: var(--accent);
+    }
+
+    .rule {
+      height: 1px;
+      background: var(--line);
+      margin: 28px 0 20px;
+    }
+
+    .telemetry {
+      display: grid;
+      gap: 15px;
+    }
+
+    .metric {
+      cursor: pointer;
+    }
+
+    .metric-head {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      margin-bottom: 7px;
+    }
+
+    .metric-name {
+      color: var(--muted);
+      letter-spacing: .14em;
+    }
+
+    .metric-value {
+      color: var(--ink);
+    }
+
+    .bar {
+      height: 4px;
+      background: #1d2221;
+      overflow: hidden;
+    }
+
+    .bar i {
+      display: block;
+      height: 100%;
+      background: var(--accent);
+      transition: width .7s;
+    }
+
+    .metric.hot .bar i {
+      background: var(--danger);
+    }
+
+    .metric.hot .metric-value {
+      color: var(--danger);
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.8;
+    }
+
+    .meta b {
+      display: block;
+      color: var(--ink);
+      font-weight: 400;
+    }
+
+    .chart-wrap {
+      margin-top: 24px;
+      border-top: 1px solid var(--line);
+      padding-top: 16px;
+    }
+
+    .chart-title {
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: .16em;
+      margin-bottom: 10px;
+    }
+
+    #chart {
+      width: 100%;
+      height: 90px;
+      display: block;
+    }
+
+    .commands {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button.command {
+      border: 1px solid #303735;
+      color: var(--muted);
+      background: transparent;
+      padding: 12px 10px;
+      font: inherit;
+      font-size: 10px;
+      letter-spacing: .1em;
+      cursor: pointer;
+      transition: .2s;
+    }
+
+    button.command:hover {
+      color: var(--ink);
+      border-color: var(--accent);
+    }
+
+    .log {
+      min-height: 40px;
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.6;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .25s;
+      background: rgba(0, 0, 0, .45);
+    }
+
+    .modal.show {
+      pointer-events: auto;
+      opacity: 1;
+    }
+
+    .repair-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(0, 0, 0, .78);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s;
+    }
+
+    .repair-modal.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .repair-frame {
+      width: min(1080px, 96vw);
+      height: min(760px, 92vh);
+      border: 1px solid #39403c;
+      background: #070809;
+      box-shadow: 0 0 40px rgba(0, 0, 0, .8);
+    }
+
+    .repair-close {
+      position: absolute;
+      top: 22px;
+      right: 28px;
+      border: 0;
+      background: none;
+      color: var(--muted);
+      font: inherit;
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    .modal-box {
+      width: min(390px, calc(100vw - 40px));
+      border: 1px solid #39403c;
+      background: #0a0d0c;
+      padding: 26px;
+    }
+
+    .modal-box p {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.7;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 24px;
+    }
+
+    .modal-actions button {
+      flex: 1;
+    }
+
+    @media (max-width:600px) {
+      .topline {
+        left: 18px;
+        right: 18px;
+        top: 18px;
+      }
+
+      .hint {
+        left: 18px;
+        bottom: 18px;
+      }
+
+      .panel {
+        padding-left: 24px;
+        padding-right: 24px;
+      }
+    }
   </style>
 </head>
+
 <body>
   <main id="stage"><canvas id="constellation" aria-label="A constellation of 600 satellites"></canvas></main>
-  <div class="topline"><span class="brand">SIX HUNDRED</span><span class="signal"><i class="pulse"></i><span id="network">NETWORK NOMINAL · 600/600</span></span></div>
+  <div class="topline"><span class="brand">SIX HUNDRED</span><span class="signal"><i class="pulse"></i><span
+        id="network">NETWORK NOMINAL · 600/600</span></span></div>
   <div class="impact" id="impact">IMPACT IN 45s</div>
   <div class="hint" id="hint">select a satellite to investigate</div>
   <aside class="panel" id="panel">
     <button class="close" id="close" aria-label="Close">×</button>
     <div class="eyebrow">Investigation / Orbital relay</div>
-    <h1 id="satName">SATELLITE 421</h1><div class="status" id="status">STATUS: DEGRADED</div>
-    <div class="rule"></div><div class="telemetry" id="telemetry"></div>
-    <div class="rule"></div><div class="meta"><span>CONTACT<b id="contact">ACTIVE</b></span><span>ORBITAL PLANE<b id="orbit">PLANE / 07</b></span></div>
-    <div class="chart-wrap"><div class="chart-title" id="chartTitle">TEMPERATURE / HISTORY</div><canvas id="chart"></canvas></div>
-    <div class="rule"></div><div class="eyebrow" style="margin-bottom:12px">Command uplink</div><div class="commands"><button class="command" data-command="POWER CYCLE">POWER CYCLE</button><button class="command" data-command="ALIGN SOLAR ARRAY">ALIGN SOLAR ARRAY</button><button class="command" data-command="BALANCE CELLS">BALANCE CELLS</button><button class="command" data-command="DOWNLINK">DOWNLINK</button><button class="command" data-command="RECONFIGURE WHEELS">RECONFIGURE WHEELS</button><button class="command" data-command="THERMAL CONTROL">THERMAL CONTROL</button><button class="command" data-command="ACTIVATE BOOSTER">ACTIVATE BOOSTER</button><button class="command" data-command="RESTART PROCESS">RESTART PROCESS</button></div>
+    <h1 id="satName">SATELLITE 421</h1>
+    <div class="status" id="status">STATUS: DEGRADED</div>
+    <div class="rule"></div>
+    <div class="telemetry" id="telemetry"></div>
+    <div class="rule"></div>
+    <div class="meta"><span>CONTACT<b id="contact">ACTIVE</b></span><span>ORBITAL PLANE<b id="orbit">PLANE /
+          07</b></span></div>
+    <div class="chart-wrap">
+      <div class="chart-title" id="chartTitle">TEMPERATURE / HISTORY</div><canvas id="chart"></canvas>
+    </div>
+    <div class="rule"></div>
+    <div class="eyebrow" style="margin-bottom:12px">Command uplink</div>
+    <div class="commands"><button class="command" data-command="POWER CYCLE">POWER CYCLE</button><button class="command"
+        data-command="ALIGN SOLAR ARRAY">ALIGN SOLAR ARRAY</button><button class="command"
+        data-command="RECALIBRATE STAR TRACKER">RECALIBRATE STAR TRACKER</button><button class="command"
+        data-command="DOWNLINK">DOWNLINK</button><button class="command" data-command="RECONFIGURE WHEELS">RECONFIGURE
+        WHEELS</button><button class="command" data-command="THERMAL CONTROL">THERMAL CONTROL</button><button
+        class="command" data-command="ACTIVATE BOOSTER">ACTIVATE BOOSTER</button><button class="command"
+        data-command="RESTART PROCESS">RESTART PROCESS</button></div>
     <div class="log" id="log">something is wrong</div>
   </aside>
-  <div class="modal" id="modal"><div class="modal-box"><div class="eyebrow">Command confirmation</div><h1 id="modalTitle" style="font-size:17px">CONFIRM COMMAND?</h1><p id="modalText">THIS COMMAND MAY ALTER THE SATELLITE'S CURRENT STATE.</p><div class="modal-actions"><button class="command" id="cancel">CANCEL</button><button class="command" id="execute" style="color:var(--accent);border-color:var(--accent)">EXECUTE</button></div></div></div>
-  <div class="repair-modal" id="repairModal"><button class="repair-close" id="repairClose" aria-label="Close repair">×</button><iframe class="repair-frame" id="repairFrame" title="Manual spacecraft repair"></iframe></div>
+  <div class="modal" id="modal">
+    <div class="modal-box">
+      <div class="eyebrow">Command confirmation</div>
+      <h1 id="modalTitle" style="font-size:17px">CONFIRM COMMAND?</h1>
+      <p id="modalText">THIS COMMAND MAY ALTER THE SATELLITE'S CURRENT STATE.</p>
+      <div class="modal-actions"><button class="command" id="cancel">CANCEL</button><button class="command" id="execute"
+          style="color:var(--accent);border-color:var(--accent)">EXECUTE</button></div>
+    </div>
+  </div>
+  <div class="repair-modal" id="repairModal"><button class="repair-close" id="repairClose"
+      aria-label="Close repair">×</button><iframe class="repair-frame" id="repairFrame"
+      title="Manual spacecraft repair"></iframe></div>
   <script>
     const canvas = document.getElementById('constellation'), ctx = canvas.getContext('2d'), panel = document.getElementById('panel');
     const chart = document.getElementById('chart'), cctx = chart.getContext('2d');
-    let W, H, dpr, selected = null, targetCommand = null, paused = 0, lastAnomalyType = 'thermal', anomalyBag=[];
-    const satellites = Array.from({length:600}, (_,i) => ({ id:i+1, a:(Math.floor(i/10)/60)*Math.PI*2+(i%10)*.018, ring:i%10, r:.15+(i%10)*.038, speed:(.00006+(i%10)*.000004)*(i%2?-1:1), phase:0, anomaly:i===420, anomalyType:i===420?'thermal':null, countdown:0, lost:false, rejoining:false, rejoinProgress:0, values:{RSSI:82,TEMPERATURE:71,POWER:68,BATTERY:91,CPU:63} }));
-    function updateNetwork(){const active=satellites.filter(s=>!s.lost).length;const network=document.getElementById('network');network.textContent=`NETWORK ${active===600?'NOMINAL':'DEGRADED'} · ${active}/600`;}
+    let W, H, dpr, selected = null, targetCommand = null, paused = 0, lastAnomalyType = 'thermal', anomalyBag = [];
+    const satellites = Array.from({ length: 600 }, (_, i) => ({ id: i + 1, a: (Math.floor(i / 10) / 60) * Math.PI * 2 + (i % 10) * .018, ring: i % 10, r: .15 + (i % 10) * .038, speed: (.00006 + (i % 10) * .000004) * (i % 2 ? -1 : 1), phase: 0, anomaly: i === 420, anomalyType: i === 420 ? 'thermal' : null, countdown: 0, lost: false, rejoining: false, rejoinProgress: 0, values: { RSSI: 82, TEMPERATURE: 71, POWER: 68, BATTERY: 91, CPU: 63 } }));
+    function updateNetwork() { const active = satellites.filter(s => !s.lost).length; const network = document.getElementById('network'); network.textContent = `NETWORK ${active === 600 ? 'NOMINAL' : 'DEGRADED'} · ${active}/600`; }
     updateNetwork();
-    function nextAnomalyType(){if(!anomalyBag.length)anomalyBag=['thermal','wheel','power','process','orbit','solar','battery','contact'].sort(()=>Math.random()-.5);let next=anomalyBag.pop();if(next===lastAnomalyType){anomalyBag.unshift(next);next=anomalyBag.pop()||'solar';}return next;}
-    function resize(){ dpr=devicePixelRatio||1; W=innerWidth; H=innerHeight; canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0); chart.width=chart.clientWidth*dpr;chart.height=90*dpr;cctx.setTransform(dpr,0,0,dpr,0,0); } addEventListener('resize',resize); resize();
-    function point(s,t){ const rr=s.r*Math.min(W,H), angle=s.a+t*s.speed+s.phase, x=W*.5+Math.cos(angle)*rr, y=H*.5+Math.sin(angle)*rr; return {x,y}; }
-    function draw(t){ ctx.clearRect(0,0,W,H); const slow=1, unit=Math.min(W,H), cx=W*.5, cy=H*.5;
-      ctx.save(); ctx.translate(cx,cy); ctx.strokeStyle='rgba(255,255,255,.055)'; ctx.lineWidth=1; for(let i=0;i<10;i++){ctx.beginPath();ctx.arc(0,0,unit*(.15+i*.038),0,Math.PI*2);ctx.stroke();} ctx.restore();
-      const earthR=Math.max(19,unit*.052); ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(cx,cy,earthR,0,Math.PI*2);ctx.fill();
-      satellites.forEach(s=>{ if(s.lost)return; const earthRatio=earthR/(unit*s.r); let decay=s.anomaly&&s.anomalyType==='orbit' ? Math.max(earthRatio,s.countdown/45) : 1; const p=point(s,t*slow); let px=W*.5+(p.x-W*.5)*decay, py=H*.5+(p.y-H*.5)*decay; if(s.rejoining){s.rejoinProgress=Math.min(1,s.rejoinProgress+.006); const eased=1-Math.pow(1-s.rejoinProgress,3); px=W*.5+(p.x-W*.5)*eased; py=H*.5+(p.y-H*.5)*eased; if(s.rejoinProgress>=1){s.rejoining=false;if(selected===s){document.getElementById('log').textContent='TELEMETRY NOMINAL · ORBIT RESTORED';document.getElementById('hint').textContent='satellite recovered · network nominal';}}} const hot=s.anomaly; ctx.globalAlpha=s.rejoining?.8:1; ctx.beginPath();ctx.arc(px,py,hot?3.6:1.5,0,Math.PI*2);ctx.fillStyle=hot?'#ff4d4d':`rgba(255,255,255,${.38+.35*(.5+.5*Math.sin(s.phase+t*.0005))})`;ctx.fill(); if(hot){ctx.beginPath();ctx.arc(px,py,11+Math.sin(t*.003)*2.5,0,Math.PI*2);ctx.strokeStyle='rgba(255,77,77,.3)';ctx.stroke();} ctx.globalAlpha=1; }); requestAnimationFrame(draw); } requestAnimationFrame(draw);
-    const chartConfigs={TEMPERATURE:{title:'TEMPERATURE / HISTORY',threshold:.70},POWER:{title:'POWER OUTPUT / HISTORY',threshold:.55},BATTERY:{title:'BATTERY PACK / HISTORY',threshold:.35},RSSI:{title:'RSSI / CONTACT HISTORY',threshold:.68},CPU:{title:'CPU LOAD / HISTORY',threshold:.85},ALTITUDE:{title:'ORBITAL ALTITUDE / HISTORY',threshold:.35}};
-    function renderSat(s){ document.getElementById('satName').textContent=`SATELLITE ${String(s.id).padStart(3,'0')}`;document.getElementById('orbit').textContent=`PLANE / ${String(s.ring+1).padStart(2,'0')}`; const label=s.anomalyType==='orbit'?'ORBITAL DECAY':s.anomalyType==='solar'?'SOLAR ARRAY MISALIGNED':s.anomalyType==='battery'?'CELL IMBALANCE':s.anomalyType==='contact'?'MISSED CONTACT WINDOW':s.anomalyType==='wheel'?'REACTION WHEEL FAULT':s.anomalyType==='power'?'POWER INSTABILITY':s.anomalyType==='process'?'PROCESS FAULT':s.anomaly?'DEGRADED':'NOMINAL'; document.getElementById('status').textContent=`STATUS: ${label}`;document.getElementById('status').className='status '+(s.anomaly?'degraded':'ok'); const el=document.getElementById('telemetry'); el.innerHTML=''; Object.entries(s.values).forEach(([k,v])=>{const row=document.createElement('div');row.className='metric '+((s.anomaly&&((s.anomalyType==='thermal'&&k==='TEMPERATURE')||(s.anomalyType==='orbit'&&k==='POWER')||(s.anomalyType==='solar'&&k==='POWER')||(s.anomalyType==='wheel'&&k==='POWER')||(s.anomalyType==='battery'&&k==='BATTERY')||(s.anomalyType==='contact'&&k==='RSSI')))?'hot':'');row.innerHTML=`<div class="metric-head"><span class="metric-name">${k}</span><span class="metric-value">${k==='RSSI'?'-'+v+' dBm':k==='TEMPERATURE'?v+'°C':v+'%'}</span></div><div class="bar"><i style="width:${Math.min(v,100)}%"></i></div>`; row.onclick=()=>{drawChart(k,v,s.anomalyType)};el.appendChild(row)}); const defaultKey=s.anomalyType==='thermal'?'TEMPERATURE':(s.anomalyType==='power'||s.anomalyType==='solar'||s.anomalyType==='wheel')?'POWER':s.anomalyType==='battery'?'BATTERY':s.anomalyType==='contact'?'RSSI':s.anomalyType==='process'?'CPU':s.anomalyType==='orbit'?'ALTITUDE':'TEMPERATURE'; drawChart(defaultKey,defaultKey==='ALTITUDE'?100:s.values[defaultKey],s.anomalyType); if(s.anomalyType==='orbit') document.getElementById('log').textContent=`ORBIT DECAY · IMPACT IN ${s.countdown}s`; }
-    function drawChart(key,val,type){const cfg=chartConfigs[key]||{title:`${key} / HISTORY`,threshold:null}; document.getElementById('chartTitle').textContent=cfg.title; const w=chart.clientWidth,h=90;cctx.clearRect(0,0,w,h);cctx.strokeStyle='#252c29';cctx.lineWidth=1;cctx.beginPath(); for(let y=15;y<h;y+=25){cctx.moveTo(0,y);cctx.lineTo(w,y)} cctx.stroke(); if(cfg.threshold){const ty=h-15-cfg.threshold*(h-25);cctx.strokeStyle='#ff4d4d';cctx.setLineDash([4,4]);cctx.beginPath();cctx.moveTo(0,ty);cctx.lineTo(w,ty);cctx.stroke();cctx.setLineDash([]);} const points=[]; for(let i=0;i<40;i++){let n=Math.min(1,Math.max(0,(val||0)/100)); if(type==='orbit')n=Math.max(.12,1-i*.022); if(type==='power')n=.58+Math.sin(i*1.1)*.16+(i>27?.1:0); if(type==='wheel')n=.58-(i>18?(i-18)*.02:0)+Math.sin(i*1.4)*.05; if(type==='process')n=.42+(i>25?(i-25)*.025:Math.sin(i)*.03); if(type==='thermal')n=.48+(i>20?(i-20)*.018:Math.sin(i*.4)*.025); points.push({x:i*w/39,y:h-15-n*(h-25),n});} const normalColor=key==='TEMPERATURE'?'#c9f75f':key==='POWER'?'#ffd166':key==='CPU'?'#58a6ff':'#c9f75f'; for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],danger=cfg.threshold&&(key==='ALTITUDE'?((a.n+b.n)/2<cfg.threshold):((a.n+b.n)/2>cfg.threshold));cctx.strokeStyle=danger?'#ff4d4d':normalColor;cctx.lineWidth=1.7;cctx.beginPath();cctx.moveTo(a.x,a.y);cctx.lineTo(b.x,b.y);cctx.stroke();} points.forEach(p=>{const danger=cfg.threshold&&(key==='ALTITUDE'?p.n<cfg.threshold:p.n>cfg.threshold);if(danger){cctx.fillStyle='#ff4d4d';cctx.beginPath();cctx.arc(p.x,p.y,2.3,0,Math.PI*2);cctx.fill();}});}
-    canvas.addEventListener('click',e=>{const rect=canvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top,unit=Math.min(W,H),earthR=Math.max(19,unit*.052);let best=null,dist=Infinity; satellites.forEach(s=>{if(s.lost)return; const base=point(s,performance.now()), earthRatio=earthR/(unit*s.r), decay=s.anomaly&&s.anomalyType==='orbit'?Math.max(earthRatio,s.countdown/45):1, px=W*.5+(base.x-W*.5)*decay, py=H*.5+(base.y-H*.5)*decay, hit=s.anomaly?95:70, d=Math.hypot(px-x,py-y);if(d<hit&&d<dist){dist=d;best=s}});if(best){selected=best;paused=0;renderSat(best);panel.classList.add('open');document.getElementById('hint').style.opacity=0;}});
-    document.getElementById('close').onclick=()=>{panel.classList.remove('open');selected=null;paused=0;document.getElementById('hint').style.opacity=1};
-    const repairTypes={'THERMAL CONTROL':'thermal','POWER CYCLE':'power','ALIGN SOLAR ARRAY':'solar','BALANCE CELLS':'battery','DOWNLINK':'contact','RECONFIGURE WHEELS':'wheel','RESTART PROCESS':'process','ACTIVATE BOOSTER':'orbit'};
-    function openRepair(type){document.getElementById('repairFrame').src=`react.html?type=${type}`;document.getElementById('repairModal').classList.add('show');}
-    function closeRepair(){document.getElementById('repairModal').classList.remove('show');document.getElementById('repairFrame').src='';}
-    document.querySelectorAll('[data-command]').forEach(b=>b.onclick=()=>{targetCommand=b.dataset.command;if(selected&&selected.anomalyType&&repairTypes[targetCommand]===selected.anomalyType){openRepair(repairTypes[targetCommand]);return;}document.getElementById('modalTitle').textContent=targetCommand+'?';document.getElementById('modalText').textContent='THIS COMMAND MAY ALTER THE SATELLITE\'S CURRENT STATE.';document.getElementById('modal').classList.add('show')});
-    document.getElementById('repairClose').onclick=closeRepair;
-    window.addEventListener('message',e=>{if(!selected)return;if(e.data?.type==='repair-complete'){const wasOrbit=selected.anomalyType==='orbit';selected.anomaly=false;selected.anomalyType=null;selected.countdown=0;selected.lost=false;selected.rejoining=wasOrbit;selected.rejoinProgress=wasOrbit?0:1;selected.values={RSSI:82,TEMPERATURE:56,POWER:68,BATTERY:91,CPU:63};document.getElementById('log').textContent=wasOrbit?'SUCCESSFUL EXECUTION · REJOINING ORBIT':'SUCCESSFUL EXECUTION · TELEMETRY NOMINAL';document.getElementById('hint').textContent=wasOrbit?'satellite recovered · rejoining orbital plane':'satellite recovered · network nominal';closeRepair();renderSat(selected);}else if(e.data?.type==='repair-failed'){selected.anomaly=false;selected.anomalyType=null;selected.countdown=0;selected.lost=true;selected.rejoining=false;updateNetwork();document.getElementById('log').textContent='SATELLITE LOST · CPU OVERRUN · SIGNAL UNAVAILABLE';document.getElementById('hint').textContent='satellite lost · signal unavailable';closeRepair();}});
-    document.getElementById('cancel').onclick=()=>document.getElementById('modal').classList.remove('show');
-    document.getElementById('execute').onclick=()=>{document.getElementById('modal').classList.remove('show');const log=document.getElementById('log'); if(!selected)return; const wasOrbit=selected.anomalyType==='orbit'; const correct=(selected.anomalyType==='thermal'&&targetCommand==='THERMAL CONTROL')||(wasOrbit&&targetCommand==='ACTIVATE BOOSTER')||(selected.anomalyType==='process'&&targetCommand==='RESTART PROCESS')||(selected.anomalyType==='wheel'&&targetCommand==='RECONFIGURE WHEELS')||(selected.anomalyType==='contact'&&targetCommand==='DOWNLINK')||(selected.anomalyType==='power'&&targetCommand==='POWER CYCLE')||(selected.anomalyType==='solar'&&targetCommand==='ALIGN SOLAR ARRAY')||(selected.anomalyType==='battery'&&targetCommand==='BALANCE CELLS'); if(correct){selected.anomaly=false;selected.anomalyType=null;selected.countdown=0;selected.lost=false;selected.rejoining=wasOrbit;selected.rejoinProgress=wasOrbit?0:1;selected.values={RSSI:82,TEMPERATURE:56,POWER:68,BATTERY:91,CPU:63};log.textContent=wasOrbit?'COMMAND COMPLETE · REJOINING ORBIT':'COMMAND COMPLETE · TELEMETRY NOMINAL';document.getElementById('hint').textContent=wasOrbit?'satellite recovered · rejoining orbital plane':'satellite recovered · network nominal';renderSat(selected)} else {log.textContent=`${targetCommand} COMPLETE · NO CHANGE DETECTED`;document.getElementById('hint').textContent='command logged · anomaly persists';} };
-    setTimeout(()=>{ if(!selected) document.getElementById('hint').textContent='anomaly detected · locate the red signal'; },7000);
-    function scheduleAnomaly(){ setTimeout(()=>{ const active=satellites.some(s=>s.anomaly||s.rejoining); if(!active){ const available=satellites.filter(s=>!s.lost), s=available[Math.floor(Math.random()*available.length)]; s.anomaly=true; s.anomalyType=nextAnomalyType(); lastAnomalyType=s.anomalyType; s.countdown=s.anomalyType==='orbit'?45:0; if(s.anomalyType==='thermal'){s.values.TEMPERATURE=78;s.values.POWER=82} if(s.anomalyType==='contact')s.values.RSSI=52; if(s.anomalyType==='power'||s.anomalyType==='solar'||s.anomalyType==='wheel')s.values.POWER=s.anomalyType==='solar'?31:s.anomalyType==='wheel'?38:32; if(s.anomalyType==='battery')s.values.BATTERY=42; if(s.anomalyType==='process')s.values.CPU=98; document.getElementById('hint').textContent='anomaly detected · locate the red signal'; } scheduleAnomaly(); },10000+Math.random()*20000); }
+    function nextAnomalyType() { if (!anomalyBag.length) anomalyBag = ['thermal', 'wheel', 'power', 'process', 'orbit', 'solar', 'startracker', 'contact'].sort(() => Math.random() - .5); let next = anomalyBag.pop(); if (next === lastAnomalyType) { anomalyBag.unshift(next); next = anomalyBag.pop() || 'solar'; } return next; }
+    function resize() { dpr = devicePixelRatio || 1; W = innerWidth; H = innerHeight; canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); chart.width = chart.clientWidth * dpr; chart.height = 90 * dpr; cctx.setTransform(dpr, 0, 0, dpr, 0, 0); } addEventListener('resize', resize); resize();
+    function point(s, t) { const rr = s.r * Math.min(W, H), angle = s.a + t * s.speed + s.phase, x = W * .5 + Math.cos(angle) * rr, y = H * .5 + Math.sin(angle) * rr; return { x, y }; }
+    function draw(t) {
+      ctx.clearRect(0, 0, W, H); const slow = 1, unit = Math.min(W, H), cx = W * .5, cy = H * .5;
+      ctx.save(); ctx.translate(cx, cy); ctx.strokeStyle = 'rgba(255,255,255,.055)'; ctx.lineWidth = 1; for (let i = 0; i < 10; i++) { ctx.beginPath(); ctx.arc(0, 0, unit * (.15 + i * .038), 0, Math.PI * 2); ctx.stroke(); } ctx.restore();
+      const earthR = Math.max(19, unit * .052); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(cx, cy, earthR, 0, Math.PI * 2); ctx.fill();
+      satellites.forEach(s => { if (s.lost) return; const earthRatio = earthR / (unit * s.r); let decay = s.anomaly && s.anomalyType === 'orbit' ? Math.max(earthRatio, s.countdown / 45) : 1; const p = point(s, t * slow); let px = W * .5 + (p.x - W * .5) * decay, py = H * .5 + (p.y - H * .5) * decay; if (s.rejoining) { s.rejoinProgress = Math.min(1, s.rejoinProgress + .006); const eased = 1 - Math.pow(1 - s.rejoinProgress, 3); px = W * .5 + (p.x - W * .5) * eased; py = H * .5 + (p.y - H * .5) * eased; if (s.rejoinProgress >= 1) { s.rejoining = false; if (selected === s) { document.getElementById('log').textContent = 'TELEMETRY NOMINAL · ORBIT RESTORED'; document.getElementById('hint').textContent = 'satellite recovered · network nominal'; } } } const hot = s.anomaly; ctx.globalAlpha = s.rejoining ? .8 : 1; ctx.beginPath(); ctx.arc(px, py, hot ? 3.6 : 1.5, 0, Math.PI * 2); ctx.fillStyle = hot ? '#ff4d4d' : `rgba(255,255,255,${.38 + .35 * (.5 + .5 * Math.sin(s.phase + t * .0005))})`; ctx.fill(); if (hot) { ctx.beginPath(); ctx.arc(px, py, 11 + Math.sin(t * .003) * 2.5, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255,77,77,.3)'; ctx.stroke(); } ctx.globalAlpha = 1; }); requestAnimationFrame(draw);
+    } requestAnimationFrame(draw);
+    const chartConfigs = { TEMPERATURE: { title: 'TEMPERATURE / HISTORY', threshold: .70 }, POWER: { title: 'POWER OUTPUT / HISTORY', threshold: .55 }, BATTERY: { title: 'BATTERY PACK / HISTORY', threshold: .35 }, RSSI: { title: 'RSSI / CONTACT HISTORY', threshold: .68 }, CPU: { title: 'CPU LOAD / HISTORY', threshold: .85 }, ALTITUDE: { title: 'ORBITAL ALTITUDE / HISTORY', threshold: .35 } };
+    function renderSat(s) { document.getElementById('satName').textContent = `SATELLITE ${String(s.id).padStart(3, '0')}`; document.getElementById('orbit').textContent = `PLANE / ${String(s.ring + 1).padStart(2, '0')}`; const label = s.anomalyType === 'orbit' ? 'ORBITAL DECAY' : s.anomalyType === 'solar' ? 'SOLAR ARRAY MISALIGNED' : s.anomalyType === 'startracker' ? 'STAR TRACKER LOST LOCK' : s.anomalyType === 'contact' ? 'MISSED CONTACT WINDOW' : s.anomalyType === 'wheel' ? 'REACTION WHEEL FAULT' : s.anomalyType === 'power' ? 'POWER INSTABILITY' : s.anomalyType === 'process' ? 'PROCESS FAULT' : s.anomaly ? 'DEGRADED' : 'NOMINAL'; document.getElementById('status').textContent = `STATUS: ${label}`; document.getElementById('status').className = 'status ' + (s.anomaly ? 'degraded' : 'ok'); const el = document.getElementById('telemetry'); el.innerHTML = ''; Object.entries(s.values).forEach(([k, v]) => { const row = document.createElement('div'); row.className = 'metric ' + ((s.anomaly && ((s.anomalyType === 'thermal' && k === 'TEMPERATURE') || (s.anomalyType === 'orbit' && k === 'POWER') || (s.anomalyType === 'solar' && k === 'POWER') || (s.anomalyType === 'wheel' && k === 'POWER') || (s.anomalyType === 'startracker' && k === 'BATTERY') || (s.anomalyType === 'contact' && k === 'RSSI'))) ? 'hot' : ''); row.innerHTML = `<div class="metric-head"><span class="metric-name">${k}</span><span class="metric-value">${k === 'RSSI' ? '-' + v + ' dBm' : k === 'TEMPERATURE' ? v + '°C' : v + '%'}</span></div><div class="bar"><i style="width:${Math.min(v, 100)}%"></i></div>`; row.onclick = () => { drawChart(k, v, s.anomalyType) }; el.appendChild(row) }); const defaultKey = s.anomalyType === 'thermal' ? 'TEMPERATURE' : (s.anomalyType === 'power' || s.anomalyType === 'solar' || s.anomalyType === 'wheel') ? 'POWER' : s.anomalyType === 'startracker' ? 'BATTERY' : s.anomalyType === 'contact' ? 'RSSI' : s.anomalyType === 'process' ? 'CPU' : s.anomalyType === 'orbit' ? 'ALTITUDE' : 'TEMPERATURE'; drawChart(defaultKey, defaultKey === 'ALTITUDE' ? 100 : s.values[defaultKey], s.anomalyType); if (s.anomalyType === 'orbit') document.getElementById('log').textContent = `ORBIT DECAY · IMPACT IN ${s.countdown}s`; }
+    function drawChart(key, val, type) { const cfg = chartConfigs[key] || { title: `${key} / HISTORY`, threshold: null }; document.getElementById('chartTitle').textContent = cfg.title; const w = chart.clientWidth, h = 90; cctx.clearRect(0, 0, w, h); cctx.strokeStyle = '#252c29'; cctx.lineWidth = 1; cctx.beginPath(); for (let y = 15; y < h; y += 25) { cctx.moveTo(0, y); cctx.lineTo(w, y) } cctx.stroke(); if (cfg.threshold) { const ty = h - 15 - cfg.threshold * (h - 25); cctx.strokeStyle = '#ff4d4d'; cctx.setLineDash([4, 4]); cctx.beginPath(); cctx.moveTo(0, ty); cctx.lineTo(w, ty); cctx.stroke(); cctx.setLineDash([]); } const points = []; for (let i = 0; i < 40; i++) { let n = Math.min(1, Math.max(0, (val || 0) / 100)); if (type === 'orbit') n = Math.max(.12, 1 - i * .022); if (type === 'power') n = .58 + Math.sin(i * 1.1) * .16 + (i > 27 ? .1 : 0); if (type === 'wheel') n = .58 - (i > 18 ? (i - 18) * .02 : 0) + Math.sin(i * 1.4) * .05; if (type === 'process') n = .42 + (i > 25 ? (i - 25) * .025 : Math.sin(i) * .03); if (type === 'thermal') n = .48 + (i > 20 ? (i - 20) * .018 : Math.sin(i * .4) * .025); points.push({ x: i * w / 39, y: h - 15 - n * (h - 25), n }); } const normalColor = key === 'TEMPERATURE' ? '#c9f75f' : key === 'POWER' ? '#ffd166' : key === 'CPU' ? '#58a6ff' : '#c9f75f'; for (let i = 1; i < points.length; i++) { const a = points[i - 1], b = points[i], danger = cfg.threshold && (key === 'ALTITUDE' ? ((a.n + b.n) / 2 < cfg.threshold) : ((a.n + b.n) / 2 > cfg.threshold)); cctx.strokeStyle = danger ? '#ff4d4d' : normalColor; cctx.lineWidth = 1.7; cctx.beginPath(); cctx.moveTo(a.x, a.y); cctx.lineTo(b.x, b.y); cctx.stroke(); } points.forEach(p => { const danger = cfg.threshold && (key === 'ALTITUDE' ? p.n < cfg.threshold : p.n > cfg.threshold); if (danger) { cctx.fillStyle = '#ff4d4d'; cctx.beginPath(); cctx.arc(p.x, p.y, 2.3, 0, Math.PI * 2); cctx.fill(); } }); }
+    canvas.addEventListener('click', e => { const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top, unit = Math.min(W, H), earthR = Math.max(19, unit * .052); let best = null, dist = Infinity; satellites.forEach(s => { if (s.lost) return; const base = point(s, performance.now()), earthRatio = earthR / (unit * s.r), decay = s.anomaly && s.anomalyType === 'orbit' ? Math.max(earthRatio, s.countdown / 45) : 1, px = W * .5 + (base.x - W * .5) * decay, py = H * .5 + (base.y - H * .5) * decay, hit = s.anomaly ? 95 : 70, d = Math.hypot(px - x, py - y); if (d < hit && d < dist) { dist = d; best = s } }); if (best) { selected = best; paused = 0; renderSat(best); panel.classList.add('open'); document.getElementById('hint').style.opacity = 0; } });
+    document.getElementById('close').onclick = () => { panel.classList.remove('open'); selected = null; paused = 0; document.getElementById('hint').style.opacity = 1 };
+    const repairTypes = { 'THERMAL CONTROL': 'thermal', 'POWER CYCLE': 'power', 'ALIGN SOLAR ARRAY': 'solar', 'RECALIBRATE STAR TRACKER': 'startracker', 'DOWNLINK': 'contact', 'RECONFIGURE WHEELS': 'wheel', 'RESTART PROCESS': 'process', 'ACTIVATE BOOSTER': 'orbit' };
+    function openRepair(type) { document.getElementById('repairFrame').src = `react.html?type=${type}`; document.getElementById('repairModal').classList.add('show'); }
+    function closeRepair() { document.getElementById('repairModal').classList.remove('show'); document.getElementById('repairFrame').src = ''; }
+    document.querySelectorAll('[data-command]').forEach(b => b.onclick = () => { targetCommand = b.dataset.command; if (selected && selected.anomalyType && repairTypes[targetCommand] === selected.anomalyType) { openRepair(repairTypes[targetCommand]); return; } document.getElementById('modalTitle').textContent = targetCommand + '?'; document.getElementById('modalText').textContent = 'THIS COMMAND MAY ALTER THE SATELLITE\'S CURRENT STATE.'; document.getElementById('modal').classList.add('show') });
+    document.getElementById('repairClose').onclick = closeRepair;
+    window.addEventListener('message', e => { if (!selected) return; if (e.data?.type === 'repair-complete') { const wasOrbit = selected.anomalyType === 'orbit'; selected.anomaly = false; selected.anomalyType = null; selected.countdown = 0; selected.lost = false; selected.rejoining = wasOrbit; selected.rejoinProgress = wasOrbit ? 0 : 1; selected.values = { RSSI: 82, TEMPERATURE: 56, POWER: 68, BATTERY: 91, CPU: 63 }; document.getElementById('log').textContent = wasOrbit ? 'SUCCESSFUL EXECUTION · REJOINING ORBIT' : 'SUCCESSFUL EXECUTION · TELEMETRY NOMINAL'; document.getElementById('hint').textContent = wasOrbit ? 'satellite recovered · rejoining orbital plane' : 'satellite recovered · network nominal'; closeRepair(); renderSat(selected); } else if (e.data?.type === 'repair-failed') { selected.anomaly = false; selected.anomalyType = null; selected.countdown = 0; selected.lost = true; selected.rejoining = false; updateNetwork(); document.getElementById('log').textContent = 'SATELLITE LOST · CPU OVERRUN · SIGNAL UNAVAILABLE'; document.getElementById('hint').textContent = 'satellite lost · signal unavailable'; closeRepair(); } });
+    document.getElementById('cancel').onclick = () => document.getElementById('modal').classList.remove('show');
+    document.getElementById('execute').onclick = () => { document.getElementById('modal').classList.remove('show'); const log = document.getElementById('log'); if (!selected) return; const wasOrbit = selected.anomalyType === 'orbit'; const correct = (selected.anomalyType === 'thermal' && targetCommand === 'THERMAL CONTROL') || (wasOrbit && targetCommand === 'ACTIVATE BOOSTER') || (selected.anomalyType === 'process' && targetCommand === 'RESTART PROCESS') || (selected.anomalyType === 'wheel' && targetCommand === 'RECONFIGURE WHEELS') || (selected.anomalyType === 'contact' && targetCommand === 'DOWNLINK') || (selected.anomalyType === 'power' && targetCommand === 'POWER CYCLE') || (selected.anomalyType === 'solar' && targetCommand === 'ALIGN SOLAR ARRAY') || (selected.anomalyType === 'startracker' && targetCommand === 'RECALIBRATE STAR TRACKER'); if (correct) { selected.anomaly = false; selected.anomalyType = null; selected.countdown = 0; selected.lost = false; selected.rejoining = wasOrbit; selected.rejoinProgress = wasOrbit ? 0 : 1; selected.values = { RSSI: 82, TEMPERATURE: 56, POWER: 68, BATTERY: 91, CPU: 63 }; log.textContent = wasOrbit ? 'COMMAND COMPLETE · REJOINING ORBIT' : 'COMMAND COMPLETE · TELEMETRY NOMINAL'; document.getElementById('hint').textContent = wasOrbit ? 'satellite recovered · rejoining orbital plane' : 'satellite recovered · network nominal'; renderSat(selected) } else { log.textContent = `${targetCommand} COMPLETE · NO CHANGE DETECTED`; document.getElementById('hint').textContent = 'command logged · anomaly persists'; } };
+    setTimeout(() => { if (!selected) document.getElementById('hint').textContent = 'anomaly detected · locate the red signal'; }, 7000);
+    function scheduleAnomaly() { setTimeout(() => { const active = satellites.some(s => s.anomaly || s.rejoining); if (!active) { const available = satellites.filter(s => !s.lost), s = available[Math.floor(Math.random() * available.length)]; s.anomaly = true; s.anomalyType = nextAnomalyType(); lastAnomalyType = s.anomalyType; s.countdown = s.anomalyType === 'orbit' ? 45 : 0; if (s.anomalyType === 'thermal') { s.values.TEMPERATURE = 78; s.values.POWER = 82 } if (s.anomalyType === 'contact') s.values.RSSI = 52; if (s.anomalyType === 'power' || s.anomalyType === 'solar' || s.anomalyType === 'wheel') s.values.POWER = s.anomalyType === 'solar' ? 31 : s.anomalyType === 'wheel' ? 38 : 32; if (s.anomalyType === 'startracker') s.values.BATTERY = 42; if (s.anomalyType === 'process') s.values.CPU = 98; document.getElementById('hint').textContent = 'anomaly detected · locate the red signal'; } scheduleAnomaly(); }, 10000 + Math.random() * 20000); }
     scheduleAnomaly();
-    setInterval(()=>{ const falling=satellites.find(s=>s.anomaly&&s.anomalyType==='orbit'&&s.countdown>0); const impact=document.getElementById('impact'); if(falling){falling.countdown--; impact.textContent=`IMPACT IN ${falling.countdown}s`; impact.classList.add('show'); if(selected===falling)document.getElementById('log').textContent=`ORBIT DECAY · IMPACT IN ${falling.countdown}s`; if(falling.countdown===0){impact.textContent='IMPACT · SIGNAL LOST'; setTimeout(()=>impact.classList.remove('show'),3500); falling.anomaly=false;falling.anomalyType=null;falling.lost=true;updateNetwork(); document.getElementById('hint').textContent='satellite lost · signal unavailable'; if(selected===falling)document.getElementById('log').textContent='SIGNAL LOST · SATELLITE BELOW RECOVERY ALTITUDE';}} else if(!falling){impact.classList.remove('show');} },1000);
+    setInterval(() => { const falling = satellites.find(s => s.anomaly && s.anomalyType === 'orbit' && s.countdown > 0); const impact = document.getElementById('impact'); if (falling) { falling.countdown--; impact.textContent = `IMPACT IN ${falling.countdown}s`; impact.classList.add('show'); if (selected === falling) document.getElementById('log').textContent = `ORBIT DECAY · IMPACT IN ${falling.countdown}s`; if (falling.countdown === 0) { impact.textContent = 'IMPACT · SIGNAL LOST'; setTimeout(() => impact.classList.remove('show'), 3500); falling.anomaly = false; falling.anomalyType = null; falling.lost = true; updateNetwork(); document.getElementById('hint').textContent = 'satellite lost · signal unavailable'; if (selected === falling) document.getElementById('log').textContent = 'SIGNAL LOST · SATELLITE BELOW RECOVERY ALTITUDE'; } } else if (!falling) { impact.classList.remove('show'); } }, 1000);
   </script>
 </body>
+
 </html>
-
-
-<!-- 
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SIX HUNDRED</title>
-<style>
-html,body{margin:0;height:100%;background:#050606;color:#eef4eb;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden}
-body{display:grid;place-items:center}
-canvas{display:block;width:100vw;height:100vh}
-#hud{position:fixed;inset:0;pointer-events:none}
-#top{position:absolute;top:24px;left:28px;letter-spacing:.22em;font-size:12px;color:#c9ff4d}
-#count{position:absolute;top:24px;right:28px;text-align:right;color:#6f7973;font-size:11px;line-height:1.6}
-#alert{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);border:1px solid #29312d;padding:10px 14px;color:#7d8781;background:rgba(5,6,6,.86);font-size:11px;letter-spacing:.12em;opacity:0;transition:opacity .3s}
-#alert.show{opacity:1}
-#repair{position:fixed;inset:0;background:rgba(0,0,0,.86);display:none;align-items:center;justify-content:center;z-index:10}
-#repair.open{display:flex}
-#repairbox{width:min(900px,92vw);height:min(720px,90vh);border:1px solid #39443e;background:#070909;box-shadow:0 0 60px rgba(0,0,0,.8);position:relative}
-#repair iframe{width:100%;height:100%;border:0}
-#close{position:absolute;right:12px;top:10px;z-index:2;border:1px solid #39443e;background:#070909;color:#8c9690;padding:6px 10px;font-family:inherit;font-size:11px;cursor:pointer}
-#close:hover{background:#c9ff4d;color:#070909}
-</style>
-</head>
-
-<body>
-
-<canvas id="space"></canvas>
-
-<div id="hud">
-  <div id="top">SIX HUNDRED</div>
-
-  <div id="count">
-    600 SATELLITES<br>
-    LEO CONSTELLATION<br>
-    <span id="status">NOMINAL</span>
-  </div>
-
-  <div id="alert"></div>
-</div>
-
-<div id="repair">
-  <div id="repairbox">
-    <button id="close">CLOSE</button>
-    <iframe id="repairFrame"></iframe>
-  </div>
-</div>
-
-<script>
-const canvas=document.getElementById('space');
-const ctx=canvas.getContext('2d');
-
-let W=innerWidth;
-let H=innerHeight;
-
-canvas.width=W*devicePixelRatio;
-canvas.height=H*devicePixelRatio;
-ctx.scale(devicePixelRatio,devicePixelRatio);
-
-const satellites=[];
-
-for(let i=0;i<600;i++){
-  satellites.push({
-    x:Math.random()*W,
-    y:Math.random()*H,
-    vx:(Math.random()-.5)*.08,
-    vy:(Math.random()-.5)*.08,
-    r:Math.random()<.03?1.5:1,
-    anomaly:false,
-    pulse:Math.random()*Math.PI*2
-  });
-}
-
-let anomalyIndex=Math.floor(Math.random()*satellites.length);
-satellites[anomalyIndex].anomaly=true;
-
-let frozen=false;
-
-function resize(){
-  W=innerWidth;
-  H=innerHeight;
-
-  canvas.width=W*devicePixelRatio;
-  canvas.height=H*devicePixelRatio;
-
-  ctx.setTransform(
-    devicePixelRatio,
-    0,
-    0,
-    devicePixelRatio,
-    0,
-    0
-  );
-}
-
-addEventListener('resize',resize);
-
-function draw(){
-  ctx.fillStyle='#050606';
-  ctx.fillRect(0,0,W,H);
-
-  for(let i=0;i<satellites.length;i++){
-    const s=satellites[i];
-
-    if(!frozen){
-      s.x+=s.vx;
-      s.y+=s.vy;
-
-      if(s.x<0)s.x=W;
-      if(s.x>W)s.x=0;
-      if(s.y<0)s.y=H;
-      if(s.y>H)s.y=0;
-
-      s.pulse+=.015;
-    }
-
-    const anomaly=s.anomaly;
-
-    if(anomaly){
-      const glow=0.35+
-        Math.sin(s.pulse*3)*0.2;
-
-      ctx.beginPath();
-      ctx.arc(s.x,s.y,5,0,Math.PI*2);
-      ctx.fillStyle=`rgba(255,89,100,${glow})`;
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.arc(s.x,s.y,2.4,0,Math.PI*2);
-      ctx.fillStyle='#ff5964';
-      ctx.fill();
-    }else{
-      ctx.beginPath();
-      ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
-      ctx.fillStyle='#dbe5dc';
-      ctx.fill();
-    }
-  }
-
-  requestAnimationFrame(draw);
-}
-
-draw();
-
-const repair=document.getElementById('repair');
-const frame=document.getElementById('repairFrame');
-const close=document.getElementById('close');
-const alertBox=document.getElementById('alert');
-const status=document.getElementById('status');
-
-function showAlert(text){
-  alertBox.textContent=text;
-  alertBox.classList.add('show');
-
-  setTimeout(()=>{
-    alertBox.classList.remove('show');
-  },2600);
-}
-
-function openRepair(){
-  frozen=true;
-
-  status.textContent='ANOMALY DETECTED';
-  status.style.color='#ff5964';
-
-  frame.src='react.html?type=thruster';
-
-  repair.classList.add('open');
-}
-
-function closeRepair(){
-  repair.classList.remove('open');
-  frame.src='';
-  frozen=false;
-
-  status.textContent='ANOMALY DETECTED';
-  status.style.color='#ff5964';
-}
-
-canvas.addEventListener('click',e=>{
-  if(frozen)return;
-
-  const rect=canvas.getBoundingClientRect();
-
-  const x=e.clientX-rect.left;
-  const y=e.clientY-rect.top;
-
-  const index=satellites.findIndex(s=>{
-    return Math.hypot(
-      s.x-x,
-      s.y-y
-    )<10;
-  });
-
-  if(index===anomalyIndex){
-    showAlert('SATELLITE 421 · THRUSTER ARRAY FAULT');
-    setTimeout(openRepair,500);
-  }
-});
-
-close.addEventListener('click',closeRepair);
-
-window.addEventListener('message',e=>{
-  if(e.data?.type==='repair-complete'){
-    repair.classList.remove('open');
-    frame.src='';
-    frozen=false;
-
-    satellites[anomalyIndex].anomaly=false;
-
-    status.textContent='NOMINAL';
-    status.style.color='#c9ff4d';
-
-    showAlert('SATELLITE 421 · THRUSTER ARRAY RESTORED');
-
-    setTimeout(()=>{
-      anomalyIndex=Math.floor(
-        Math.random()*satellites.length
-      );
-
-      satellites.forEach(s=>s.anomaly=false);
-      satellites[anomalyIndex].anomaly=true;
-
-      status.textContent='ANOMALY DETECTED';
-      status.style.color='#ff5964';
-    },5000);
-  }
-});
-</script>
-
-</body>
-</html>
- -->
