@@ -103,6 +103,7 @@ function Power() {
     const [error, setError] = useState('');
     const busYs = [30, 110, 190, 270], loadYs = [30, 140, 250];
 
+    
     const toggleBus = i => { if (usedBuses.includes(i)) return; setStaged(s => s.includes(i) ? s.filter(x => x !== i) : [...s, i]); setError('') };
     const attemptLoad = li => {
         if (powered.includes(li)) return;
