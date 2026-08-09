@@ -524,7 +524,7 @@ function Orbit() {
     const satStart = polar(cfg.startAngle, cfg.r1);
     const points = end => {
         const [ex, ey] = polar(end.angle, end.dist);
-        const da = ((end.angle - cfg.startAngle + 540) % 360) - 180, midAngle = cfg.startAngle + da / 2;
+        const da = (end.angle - cfg.startAngle + 360) % 360, midAngle = cfg.startAngle + da / 2;
         const midR = Math.max(20, Math.max(cfg.r1, end.dist) + (cfg.raiseMode ? 26 : -16));
         const [mx, my] = polar(midAngle, midR);
         return [satStart, [mx, my], [ex, ey]];
