@@ -63,14 +63,15 @@
 
     .brand {
       color: var(--ink);
-      font-size: 12px;
-      letter-spacing: .28em;
+      font-size: 30px;
+      letter-spacing: .22em;
     }
 
     .signal {
       display: flex;
       align-items: center;
       gap: 9px;
+      font-size: 13px;
     }
 
     .pulse {
@@ -86,8 +87,8 @@
       left: 30px;
       bottom: 24px;
       color: var(--dim);
-      font-size: 10px;
-      letter-spacing: .12em;
+      font-size: 13px;
+      letter-spacing: .1em;
       text-transform: uppercase;
       transition: opacity .5s;
     }
@@ -433,7 +434,7 @@
     const chart = document.getElementById('chart'), cctx = chart.getContext('2d');
     let W, H, dpr, selected = null, targetCommand = null, paused = 0, lastAnomalyType = 'thermal', anomalyBag = [];
     const satellites = Array.from({ length: 600 }, (_, i) => ({ id: i + 1, a: (Math.floor(i / 10) / 60) * Math.PI * 2 + (i % 10) * .018, ring: i % 10, r: .15 + (i % 10) * .038, speed: (.00006 + (i % 10) * .000004) * (i % 2 ? -1 : 1), phase: 0, anomaly: false, anomalyType: null, countdown: 0, lost: false, rejoining: false, rejoinProgress: 0, values: { RSSI: 82, TEMPERATURE: 71, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 } }));
-    function updateNetwork() { const active = satellites.filter(s => !s.lost).length; const network = document.getElementById('network'); network.textContent = `NETWORK ${active === 600 ? 'NOMINAL' : 'DEGRADED'} · ${active}/600`; }
+    function updateNetwork() { const active = satellites.filter(s => !s.lost).length; const network = document.getElementById('network'); network.textContent = `CONSTELLATION ${active === 600 ? 'NOMINAL' : 'DEGRADED'} · ${active}/600`; }
     updateNetwork();
     function nextAnomalyType() { if (!anomalyBag.length) anomalyBag = ['thermal', 'wheel', 'power', 'process', 'orbit', 'solar', 'startracker', 'contact'].sort(() => Math.random() - .5); let next = anomalyBag.pop(); if (next === lastAnomalyType) { anomalyBag.unshift(next); next = anomalyBag.pop() || 'solar'; } return next; }
     function resize() { dpr = devicePixelRatio || 1; W = innerWidth; H = innerHeight; canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); chart.width = chart.clientWidth * dpr; chart.height = 90 * dpr; cctx.setTransform(dpr, 0, 0, dpr, 0, 0); } addEventListener('resize', resize); resize();
