@@ -49,7 +49,7 @@ function Solar(){
   const [w1x,w1y]=polar(angle-TOL,135),[w2x,w2y]=polar(angle+TOL,135);
   const sector=`M ${CX} ${CY} L ${w1x} ${w1y} A 135 135 0 0 1 ${w2x} ${w2y} Z`;
   const [sx,sy]=polar(sunAngle,SUN_R);
-  const SCID_W=150,SCID_H=SCID_W*342/520,SUN_W=70,SUN_H=SUN_W*345/520;
+  const SCID_W=150,SCID_H=SCID_W*222/520,SUN_W=70,SUN_H=SUN_W*345/520;
 
   return <>
     <Header title="SOLAR ALIGNMENT" sub="ARRAY OFFLINE · BATTERY DEPLETED"/>
@@ -111,7 +111,7 @@ function Contact(){
   };
 
   const bars=[20,45,70,90];
-  const ASSETS='600_satellite_game_assets/';
+  const ASSETS='600_solar_assets/';
   const FRAME_DIR='600_gn_antenna_pixel_frames/';
   const FRAMES=[{file:'antenna_r01_f01.png',w:96,h:168},{file:'antenna_r01_f02.png',w:128,h:168},{file:'antenna_r01_f03.png',w:128,h:173},{file:'antenna_r01_f04.png',w:105,h:176},{file:'antenna_r01_f05.png',w:103,h:177},{file:'antenna_r01_f06.png',w:96,h:186},{file:'antenna_r01_f07.png',w:93,h:184},{file:'antenna_r01_f08.png',w:99,h:176},{file:'antenna_r01_f09.png',w:103,h:176},{file:'antenna_r01_f10.png',w:128,h:170},{file:'antenna_r01_f11.png',w:128,h:166},{file:'antenna_r01_f12.png',w:96,h:159}];
   const DISPLAY_H=170,GROUND_Y=232,CX=150;
@@ -127,7 +127,7 @@ function Contact(){
       <svg viewBox="0 0 300 300" width="320" height="320" style={{background:'#0c1210',border:'1px solid #34403a'}}>
         <ellipse cx={CX} cy={GROUND_Y+6} rx="72" ry="10" fill="rgba(0,0,0,.35)"/>
         <image href={FRAME_DIR+fr.file} x={imgX} y={imgY} width={dispW} height={DISPLAY_H} style={{imageRendering:'pixelated'}}/>
-        {locked&&<image href={ASSETS+'satellite_mid_elevation.png'} x="196" y="24" width="78" height={78*116/173} style={{imageRendering:'pixelated'}}/>}
+        {locked&&<image href={ASSETS+'scid.png'} x="176" y="34" width="98" height={98*222/520}/>}
         {bars.map((th,i)=><rect key={th} x={20+i*13} y={54-(10+i*7)} width="9" height={10+i*7} fill={strength>=th?'#c9ff4d':'#2a332f'} stroke="#1c2422" strokeWidth="1"/>)}
         <text x="150" y="292" textAnchor="middle" fontSize="9" fill={strength>=THRESH?'#c9ff4d':'#89948d'}>{locked?'DOWNLINK ESTABLISHED':strength>=THRESH?'SIGNAL PEAKED · LOCK IT IN':'SWEEP THE DISH · HILL-CLIMB THE SIGNAL'}</text>
       </svg>
