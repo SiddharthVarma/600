@@ -109,3 +109,238 @@
   </script>
 </body>
 </html>
+
+
+<!-- 
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SIX HUNDRED</title>
+<style>
+html,body{margin:0;height:100%;background:#050606;color:#eef4eb;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden}
+body{display:grid;place-items:center}
+canvas{display:block;width:100vw;height:100vh}
+#hud{position:fixed;inset:0;pointer-events:none}
+#top{position:absolute;top:24px;left:28px;letter-spacing:.22em;font-size:12px;color:#c9ff4d}
+#count{position:absolute;top:24px;right:28px;text-align:right;color:#6f7973;font-size:11px;line-height:1.6}
+#alert{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);border:1px solid #29312d;padding:10px 14px;color:#7d8781;background:rgba(5,6,6,.86);font-size:11px;letter-spacing:.12em;opacity:0;transition:opacity .3s}
+#alert.show{opacity:1}
+#repair{position:fixed;inset:0;background:rgba(0,0,0,.86);display:none;align-items:center;justify-content:center;z-index:10}
+#repair.open{display:flex}
+#repairbox{width:min(900px,92vw);height:min(720px,90vh);border:1px solid #39443e;background:#070909;box-shadow:0 0 60px rgba(0,0,0,.8);position:relative}
+#repair iframe{width:100%;height:100%;border:0}
+#close{position:absolute;right:12px;top:10px;z-index:2;border:1px solid #39443e;background:#070909;color:#8c9690;padding:6px 10px;font-family:inherit;font-size:11px;cursor:pointer}
+#close:hover{background:#c9ff4d;color:#070909}
+</style>
+</head>
+
+<body>
+
+<canvas id="space"></canvas>
+
+<div id="hud">
+  <div id="top">SIX HUNDRED</div>
+
+  <div id="count">
+    600 SATELLITES<br>
+    LEO CONSTELLATION<br>
+    <span id="status">NOMINAL</span>
+  </div>
+
+  <div id="alert"></div>
+</div>
+
+<div id="repair">
+  <div id="repairbox">
+    <button id="close">CLOSE</button>
+    <iframe id="repairFrame"></iframe>
+  </div>
+</div>
+
+<script>
+const canvas=document.getElementById('space');
+const ctx=canvas.getContext('2d');
+
+let W=innerWidth;
+let H=innerHeight;
+
+canvas.width=W*devicePixelRatio;
+canvas.height=H*devicePixelRatio;
+ctx.scale(devicePixelRatio,devicePixelRatio);
+
+const satellites=[];
+
+for(let i=0;i<600;i++){
+  satellites.push({
+    x:Math.random()*W,
+    y:Math.random()*H,
+    vx:(Math.random()-.5)*.08,
+    vy:(Math.random()-.5)*.08,
+    r:Math.random()<.03?1.5:1,
+    anomaly:false,
+    pulse:Math.random()*Math.PI*2
+  });
+}
+
+let anomalyIndex=Math.floor(Math.random()*satellites.length);
+satellites[anomalyIndex].anomaly=true;
+
+let frozen=false;
+
+function resize(){
+  W=innerWidth;
+  H=innerHeight;
+
+  canvas.width=W*devicePixelRatio;
+  canvas.height=H*devicePixelRatio;
+
+  ctx.setTransform(
+    devicePixelRatio,
+    0,
+    0,
+    devicePixelRatio,
+    0,
+    0
+  );
+}
+
+addEventListener('resize',resize);
+
+function draw(){
+  ctx.fillStyle='#050606';
+  ctx.fillRect(0,0,W,H);
+
+  for(let i=0;i<satellites.length;i++){
+    const s=satellites[i];
+
+    if(!frozen){
+      s.x+=s.vx;
+      s.y+=s.vy;
+
+      if(s.x<0)s.x=W;
+      if(s.x>W)s.x=0;
+      if(s.y<0)s.y=H;
+      if(s.y>H)s.y=0;
+
+      s.pulse+=.015;
+    }
+
+    const anomaly=s.anomaly;
+
+    if(anomaly){
+      const glow=0.35+
+        Math.sin(s.pulse*3)*0.2;
+
+      ctx.beginPath();
+      ctx.arc(s.x,s.y,5,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,89,100,${glow})`;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(s.x,s.y,2.4,0,Math.PI*2);
+      ctx.fillStyle='#ff5964';
+      ctx.fill();
+    }else{
+      ctx.beginPath();
+      ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle='#dbe5dc';
+      ctx.fill();
+    }
+  }
+
+  requestAnimationFrame(draw);
+}
+
+draw();
+
+const repair=document.getElementById('repair');
+const frame=document.getElementById('repairFrame');
+const close=document.getElementById('close');
+const alertBox=document.getElementById('alert');
+const status=document.getElementById('status');
+
+function showAlert(text){
+  alertBox.textContent=text;
+  alertBox.classList.add('show');
+
+  setTimeout(()=>{
+    alertBox.classList.remove('show');
+  },2600);
+}
+
+function openRepair(){
+  frozen=true;
+
+  status.textContent='ANOMALY DETECTED';
+  status.style.color='#ff5964';
+
+  frame.src='react.html?type=thruster';
+
+  repair.classList.add('open');
+}
+
+function closeRepair(){
+  repair.classList.remove('open');
+  frame.src='';
+  frozen=false;
+
+  status.textContent='ANOMALY DETECTED';
+  status.style.color='#ff5964';
+}
+
+canvas.addEventListener('click',e=>{
+  if(frozen)return;
+
+  const rect=canvas.getBoundingClientRect();
+
+  const x=e.clientX-rect.left;
+  const y=e.clientY-rect.top;
+
+  const index=satellites.findIndex(s=>{
+    return Math.hypot(
+      s.x-x,
+      s.y-y
+    )<10;
+  });
+
+  if(index===anomalyIndex){
+    showAlert('SATELLITE 421 · THRUSTER ARRAY FAULT');
+    setTimeout(openRepair,500);
+  }
+});
+
+close.addEventListener('click',closeRepair);
+
+window.addEventListener('message',e=>{
+  if(e.data?.type==='repair-complete'){
+    repair.classList.remove('open');
+    frame.src='';
+    frozen=false;
+
+    satellites[anomalyIndex].anomaly=false;
+
+    status.textContent='NOMINAL';
+    status.style.color='#c9ff4d';
+
+    showAlert('SATELLITE 421 · THRUSTER ARRAY RESTORED');
+
+    setTimeout(()=>{
+      anomalyIndex=Math.floor(
+        Math.random()*satellites.length
+      );
+
+      satellites.forEach(s=>s.anomaly=false);
+      satellites[anomalyIndex].anomaly=true;
+
+      status.textContent='ANOMALY DETECTED';
+      status.style.color='#ff5964';
+    },5000);
+  }
+});
+</script>
+
+</body>
+</html>
+ -->
