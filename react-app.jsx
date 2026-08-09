@@ -1,9 +1,9 @@
 const { useState, useEffect, useRef } = React;
 const shuffle = a => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[x[i], x[j]] = [x[j], x[i]] } return x };
 const allSubsets = n => { const res = []; for (let m = 1; m < (1 << n); m++) { const s = []; for (let b = 0; b < n; b++)if (m & (1 << b)) s.push(b); res.push(s) } return res };
-const PROCESS_POOL = ['PACKET RETRY', 'TELEMETRY CACHE', 'IMAGE PIPELINE', 'LOG AGGREGATOR', 'PAYLOAD INDEXER', 'MEMORY SCRUBBER', 'ATTITUDE SOLVER', 'THERMAL DAEMON', 'STAR TRACKER FEED', 'DOWNLINK BUFFER', 'EPHEMERIS CACHE', 'FAULT MONITOR'];
+const PROCESS_POOL = ['PACKET RETRY', 'TELEMETRY CACHE', 'IMAGE PIPELINE', 'LOG AGGREGATOR', 'PAYLOAD INDEXER', 'MEMORY SCRUBBER', 'ATTITUDE SOLVER', 'MOTION SCHEDULE', 'STAR TRACKER FEED', 'DOWNLINK BUFFER', 'EPHEMERIS CALCULATOR', 'FAULT MONITOR'];
 const games = [['thermal', 'THERMAL ROUTING', 'Valve sequencing'], ['power', 'POWER BUS', 'Route power by the numbers'], ['solar', 'SOLAR ALIGNMENT', 'Point at the sun'], ['contact', 'MISSED CONTACT', 'Hunt the signal peak'], ['wheel', 'REACTION WHEEL FAULT', 'Balance the torque'], ['process', 'PROCESS FAULT', 'Contain the leak in time'], ['orbit', 'ORBITAL BURN', 'Plot a transfer burn'], ['sensor', 'SENSOR FAULT', 'Find the outlier'], ['attitude', 'ATTITUDE DRIFT', 'Stabilize pointing'], ['startracker', 'STAR TRACKER LOCK', 'Rebuild the star field'], ['impact', 'MODULE IMPACT', 'Isolate the breach'], ['radiation', 'RADIATION EVENT', 'Wait it out']];
-function Frame({ type, setType, children }) { const embedded = Boolean(new URLSearchParams(location.search).get('type')); return <div className="app"><header className="top"><span className="brand">SIX HUNDRED / REPAIR LAB</span><span className="eyebrow">SAT 421 · MANUAL OVERRIDE</span></header><div className={'layout ' + (embedded ? 'embedded' : '')} style={embedded ? { display: 'block', marginTop: 0 } : {}}>{!embedded && <nav className="menu">{games.map(([id, name]) => <button key={id} className={type === id ? 'active' : ''} onClick={() => setType(id)}>{name}</button>)}</nav>}<main className="board" style={embedded ? { minHeight: '100%', border: 0 } : {}}>{children}</main></div></div> }
+function Frame({ type, setType, children, remaining, timedOut }) { const embedded = Boolean(new URLSearchParams(location.search).get('type')); return <div className="app"><header className="top"><span className="brand">SIX HUNDRED / REPAIR LAB</span><span className="eyebrow">SAT 421 · MANUAL OVERRIDE{remaining != null && !timedOut && <span style={{ color: remaining <= 10 ? 'var(--red)' : undefined, marginLeft: 10 }}>· REPAIR WINDOW {remaining}s</span>}</span></header><div className={'layout ' + (embedded ? 'embedded' : '')} style={embedded ? { display: 'block', marginTop: 0 } : {}}>{!embedded && <nav className="menu">{games.map(([id, name]) => <button key={id} className={type === id ? 'active' : ''} onClick={() => setType(id)}>{name}</button>)}</nav>}<main className="board" style={embedded ? { minHeight: '100%', border: 0 } : {}}>{children}</main></div></div> }
 function Header({ title, sub }) { return <><div className="eyebrow">Critical subsystem interaction</div><h1>{title}</h1><div className="signal">{sub}</div></> }
 function Result({ ok, children }) { const [sent, setSent] = useState(false); const finish = () => { if (!sent && window.parent !== window) { setSent(true); setTimeout(() => window.parent.postMessage({ type: 'repair-complete' }, '*'), 1200) } }; return children && <div className={ok ? 'success' : 'failure'}>{sent ? 'SUCCESSFUL EXECUTION' : children}{ok && <div className="actions"><button className="action" onClick={finish} disabled={sent}>{sent ? 'SUCCESSFUL EXECUTION' : 'EXECUTE'}</button></div>}</div> }
 function Thermal() {
@@ -103,7 +103,7 @@ function Power() {
     const [error, setError] = useState('');
     const busYs = [30, 110, 190, 270], loadYs = [30, 140, 250];
 
-    
+
     const toggleBus = i => { if (usedBuses.includes(i)) return; setStaged(s => s.includes(i) ? s.filter(x => x !== i) : [...s, i]); setError('') };
     const attemptLoad = li => {
         if (powered.includes(li)) return;
@@ -295,9 +295,9 @@ function ReactionWheel() {
     const ASSETS = '600_wheel_assets/';
     const WHEEL_ANGLES = [45, 135, 225, 315];
     const WHEEL_ASSETS = [{ file: 'wheel_nominal.png', w: 294, h: 340 }, { file: 'wheel_failed.png', w: 303, h: 340 }];
-    const LEVELS = [0, .5, 1];
+    const LEVELS = [0, .25, .5, .75, 1];
     const angleDelta = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d };
-    const ANGLE_TOL = 14, MAG_TOL = (m) => m * 0.2 + 0.12;
+    const ANGLE_TOL = 0.5, MAG_TOL = () => 0.01;
     const vecOf = lv => WHEEL_ANGLES.reduce((acc, ang, i) => { const p = lv[i] || 0; if (!p) return acc; const r = ang * Math.PI / 180; return { x: acc.x + Math.cos(r) * p, y: acc.y + Math.sin(r) * p } }, { x: 0, y: 0 });
     const allAssignments = avail => {
         let res = [{}];
@@ -357,23 +357,24 @@ function ReactionWheel() {
 
     return <>
         <Header title="REACTION WHEEL FAULT" sub={`WHEEL ${setup.failedIdx + 1} OFFLINE · UNCOMMANDED TUMBLE`} />
-        <p className="instructions">One reaction wheel has failed and can't be commanded. The satellite is drifting — click each working wheel to cycle its commanded speed (OFF · HALF · FULL) until the combined torque cancels the drift. Direction and magnitude both have to line up.</p>
+        <p className="instructions">One reaction wheel has failed and can't be commanded. The satellite is drifting — click each working wheel to cycle its commanded speed (OFF · 25% · 50% · 75% · 100%) until the combined torque cancels the drift. Direction and magnitude both have to line up.</p>
         <div style={{ display: 'grid', placeItems: 'center', margin: '24px 0' }}>
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: '#0c1210', border: '1px solid #34403a' }}>
                 <circle cx={CX} cy={CY} r="104" fill="none" stroke="#242c29" strokeDasharray="3 5" />
                 {arrow(driftAngle, 72, '#ff5964')}
-                {resMag > 0.05 && arrow(resAngle, Math.min(90, resMag * 45), closeEnough ? '#c9ff4d' : '#ffd166')}
-                <circle cx={CX} cy={CY} r="20" fill="#141d1a" stroke="#5c6b64" strokeWidth="3" />
+                {resMag > 0.05 && arrow(resAngle, Math.min(56, 22 + resMag * 38), closeEnough ? '#c9ff4d' : '#ffd166')}
+                <circle cx={CX} cy={CY} r="16" fill="#141d1a" stroke="#5c6b64" strokeWidth="3" />
                 {WHEEL_ANGLES.map((ang, i) => {
                     const failed = i === setup.failedIdx, p = levels[i] || 0;
                     const asset = WHEEL_ASSETS[failed ? 1 : 0];
                     const dispH = 64, dispW = dispH * asset.w / asset.h;
                     const [wx, wy] = polar(ang, 104);
-                    const ringColor = p === 1 ? '#c9ff4d' : p === .5 ? '#ffd166' : null;
+                    const ringColor = p === 1 ? '#c9ff4d' : p === .75 ? '#d9f75f' : p === .5 ? '#ffd166' : p === .25 ? '#ff9f5a' : null;
+                    const ringFill = p === 1 ? 'rgba(201,255,77,.22)' : p === .75 ? 'rgba(217,247,95,.2)' : p === .5 ? 'rgba(255,209,102,.16)' : p === .25 ? 'rgba(255,159,90,.14)' : null;
                     return <g key={i} onClick={() => cycle(i)} style={{ cursor: failed ? 'default' : 'pointer' }}>
-                        {ringColor && <circle cx={wx} cy={wy} r={dispH * 0.62} fill={p === 1 ? 'rgba(201,255,77,.22)' : 'rgba(255,209,102,.16)'} stroke={ringColor} strokeWidth="2" />}
+                        {ringColor && <circle cx={wx} cy={wy} r={dispH * 0.62} fill={ringFill} stroke={ringColor} strokeWidth="2" />}
                         <image href={ASSETS + asset.file} x={wx - dispW / 2} y={wy - dispH / 2} width={dispW} height={dispH} />
-                        {!failed && <text x={wx} y={wy + dispH / 2 + 16} textAnchor="middle" fontSize="9" fill={ringColor || '#5c6b64'}>{p === 1 ? 'FULL' : p === .5 ? 'HALF' : 'OFF'}</text>}
+                        {!failed && <text x={wx} y={wy + dispH / 2 + 16} textAnchor="middle" fontSize="9" fill={ringColor || '#5c6b64'}>{p === 1 ? '100%' : p === .75 ? '75%' : p === .5 ? '50%' : p === .25 ? '25%' : 'OFF'}</text>}
                     </g>;
                 })}
                 <text x="150" y="292" textAnchor="middle" fontSize="9" fill={closeEnough ? '#c9ff4d' : '#89948d'}>{closeEnough ? 'CORRECTION ALIGNED · READY TO FIRE' : 'CYCLE WHEEL SPEED · MATCH DIRECTION AND MAGNITUDE'}</text>
@@ -524,7 +525,7 @@ function Orbit() {
     const satStart = polar(cfg.startAngle, cfg.r1);
     const points = end => {
         const [ex, ey] = polar(end.angle, end.dist);
-        const da = ((end.angle - cfg.startAngle + 540) % 360) - 180, midAngle = cfg.startAngle + da / 2;
+        const da = (end.angle - cfg.startAngle + 360) % 360, midAngle = cfg.startAngle + da / 2;
         const midR = Math.max(20, Math.max(cfg.r1, end.dist) + (cfg.raiseMode ? 26 : -16));
         const [mx, my] = polar(midAngle, midR);
         return [satStart, [mx, my], [ex, ey]];
@@ -625,7 +626,7 @@ function Orbit() {
         </div>
         <div className="readout" style={{ color: readoutColor }}>{readoutText}</div>
         <div className="legend"><span><i className="dot green" />INSERTION WINDOW</span><span><i className="dot redbg" />MIN SAFE ALTITUDE</span></div>
-        {stage === 'plot' && locked && <div className="actions"><button className="action" onClick={() => setStage('approach')}>IGNITE TRANSFER BURN</button><button className="action" onClick={() => { setLocked(null); setError('') }}>REPLOT</button></div>}
+        {stage === 'plot' && locked && <div className="actions"><button className="action" onClick={() => setStage('approach')}>ORBIT RAISING MANEUVER</button><button className="action" onClick={() => { setLocked(null); setError('') }}>REPLOT</button></div>}
         {stage === 'coast' && <div className="actions"><button className="action" style={{ borderColor: inWindow ? 'var(--green)' : nearWindow ? 'var(--yellow)' : '#39453f', color: inWindow ? 'var(--green)' : nearWindow ? 'var(--yellow)' : '#85908a' }} onClick={fireCircularization}>FIRE CIRCULARIZATION BURN</button></div>}
         {stage === 'success' ? <div className="success">CIRCULARIZATION ACCURATE · ORBIT {cfg.raiseMode ? 'RAISED' : 'LOWERED'} INTO HOME PLANE</div> : (error && stage === 'plot') ? <div className="failure">{error}</div> : null}
     </>;
@@ -720,5 +721,28 @@ function StarTracker() {
 }
 function Impact() { const [pick, setPick] = useState(null), [fault] = useState(() => shuffle(['COMMS', 'POWER', 'THERMAL', 'PAYLOAD', 'GUIDANCE', 'BATTERY'])[0]); return <><Header title="MODULE IMPACT" sub="PRESSURE LOSS · STRUCTURAL BREACH DETECTED" /><p className="instructions">Isolate the damaged module before the pressure loss spreads. The breach location varies by incident.</p><div className="pixel-grid">{['COMMS', 'POWER', 'THERMAL', 'PAYLOAD', 'GUIDANCE', 'BATTERY'].map(x => <button className={'module ' + (pick === x ? (x === fault ? 'done' : 'fail') : '')} onClick={() => setPick(x)} key={x}>{x}</button>)}</div><Result ok={pick === fault}>{pick === fault ? 'MODULE ISOLATED · PRESSURE STABLE' : 'Trace the pressure-loss indicator to the damaged module.'}</Result></> }
 function Radiation() { const [t, setT] = useState(0); useEffect(() => { if (t > 0) { const id = setTimeout(() => setT(t - 1), 1000); return () => clearTimeout(id) } }, [t]); return <><Header title="RADIATION EVENT" sub="SOLAR PARTICLE FLUX ELEVATED" /><p className="instructions">This is a transient event. Enter shielding protocol, then wait. Intervening too early risks unnecessary degradation.</p><div className="readout">{t ? `FLUX FALLING · ${t}s` : 'FLUX NOMINAL'}</div><button className="action" onClick={() => setT(8)} disabled={t > 0}>{t ? 'WAITING FOR CLEAR' : 'ENTER SHIELDING PROTOCOL'}</button><Result ok={t === 0 && false}>{t === 0 ? 'Wait for the event to pass without cycling power.' : ''}</Result></> }
-function App() { const requested = new URLSearchParams(location.search).get('type'); const [type, setType] = useState(games.some(g => g[0] === requested) ? requested : 'thermal'); const C = { thermal: Thermal, power: Power, solar: Solar, contact: Contact, wheel: ReactionWheel, process: Process, orbit: Orbit, sensor: Sensor, attitude: Attitude, startracker: StarTracker, impact: Impact, radiation: Radiation }[type]; return <Frame type={type} setType={setType}><C /></Frame> }; ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+function App() {
+  const params = new URLSearchParams(location.search);
+  const requested = params.get('type');
+  const [type, setType] = useState(games.some(g => g[0] === requested) ? requested : 'thermal');
+  const [remaining, setRemaining] = useState(() => { const n = parseInt(params.get('deadline'), 10); return Number.isFinite(n) && n > 0 ? n : null });
+  const [timedOut, setTimedOut] = useState(false);
+  useEffect(() => {
+    if (remaining == null || timedOut) return;
+    const id = setTimeout(() => {
+      if (remaining <= 1) { setTimedOut(true); setRemaining(0) }
+      else setRemaining(remaining - 1);
+    }, 1000);
+    return () => clearTimeout(id);
+  }, [remaining, timedOut]);
+  useEffect(() => {
+    if (!timedOut) return;
+    if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-failed' }, '*'), 2200); return () => clearTimeout(id) }
+  }, [timedOut]);
+  const C = { thermal: Thermal, power: Power, solar: Solar, contact: Contact, wheel: ReactionWheel, process: Process, orbit: Orbit, sensor: Sensor, attitude: Attitude, startracker: StarTracker, impact: Impact, radiation: Radiation }[type];
+  return <Frame type={type} setType={setType} remaining={remaining} timedOut={timedOut}>
+    {timedOut ? <div className="failure" style={{ margin: '60px 0', fontSize: 14, letterSpacing: '.03em' }}>SATELLITE COMMANDED TOO LATE · SATELLITE LOST</div> : <C />}
+  </Frame>
+};
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 
