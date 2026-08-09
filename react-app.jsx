@@ -385,7 +385,7 @@ function ReactionWheel() {
     </>;
 }
 function Process() {
-    const BASE = 30, RATE = 70 / 180, WRONG_PENALTY = 16;
+    const BASE = 30, RATE = 70 / 180, WRONG_PENALTY = 28;
     const [setup] = useState(() => {
         const six = shuffle(PROCESS_POOL).slice(0, 6);
         const leakArr = shuffle(six).slice(0, 3);
@@ -411,7 +411,15 @@ function Process() {
         if (phase !== 'run') return;
         let raf, t0 = null, lastSampleT = -1, localSeries = {};
         setup.six.forEach(p => localSeries[p] = []);
-        let cpuHist = [], curCPU = BASE;
+        let cpuHist = [], curCPU = BASE, smoothedSecs = null;
+        const regressionSlope = hist => {
+            const n = hist.length;
+            if (n < 2) return 0;
+            const tMean = hist.reduce((s, p) => s + p.t, 0) / n, cMean = hist.reduce((s, p) => s + p.cpu, 0) / n;
+            let num = 0, den = 0;
+            hist.forEach(p => { num += (p.t - tMean) * (p.cpu - cMean); den += (p.t - tMean) ** 2 });
+            return den ? num / den : 0;
+        };
         const step = ts => {
             if (t0 == null) t0 = ts;
             const elapsed = (ts - t0) / 1000;
@@ -442,12 +450,13 @@ function Process() {
                 cpuHist.push({ t: elapsed, cpu: dispCPU });
                 if (cpuHist.length > 6) cpuHist.shift();
                 if (cpuHist.length >= 2) {
-                    const a = cpuHist[0], b = cpuHist[cpuHist.length - 1];
-                    const r = (b.cpu - a.cpu) / ((b.t - a.t) || 1);
-                    if (r <= .15) setRateInfo({ text: 'STABLE', stable: true });
+                    const r = regressionSlope(cpuHist);
+                    if (r <= .3 && dispCPU < 55) { setRateInfo({ text: 'STABLE', stable: true }); smoothedSecs = null }
+                    else if (r <= .3) { setRateInfo({ text: 'ELEVATED · NO MARGIN', stable: false }); smoothedSecs = null }
                     else {
                         const secs = (100 - dispCPU) / r;
-                        setRateInfo({ text: secs > 599 ? '>10:00' : `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`, stable: false });
+                        smoothedSecs = smoothedSecs == null ? secs : smoothedSecs * .7 + secs * .3;
+                        setRateInfo({ text: smoothedSecs > 599 ? '>10:00' : `${Math.floor(smoothedSecs / 60)}:${String(Math.floor(smoothedSecs % 60)).padStart(2, '0')}`, stable: false });
                     }
                 }
             }
@@ -461,7 +470,7 @@ function Process() {
                     setStopped([]);
                     setFlash(true);
                     setTimeout(() => setFlash(false), 1600);
-                    t0 = null; lastSampleT = -1; curCPU = BASE; cpuHist = [];
+                    t0 = null; lastSampleT = -1; curCPU = BASE; cpuHist = []; smoothedSecs = null;
                     localSeries = {}; setup.six.forEach(p => localSeries[p] = []);
                     setSeries({ ...localSeries });
                     setDisplayCPU(BASE);
