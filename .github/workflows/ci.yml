@@ -17,7 +17,7 @@ jobs:
           node-version: 20
 
       - name: Check react-app.jsx syntax (JSX-aware)
-        run: npx --yes esbuild react-app.jsx --loader=jsx --outfile=/dev/null
+        run: npx --yes esbuild react-app.jsx --outfile=/dev/null
 
       - name: Check index.html inline script syntax
         run: |
