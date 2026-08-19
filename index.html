@@ -5,6 +5,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Six Hundred — Mission Control</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛰️</text></svg>" />
   <style>
     :root {
       --bg: #050607;
@@ -513,6 +514,7 @@
       const available = satellites.filter(s => !s.lost && !s.anomaly);
       if (available.length < 5) return;
       grbActive = true;
+      if (document.getElementById('repairModal').classList.contains('show')) closeRepair();
       document.getElementById('grbWarning').classList.add('show');
       setTimeout(() => {
         document.getElementById('grbWarning').classList.remove('show');
