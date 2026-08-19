@@ -2,8 +2,8 @@ const { useState, useEffect, useRef } = React;
 const shuffle = a => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[x[i], x[j]] = [x[j], x[i]] } return x };
 const allSubsets = n => { const res = []; for (let m = 1; m < (1 << n); m++) { const s = []; for (let b = 0; b < n; b++)if (m & (1 << b)) s.push(b); res.push(s) } return res };
 const PROCESS_POOL = ['PACKET RETRY', 'TELEMETRY CACHE', 'IMAGE PIPELINE', 'LOG AGGREGATOR', 'PAYLOAD INDEXER', 'MEMORY SCRUBBER', 'ATTITUDE SOLVER', 'MOTION SCHEDULE', 'STAR TRACKER FEED', 'DOWNLINK BUFFER', 'EPHEMERIS CALCULATOR', 'FAULT MONITOR'];
-const games = [['thermal', 'THERMAL ROUTING', 'Valve sequencing'], ['power', 'POWER BUS', 'Route power by the numbers'], ['solar', 'SOLAR ALIGNMENT', 'Point at the sun'], ['contact', 'MISSED CONTACT', 'Hunt the signal peak'], ['wheel', 'REACTION WHEEL FAULT', 'Balance the torque'], ['process', 'PROCESS FAULT', 'Contain the leak in time'], ['orbit', 'ORBITAL BURN', 'Plot a transfer burn'], ['sensor', 'SENSOR FAULT', 'Find the outlier'], ['attitude', 'ATTITUDE DRIFT', 'Stabilize pointing'], ['startracker', 'STAR TRACKER LOCK', 'Rebuild the star field'], ['impact', 'MODULE IMPACT', 'Isolate the breach'], ['radiation', 'RADIATION EVENT', 'Wait it out']];
-function Frame({ type, setType, children, remaining, timedOut }) { const embedded = Boolean(new URLSearchParams(location.search).get('type')); return <div className="app"><header className="top"><span className="brand">SIX HUNDRED / REPAIR LAB</span><span className="eyebrow">SAT 421 · MANUAL OVERRIDE{remaining != null && !timedOut && <span style={{ color: remaining <= 10 ? 'var(--red)' : undefined, marginLeft: 10 }}>· REPAIR WINDOW {remaining}s</span>}</span></header><div className={'layout ' + (embedded ? 'embedded' : '')} style={embedded ? { display: 'block', marginTop: 0 } : {}}>{!embedded && <nav className="menu">{games.map(([id, name]) => <button key={id} className={type === id ? 'active' : ''} onClick={() => setType(id)}>{name}</button>)}</nav>}<main className="board" style={embedded ? { minHeight: '100%', border: 0 } : {}}>{children}</main></div></div> }
+const games = [['thermal', 'THERMAL ROUTING', 'Valve sequencing'], ['power', 'POWER BUS', 'Route power by the numbers'], ['solar', 'SOLAR ALIGNMENT', 'Point at the sun'], ['contact', 'MISSED CONTACT', 'Hunt the signal peak'], ['wheel', 'REACTION WHEEL FAULT', 'Balance the torque'], ['process', 'PROCESS FAULT', 'Contain the leak in time'], ['orbit', 'ORBITAL BURN', 'Plot a transfer burn'], ['sensor', 'SENSOR FAULT', 'Find the outlier'], ['attitude', 'ATTITUDE DRIFT', 'Stabilize pointing'], ['startracker', 'STAR TRACKER LOCK', 'Rebuild the star field'], ['impact', 'MODULE IMPACT', 'Isolate the breach'], ['radiation', 'RADIATION EVENT', 'Wait it out'], ['bitflip', 'HAMMING CODE FAULT', 'GRB event · correct the bit flips']];
+function Frame({ type, setType, children, remaining, timedOut }) { const params = new URLSearchParams(location.search); const embedded = Boolean(params.get('type')); const multi = Boolean(params.get('sats')); const satId = params.get('sat'); const satLabel = multi ? 'MULTIPLE SATELLITES · EMERGENCY OVERRIDE' : satId ? `SAT ${String(satId).padStart(3, '0')} · MANUAL OVERRIDE` : 'SAT 421 · MANUAL OVERRIDE'; return <div className="app"><header className="top"><span className="brand">SIX HUNDRED / REPAIR LAB</span><span className="eyebrow">{satLabel}{remaining != null && !timedOut && <span style={{ color: remaining <= 10 ? 'var(--red)' : undefined, marginLeft: 10 }}>· REPAIR WINDOW {remaining}s</span>}</span></header><div className={'layout ' + (embedded ? 'embedded' : '')} style={embedded ? { display: 'block', marginTop: 0 } : {}}>{!embedded && <nav className="menu">{games.map(([id, name]) => <button key={id} className={type === id ? 'active' : ''} onClick={() => setType(id)}>{name}</button>)}</nav>}<main className="board" style={embedded ? { minHeight: '100%', border: 0 } : {}}>{children}</main></div></div> }
 function Header({ title, sub }) { return <><div className="eyebrow">Critical subsystem interaction</div><h1>{title}</h1><div className="signal">{sub}</div></> }
 function Result({ ok, children }) { const [sent, setSent] = useState(false); const finish = () => { if (!sent && window.parent !== window) { setSent(true); setTimeout(() => window.parent.postMessage({ type: 'repair-complete' }, '*'), 1200) } }; return children && <div className={ok ? 'success' : 'failure'}>{sent ? 'SUCCESSFUL EXECUTION' : children}{ok && <div className="actions"><button className="action" onClick={finish} disabled={sent}>{sent ? 'SUCCESSFUL EXECUTION' : 'EXECUTE'}</button></div>}</div> }
 function Thermal() {
@@ -730,6 +730,120 @@ function StarTracker() {
 }
 function Impact() { const [pick, setPick] = useState(null), [fault] = useState(() => shuffle(['COMMS', 'POWER', 'THERMAL', 'PAYLOAD', 'GUIDANCE', 'BATTERY'])[0]); return <><Header title="MODULE IMPACT" sub="PRESSURE LOSS · STRUCTURAL BREACH DETECTED" /><p className="instructions">Isolate the damaged module before the pressure loss spreads. The breach location varies by incident.</p><div className="pixel-grid">{['COMMS', 'POWER', 'THERMAL', 'PAYLOAD', 'GUIDANCE', 'BATTERY'].map(x => <button className={'module ' + (pick === x ? (x === fault ? 'done' : 'fail') : '')} onClick={() => setPick(x)} key={x}>{x}</button>)}</div><Result ok={pick === fault}>{pick === fault ? 'MODULE ISOLATED · PRESSURE STABLE' : 'Trace the pressure-loss indicator to the damaged module.'}</Result></> }
 function Radiation() { const [t, setT] = useState(0); useEffect(() => { if (t > 0) { const id = setTimeout(() => setT(t - 1), 1000); return () => clearTimeout(id) } }, [t]); return <><Header title="RADIATION EVENT" sub="SOLAR PARTICLE FLUX ELEVATED" /><p className="instructions">This is a transient event. Enter shielding protocol, then wait. Intervening too early risks unnecessary degradation.</p><div className="readout">{t ? `FLUX FALLING · ${t}s` : 'FLUX NOMINAL'}</div><button className="action" onClick={() => setT(8)} disabled={t > 0}>{t ? 'WAITING FOR CLEAR' : 'ENTER SHIELDING PROTOCOL'}</button><Result ok={t === 0 && false}>{t === 0 ? 'Wait for the event to pass without cycling power.' : ''}</Result></> }
+function genHammingWord() {
+  // builds a genuine valid Hamming(7,4) codeword: 4 free data bits at
+  // positions 3,5,6,7, with 3 check bits at positions 1,2,4 chosen so every
+  // overlapping parity check comes out even (i.e. a "clean" register).
+  const d = [Math.random() < .5 ? 1 : 0, Math.random() < .5 ? 1 : 0, Math.random() < .5 ? 1 : 0, Math.random() < .5 ? 1 : 0];
+  const b = Array(8).fill(0);
+  b[3] = d[0]; b[5] = d[1]; b[6] = d[2]; b[7] = d[3];
+  b[1] = b[3] ^ b[5] ^ b[7];
+  b[2] = b[3] ^ b[6] ^ b[7];
+  b[4] = b[5] ^ b[6] ^ b[7];
+  return b.slice(1); // index 0..6 = bit position 1..7
+}
+function hammingSyndrome(bits) {
+  const c1 = bits[0] ^ bits[2] ^ bits[4] ^ bits[6];
+  const c2 = bits[1] ^ bits[2] ^ bits[5] ^ bits[6];
+  const c3 = bits[3] ^ bits[4] ^ bits[5] ^ bits[6];
+  return { c1, c2, c3, pos: c1 * 1 + c2 * 2 + c3 * 4 }; // pos 0 = no error, else the exact corrupted bit (1-7)
+}
+function HammingRow({ label, bits, syn, onToggle, disabled, reference, restored }) {
+  const ok = restored != null ? restored : syn.pos === 0;
+  return <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '8px 0', borderLeft: '2px solid ' + (ok ? 'transparent' : 'var(--red)'), paddingLeft: 10, borderBottom: '1px solid #1c2422', flexWrap: 'wrap' }}>
+    <div style={{ width: 78, fontSize: 11, color: reference ? '#7b8580' : '#9aa39c' }}>{label}</div>
+    <div style={{ display: 'flex', gap: 4 }}>
+      {bits.map((b, i) => <button key={i} onClick={() => onToggle(i)} disabled={disabled} style={{ width: 26, height: 26, border: '1px solid #39453f', background: b ? '#1c2b16' : '#0d1211', color: b ? 'var(--green)' : '#5c6b64', fontSize: 12, cursor: disabled ? 'default' : 'pointer' }}>{b}</button>)}
+    </div>
+    <div style={{ display: 'flex', gap: 8, fontSize: 10 }}>
+      <span style={{ color: syn.c1 ? 'var(--red)' : 'var(--green)' }}>C1:{syn.c1 ? '✕' : '✓'}</span>
+      <span style={{ color: syn.c2 ? 'var(--red)' : 'var(--green)' }}>C2:{syn.c2 ? '✕' : '✓'}</span>
+      <span style={{ color: syn.c3 ? 'var(--red)' : 'var(--green)' }}>C3:{syn.c3 ? '✕' : '✓'}</span>
+    </div>
+    <div style={{ fontSize: 10, color: ok ? 'var(--green)' : 'var(--red)', minWidth: 100 }}>{ok ? 'NO ERROR' : 'ERROR DETECTED'}</div>
+  </div>;
+}
+function BitFlip() {
+  const TIME = 100;
+  const [setup] = useState(() => {
+    const idsParam = new URLSearchParams(location.search).get('sats');
+    const ids = idsParam ? idsParam.split(',').filter(Boolean) : Array.from({ length: 5 }, () => String(100 + Math.floor(Math.random() * 900)));
+    const ref = genHammingWord();
+    const sats = ids.map(rawId => {
+      const id = 'SAT ' + String(rawId).padStart(3, '0');
+      const original = genHammingWord();
+      const corruptPos = 1 + Math.floor(Math.random() * 7);
+      const bits = [...original];
+      bits[corruptPos - 1] ^= 1;
+      return { id: id, satId: rawId, original, bits, corruptPos };
+    });
+    return { ref, sats };
+  });
+  // fixPos[i] = the single bit position (1-7) currently flipped back for satellite i, or null if untouched.
+  // Only ever one bit differs from the true corrupted state, so a clean syndrome and a correct fix are
+  // mathematically the same thing -- there's no way to land on a different, coincidentally-valid word.
+  const [fixPos, setFixPos] = useState(() => setup.sats.map(() => null));
+  const [phase, setPhase] = useState('run'); // run | done
+  const [remaining, setRemaining] = useState(TIME);
+
+  useEffect(() => {
+    if (phase !== 'run') return;
+    if (remaining <= 0) { setPhase('done'); return }
+    const id = setTimeout(() => setRemaining(r => r - 1), 1000);
+    return () => clearTimeout(id);
+  }, [remaining, phase]);
+
+  const bitsState = setup.sats.map((s, si) => {
+    const b = [...s.bits];
+    if (fixPos[si] != null) b[fixPos[si] - 1] ^= 1;
+    return b;
+  });
+
+  const toggle = (si, bi) => {
+    if (phase !== 'run') return;
+    const pos = bi + 1;
+    setFixPos(fp => fp.map((p, i) => i === si ? (p === pos ? null : pos) : p));
+  };
+
+  const results = bitsState.map(bits => hammingSyndrome(bits));
+  const restored = setup.sats.map((s, i) => fixPos[i] === s.corruptPos);
+  const fixedCount = restored.filter(Boolean).length;
+
+  useEffect(() => {
+    if (fixedCount === 5 && phase === 'run') setPhase('done');
+  }, [fixedCount, phase]);
+
+  useEffect(() => {
+    if (phase !== 'done') return;
+    if (window.parent !== window) {
+      const id = setTimeout(() => {
+        const results = setup.sats.map((s, i) => ({ satId: s.satId, fixed: restored[i] }));
+        window.parent.postMessage({ type: 'grb-resolved', results }, '*');
+      }, 1400);
+      return () => clearTimeout(id);
+    }
+  }, [phase]);
+
+  const refSyn = hammingSyndrome(setup.ref);
+
+  return <>
+    <Header title="GAMMA RAY BURST" sub={`HAMMING CODE ERROR CORRECTION · ${remaining}s REMAINING`} />
+    <p className="instructions">A gamma-ray burst has flipped one bit in each affected satellite's memory register. Every register runs a Hamming code — three overlapping checksum bits (C1/C2/C3), each covering a different set of bit positions. Work out which bit is wrong from which checks fail, then click it to flip it back before the window closes.</p>
+    <div style={{ fontSize: 10, color: '#7b8580', lineHeight: 1.8, margin: '10px 0', border: '1px solid #1c2422', padding: '10px 12px' }}>
+      C1 covers bits 1,3,5,7 &nbsp;·&nbsp; C2 covers bits 2,3,6,7 &nbsp;·&nbsp; C3 covers bits 4,5,6,7 — a check fails if an odd number of its bits are wrong.<br />
+      Only C1 fails → bit 1 &nbsp;·&nbsp; only C2 → bit 2 &nbsp;·&nbsp; C1+C2 → bit 3 &nbsp;·&nbsp; only C3 → bit 4 &nbsp;·&nbsp; C1+C3 → bit 5 &nbsp;·&nbsp; C2+C3 → bit 6 &nbsp;·&nbsp; all three → bit 7
+    </div>
+    <div style={{ marginTop: 18 }}>
+      <div style={{ fontSize: 11, letterSpacing: '.14em', color: '#7b8580', marginBottom: 6 }}>EXAMPLE · CLEAN READING</div>
+      <HammingRow label="REF 000" bits={setup.ref} syn={refSyn} onToggle={() => { }} disabled reference />
+    </div>
+    <div style={{ marginTop: 18, display: 'grid', gap: 2 }}>
+      <div style={{ fontSize: 11, letterSpacing: '.14em', color: '#7b8580', marginBottom: 6 }}>AFFECTED SATELLITES</div>
+      {setup.sats.map((s, si) => <HammingRow key={s.id} label={s.id} bits={bitsState[si]} syn={results[si]} restored={restored[si]} onToggle={bi => toggle(si, bi)} disabled={phase !== 'run'} />)}
+    </div>
+    {phase === 'done' && <div className={fixedCount === 5 ? 'success' : 'failure'}>{fixedCount === 5 ? 'ALL REGISTERS RESTORED · HAMMING CODE VALIDATED' : `${fixedCount}/5 SATELLITES RECOVERED · ${5 - fixedCount} LOST TO UNCORRECTED BIT ERRORS`}</div>}
+  </>;
+}
 function App() {
   const params = new URLSearchParams(location.search);
   const requested = params.get('type');
@@ -748,7 +862,7 @@ function App() {
     if (!timedOut) return;
     if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-failed' }, '*'), 2200); return () => clearTimeout(id) }
   }, [timedOut]);
-  const C = { thermal: Thermal, power: Power, solar: Solar, contact: Contact, wheel: ReactionWheel, process: Process, orbit: Orbit, sensor: Sensor, attitude: Attitude, startracker: StarTracker, impact: Impact, radiation: Radiation }[type];
+  const C = { thermal: Thermal, power: Power, solar: Solar, contact: Contact, wheel: ReactionWheel, process: Process, orbit: Orbit, sensor: Sensor, attitude: Attitude, startracker: StarTracker, impact: Impact, radiation: Radiation, bitflip: BitFlip }[type];
   return <Frame type={type} setType={setType} remaining={remaining} timedOut={timedOut}>
     {timedOut ? <div className="failure" style={{ margin: '60px 0', fontSize: 14, letterSpacing: '.03em' }}>SATELLITE COMMANDED TOO LATE · SATELLITE LOST</div> : <C />}
   </Frame>
