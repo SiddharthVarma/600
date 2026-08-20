@@ -430,6 +430,15 @@
       <p>Memory corruption imminent across multiple satellites. Bracing for impact.</p>
     </div>
   </div>
+  <div class="repair-modal" id="debrisModal"><iframe class="repair-frame" id="debrisFrame"
+      title="Collision avoidance emergency response"></iframe></div>
+  <div class="modal" id="debrisWarning">
+    <div class="modal-box" style="text-align:center;border-color:var(--danger)">
+      <div class="eyebrow" style="color:var(--danger)">Orbital plane alert</div>
+      <h1 style="font-size:20px;color:var(--danger)">COLLISION ALERT · DEBRIS FIELD DETECTED</h1>
+      <p>A rival operator's satellite has broken apart. Wreckage is crossing the orbital plane. Bracing for impact.</p>
+    </div>
+  </div>
   <div class="modal" id="gameOver">
     <div class="modal-box">
       <div class="eyebrow">Constellation status</div>
@@ -443,7 +452,7 @@
     const canvas = document.getElementById('constellation'), ctx = canvas.getContext('2d'), panel = document.getElementById('panel');
     const earthImg = new Image(); earthImg.src = '600_earth_assets/earth.png';
     const chart = document.getElementById('chart'), cctx = chart.getContext('2d');
-    let W, H, dpr, selected = null, paused = 0, lastAnomalyType = 'thermal', anomalyBag = [], grbActive = false;
+    let W, H, dpr, selected = null, paused = 0, lastAnomalyType = 'thermal', anomalyBag = [], grbActive = false, debrisActive = false;
     const satellites = Array.from({ length: 600 }, (_, i) => ({ id: i + 1, a: (Math.floor(i / 10) / 60) * Math.PI * 2 + (i % 10) * .018, ring: i % 10, r: .15 + (i % 10) * .038, speed: (.00006 + (i % 10) * .000004) * (i % 2 ? -1 : 1), phase: 0, anomaly: false, anomalyType: null, countdown: 0, lost: false, rejoining: false, rejoinProgress: 0, values: { RSSI: 82, TEMPERATURE: 71, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 } }));
     function updateNetwork() { const active = satellites.filter(s => !s.lost).length; const network = document.getElementById('network'); network.textContent = `CONSTELLATION ${active === 600 ? 'NOMINAL' : 'DEGRADED'} · ${active}/600`; if (active === 0) document.getElementById('gameOver').classList.add('show'); }
     document.getElementById('restartAll').onclick = () => {
@@ -452,6 +461,9 @@
       grbActive = false; window.__grbSats = null;
       document.getElementById('grbModal').classList.remove('show'); document.getElementById('grbFrame').src = '';
       document.getElementById('grbWarning').classList.remove('show');
+      debrisActive = false; window.__debrisSats = null;
+      document.getElementById('debrisModal').classList.remove('show'); document.getElementById('debrisFrame').src = '';
+      document.getElementById('debrisWarning').classList.remove('show');
       document.getElementById('gameOver').classList.remove('show');
       panel.classList.remove('open');
       document.getElementById('hint').textContent = 'select a satellite to investigate';
@@ -473,12 +485,12 @@
     const chartConfigs = { TEMPERATURE: { title: 'TEMPERATURE / HISTORY', threshold: .70 }, POWER: { title: 'POWER OUTPUT / HISTORY', threshold: .55 }, BATTERY: { title: 'BATTERY PACK / HISTORY', threshold: .35 }, RSSI: { title: 'RSSI / CONTACT HISTORY', threshold: .68 }, CPU: { title: 'CPU LOAD / HISTORY', threshold: .85 }, ALTITUDE: { title: 'ORBITAL ALTITUDE / HISTORY', threshold: .35 }, TORQUE: { title: 'TORQUE MARGIN / HISTORY', threshold: .40 } };
     function renderSat(s) { document.getElementById('satName').textContent = `SATELLITE ${String(s.id).padStart(3, '0')}`; document.getElementById('orbit').textContent = `PLANE / ${String(s.ring + 1).padStart(2, '0')}`; const label = s.anomalyType === 'orbit' ? 'ORBITAL DECAY' : s.anomalyType === 'solar' ? 'SOLAR ARRAY MISALIGNED' : s.anomalyType === 'startracker' ? 'STAR TRACKER LOST LOCK' : s.anomalyType === 'contact' ? 'MISSED CONTACT WINDOW' : s.anomalyType === 'wheel' ? 'REACTION WHEEL FAULT' : s.anomalyType === 'power' ? 'POWER INSTABILITY' : s.anomalyType === 'process' ? 'PROCESS FAULT' : s.anomaly ? 'DEGRADED' : 'NOMINAL'; document.getElementById('status').textContent = `STATUS: ${label}`; document.getElementById('status').className = 'status ' + (s.anomaly ? 'degraded' : 'ok'); const el = document.getElementById('telemetry'); el.innerHTML = ''; Object.entries(s.values).forEach(([k, v]) => { const row = document.createElement('div'); row.className = 'metric ' + ((s.anomaly && ((s.anomalyType === 'thermal' && k === 'TEMPERATURE') || (s.anomalyType === 'orbit' && k === 'POWER') || (s.anomalyType === 'solar' && k === 'POWER') || (s.anomalyType === 'wheel' && k === 'TORQUE') || (s.anomalyType === 'startracker' && k === 'BATTERY') || (s.anomalyType === 'contact' && k === 'RSSI'))) ? 'hot' : ''); row.innerHTML = `<div class="metric-head"><span class="metric-name">${k}</span><span class="metric-value">${k === 'RSSI' ? '-' + v + ' dBm' : k === 'TEMPERATURE' ? v + '°C' : v + '%'}</span></div><div class="bar"><i style="width:${Math.min(v, 100)}%"></i></div>`; row.onclick = () => { drawChart(k, v, s.anomalyType) }; el.appendChild(row) }); const defaultKey = s.anomalyType === 'thermal' ? 'TEMPERATURE' : (s.anomalyType === 'power' || s.anomalyType === 'solar') ? 'POWER' : s.anomalyType === 'wheel' ? 'TORQUE' : s.anomalyType === 'startracker' ? 'BATTERY' : s.anomalyType === 'contact' ? 'RSSI' : s.anomalyType === 'process' ? 'CPU' : s.anomalyType === 'orbit' ? 'ALTITUDE' : 'TEMPERATURE'; drawChart(defaultKey, defaultKey === 'ALTITUDE' ? 100 : s.values[defaultKey], s.anomalyType); if (s.anomaly && s.countdown > 0) document.getElementById('log').textContent = s.anomalyType === 'orbit' ? `ORBIT DECAY · IMPACT IN ${s.countdown}s` : `SATELLITE LOST IN ${s.countdown}s IF UNRESOLVED`; }
     function drawChart(key, val, type) { const cfg = chartConfigs[key] || { title: `${key} / HISTORY`, threshold: null }; document.getElementById('chartTitle').textContent = cfg.title; const w = chart.clientWidth, h = 90; cctx.clearRect(0, 0, w, h); cctx.strokeStyle = '#252c29'; cctx.lineWidth = 1; cctx.beginPath(); for (let y = 15; y < h; y += 25) { cctx.moveTo(0, y); cctx.lineTo(w, y) } cctx.stroke(); if (cfg.threshold) { const ty = h - 15 - cfg.threshold * (h - 25); cctx.strokeStyle = '#ff4d4d'; cctx.setLineDash([4, 4]); cctx.beginPath(); cctx.moveTo(0, ty); cctx.lineTo(w, ty); cctx.stroke(); cctx.setLineDash([]); } const points = []; for (let i = 0; i < 40; i++) { let n = Math.min(1, Math.max(0, (val || 0) / 100)); if (type === 'orbit') n = Math.max(.12, 1 - i * .022); if (type === 'power') n = .58 + Math.sin(i * 1.1) * .16 + (i > 27 ? .1 : 0); if (type === 'wheel') n = .36 + Math.sin(i * 1.4) * .06 - (i > 18 ? (i - 18) * .012 : 0); if (type === 'process') n = .42 + (i > 25 ? (i - 25) * .025 : Math.sin(i) * .03); if (type === 'thermal') n = .48 + (i > 20 ? (i - 20) * .018 : Math.sin(i * .4) * .025); points.push({ x: i * w / 39, y: h - 15 - n * (h - 25), n }); } const normalColor = key === 'TEMPERATURE' ? '#c9f75f' : key === 'POWER' ? '#ffd166' : key === 'CPU' ? '#58a6ff' : key === 'TORQUE' ? '#c58cff' : '#c9f75f'; for (let i = 1; i < points.length; i++) { const a = points[i - 1], b = points[i], danger = cfg.threshold && ((key === 'ALTITUDE' || key === 'TORQUE') ? ((a.n + b.n) / 2 < cfg.threshold) : ((a.n + b.n) / 2 > cfg.threshold)); cctx.strokeStyle = danger ? '#ff4d4d' : normalColor; cctx.lineWidth = 1.7; cctx.beginPath(); cctx.moveTo(a.x, a.y); cctx.lineTo(b.x, b.y); cctx.stroke(); } points.forEach(p => { const danger = cfg.threshold && ((key === 'ALTITUDE' || key === 'TORQUE') ? p.n < cfg.threshold : p.n > cfg.threshold); if (danger) { cctx.fillStyle = '#ff4d4d'; cctx.beginPath(); cctx.arc(p.x, p.y, 2.3, 0, Math.PI * 2); cctx.fill(); } }); }
-    canvas.addEventListener('click', e => { if (grbActive) return; const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top, unit = Math.min(W, H), earthR = Math.max(19, unit * .052); let best = null, dist = Infinity; satellites.forEach(s => { if (s.lost || ringProgress(s.ring, performance.now()) <= 0) return; const base = point(s, performance.now()), earthRatio = earthR / (unit * s.r), decay = s.anomaly && s.anomalyType === 'orbit' ? Math.max(earthRatio, s.countdown / 45) : 1, px = W * .5 + (base.x - W * .5) * decay, py = H * .5 + (base.y - H * .5) * decay, hit = s.anomaly ? 95 : 70, d = Math.hypot(px - x, py - y); if (d < hit && d < dist) { dist = d; best = s } }); if (best) { selected = best; paused = 0; renderSat(best); panel.classList.add('open'); document.getElementById('hint').style.opacity = 0; } });
+    canvas.addEventListener('click', e => { if (grbActive || debrisActive) return; const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top, unit = Math.min(W, H), earthR = Math.max(19, unit * .052); let best = null, dist = Infinity; satellites.forEach(s => { if (s.lost || ringProgress(s.ring, performance.now()) <= 0) return; const base = point(s, performance.now()), earthRatio = earthR / (unit * s.r), decay = s.anomaly && s.anomalyType === 'orbit' ? Math.max(earthRatio, s.countdown / 45) : 1, px = W * .5 + (base.x - W * .5) * decay, py = H * .5 + (base.y - H * .5) * decay, hit = s.anomaly ? 95 : 70, d = Math.hypot(px - x, py - y); if (d < hit && d < dist) { dist = d; best = s } }); if (best) { selected = best; paused = 0; renderSat(best); panel.classList.add('open'); document.getElementById('hint').style.opacity = 0; } });
     document.getElementById('close').onclick = () => { panel.classList.remove('open'); selected = null; paused = 0; document.getElementById('hint').style.opacity = 1 };
     const repairTypes = { 'THERMAL CONTROL': 'thermal', 'POWER CYCLE': 'power', 'ALIGN SOLAR ARRAY': 'solar', 'RECALIBRATE STAR TRACKER': 'startracker', 'BLIND AQUISITION': 'contact', 'RECONFIGURE WHEELS': 'wheel', 'RESTART PROCESS': 'process', 'ACTIVATE BOOSTER': 'orbit' };
     function openRepair(type) { const deadline = selected ? selected.countdown : ''; const satId = selected ? selected.id : ''; document.getElementById('repairFrame').src = `react.html?type=${type}&deadline=${deadline}&sat=${satId}`; document.getElementById('repairModal').classList.add('show'); }
     function closeRepair() { document.getElementById('repairModal').classList.remove('show'); document.getElementById('repairFrame').src = ''; }
-    document.querySelectorAll('[data-command]').forEach(b => b.onclick = () => { if (grbActive) return; const command = b.dataset.command; if (selected && selected.anomalyType && repairTypes[command] === selected.anomalyType) { openRepair(repairTypes[command]); return; } document.getElementById('log').textContent = 'COMMAND VERIFICATION FAILED'; document.getElementById('hint').textContent = 'command logged · anomaly persists'; });
+    document.querySelectorAll('[data-command]').forEach(b => b.onclick = () => { if (grbActive || debrisActive) return; const command = b.dataset.command; if (selected && selected.anomalyType && repairTypes[command] === selected.anomalyType) { openRepair(repairTypes[command]); return; } document.getElementById('log').textContent = 'COMMAND VERIFICATION FAILED'; document.getElementById('hint').textContent = 'command logged · anomaly persists'; });
     document.getElementById('repairClose').onclick = closeRepair;
     window.addEventListener('message', e => {
       if (e.data?.type === 'grb-resolved') {
@@ -500,6 +512,22 @@
         if (selected && sats.includes(selected)) { panel.classList.remove('open'); selected = null; }
         return;
       }
+      if (e.data?.type === 'debris-resolved') {
+        const sats = window.__debrisSats || [], survived = !!e.data.survived;
+        sats.forEach(s => {
+          s.anomaly = false; s.anomalyType = null; s.countdown = 0;
+          if (survived) { s.values = { RSSI: 82, TEMPERATURE: 56, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 }; }
+          else { s.lost = true; }
+        });
+        updateNetwork();
+        document.getElementById('log').textContent = survived ? 'DEBRIS FIELD CLEARED · FORMATION INTACT' : `COLLISION CASCADE · ${sats.length} SATELLITES LOST`;
+        document.getElementById('hint').textContent = survived ? 'evasive maneuvers successful · network nominal' : 'orbital plane segment lost · debris field expanding';
+        document.getElementById('debrisModal').classList.remove('show');
+        document.getElementById('debrisFrame').src = '';
+        debrisActive = false; window.__debrisSats = null;
+        if (selected && sats.includes(selected)) { panel.classList.remove('open'); selected = null; }
+        return;
+      }
       if (!selected) return;
       if (e.data?.type === 'repair-complete') { const wasOrbit = selected.anomalyType === 'orbit'; selected.anomaly = false; selected.anomalyType = null; selected.countdown = 0; selected.lost = false; selected.rejoining = wasOrbit; selected.rejoinProgress = wasOrbit ? 0 : 1; selected.values = { RSSI: 82, TEMPERATURE: 56, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 }; document.getElementById('log').textContent = wasOrbit ? 'SUCCESSFUL EXECUTION · REJOINING ORBIT' : 'SUCCESSFUL EXECUTION · TELEMETRY NOMINAL'; document.getElementById('hint').textContent = wasOrbit ? 'satellite recovered · rejoining orbital plane' : 'satellite recovered · network nominal'; closeRepair(); renderSat(selected); } else if (e.data?.type === 'repair-failed') { selected.anomaly = false; selected.anomalyType = null; selected.countdown = 0; selected.lost = true; selected.rejoining = false; updateNetwork(); document.getElementById('log').textContent = 'SATELLITE COMMANDED TOO LATE · SATELLITE LOST'; document.getElementById('hint').textContent = 'satellite lost · signal unavailable'; closeRepair(); }
     });
@@ -510,7 +538,7 @@
 
     function scheduleGRB() { setTimeout(() => { triggerGRB(); scheduleGRB(); }, 240000 + Math.random() * 160000); }
     function triggerGRB() {
-      if (grbActive) return;
+      if (grbActive || debrisActive) return;
       const available = satellites.filter(s => !s.lost && !s.anomaly);
       if (available.length < 5) return;
       grbActive = true;
@@ -530,6 +558,36 @@
       document.getElementById('grbModal').classList.add('show');
     }
     setTimeout(scheduleGRB, 30000);
+
+    const DEBRIS_RING_SIZE = 60, DEBRIS_CLUSTER = 10;
+    function pickDebrisCluster() {
+      for (let attempt = 0; attempt < 30; attempt++) {
+        const ring = Math.floor(Math.random() * 10), k0 = Math.floor(Math.random() * DEBRIS_RING_SIZE);
+        const group = Array.from({ length: DEBRIS_CLUSTER }, (_, j) => satellites[10 * ((k0 + j) % DEBRIS_RING_SIZE) + ring]);
+        if (group.every(s => !s.lost)) return group;
+      }
+      return null;
+    }
+    function scheduleDebris() { setTimeout(() => { triggerDebris(); scheduleDebris(); }, 260000 + Math.random() * 160000); }
+    function triggerDebris() {
+      if (grbActive || debrisActive) return;
+      const group = pickDebrisCluster();
+      if (!group) return;
+      debrisActive = true;
+      if (document.getElementById('repairModal').classList.contains('show')) closeRepair();
+      document.getElementById('debrisWarning').classList.add('show');
+      setTimeout(() => {
+        document.getElementById('debrisWarning').classList.remove('show');
+        startDebris(group);
+      }, 4000);
+    }
+    function startDebris(group) {
+      group.forEach(s => { s.anomaly = true; s.anomalyType = 'debris'; s.countdown = 0; });
+      window.__debrisSats = group;
+      document.getElementById('debrisFrame').src = `react.html?type=debris&sats=${group.map(s => s.id).join(',')}`;
+      document.getElementById('debrisModal').classList.add('show');
+    }
+    setTimeout(scheduleDebris, 90000);
     setInterval(() => {
       const ticking = satellites.filter(s => s.anomaly && s.countdown > 0);
       const impact = document.getElementById('impact');

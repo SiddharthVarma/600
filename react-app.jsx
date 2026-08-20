@@ -2,25 +2,52 @@ const { useState, useEffect, useRef } = React;
 const shuffle = a => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[x[i], x[j]] = [x[j], x[i]] } return x };
 const allSubsets = n => { const res = []; for (let m = 1; m < (1 << n); m++) { const s = []; for (let b = 0; b < n; b++)if (m & (1 << b)) s.push(b); res.push(s) } return res };
 const PROCESS_POOL = ['PACKET RETRY', 'TELEMETRY CACHE', 'IMAGE PIPELINE', 'LOG AGGREGATOR', 'PAYLOAD INDEXER', 'MEMORY SCRUBBER', 'ATTITUDE SOLVER', 'MOTION SCHEDULE', 'STAR TRACKER FEED', 'DOWNLINK BUFFER', 'EPHEMERIS CALCULATOR', 'FAULT MONITOR'];
-const games = [['thermal', 'THERMAL ROUTING', 'Valve sequencing'], ['power', 'POWER BUS', 'Route power by the numbers'], ['solar', 'SOLAR ALIGNMENT', 'Point at the sun'], ['contact', 'MISSED CONTACT', 'Hunt the signal peak'], ['wheel', 'REACTION WHEEL FAULT', 'Balance the torque'], ['process', 'PROCESS FAULT', 'Contain the leak in time'], ['orbit', 'ORBITAL BURN', 'Plot a transfer burn'], ['sensor', 'SENSOR FAULT', 'Find the outlier'], ['attitude', 'ATTITUDE DRIFT', 'Stabilize pointing'], ['startracker', 'STAR TRACKER LOCK', 'Rebuild the star field'], ['impact', 'MODULE IMPACT', 'Isolate the breach'], ['radiation', 'RADIATION EVENT', 'Wait it out'], ['bitflip', 'HAMMING CODE FAULT', 'GRB event · correct the bit flips']];
+const games = [['thermal', 'THERMAL ROUTING', 'Valve sequencing'], ['power', 'POWER BUS', 'Route power by the numbers'], ['solar', 'SOLAR ALIGNMENT', 'Point at the sun'], ['contact', 'MISSED CONTACT', 'Hunt the signal peak'], ['wheel', 'REACTION WHEEL FAULT', 'Balance the torque'], ['process', 'PROCESS FAULT', 'Contain the leak in time'], ['orbit', 'ORBITAL BURN', 'Plot a transfer burn'], ['sensor', 'SENSOR FAULT', 'Find the outlier'], ['attitude', 'ATTITUDE DRIFT', 'Stabilize pointing'], ['startracker', 'STAR TRACKER LOCK', 'Rebuild the star field'], ['impact', 'MODULE IMPACT', 'Isolate the breach'], ['radiation', 'RADIATION EVENT', 'Wait it out'], ['bitflip', 'HAMMING CODE FAULT', 'GRB event · correct the bit flips'], ['debris', 'DEBRIS FIELD', 'Collision cascade · dodge the wreckage']];
 function Frame({ type, setType, children, remaining, timedOut }) { const params = new URLSearchParams(location.search); const embedded = Boolean(params.get('type')); const multi = Boolean(params.get('sats')); const satId = params.get('sat'); const satLabel = multi ? 'MULTIPLE SATELLITES · EMERGENCY OVERRIDE' : satId ? `SAT ${String(satId).padStart(3, '0')} · MANUAL OVERRIDE` : 'SAT 421 · MANUAL OVERRIDE'; return <div className="app"><header className="top"><span className="brand">SIX HUNDRED / REPAIR LAB</span><span className="eyebrow">{satLabel}{remaining != null && !timedOut && <span style={{ color: remaining <= 10 ? 'var(--red)' : undefined, marginLeft: 10 }}>· REPAIR WINDOW {remaining}s</span>}</span></header><div className={'layout ' + (embedded ? 'embedded' : '')} style={embedded ? { display: 'block', marginTop: 0 } : {}}>{!embedded && <nav className="menu">{games.map(([id, name]) => <button key={id} className={type === id ? 'active' : ''} onClick={() => setType(id)}>{name}</button>)}</nav>}<main className="board" style={embedded ? { minHeight: '100%', border: 0 } : {}}>{children}</main></div></div> }
 function Header({ title, sub }) { return <><div className="eyebrow">Critical subsystem interaction</div><h1>{title}</h1><div className="signal">{sub}</div></> }
-function Result({ ok, children }) { const [sent, setSent] = useState(false); const finish = () => { if (!sent && window.parent !== window) { setSent(true); setTimeout(() => window.parent.postMessage({ type: 'repair-complete' }, '*'), 1200) } }; return children && <div className={ok ? 'success' : 'failure'}>{sent ? 'SUCCESSFUL EXECUTION' : children}{ok && <div className="actions"><button className="action" onClick={finish} disabled={sent}>{sent ? 'SUCCESSFUL EXECUTION' : 'EXECUTE'}</button></div>}</div> }
+function Result({ ok, children }) { const [sent, setSent] = useState(false); const finish = () => { if (!sent && window.parent !== window) { setSent(true); setTimeout(() => window.parent.postMessage({ type: 'repair-complete' }, '*'), 1200) } }; return children && <div className={ok ? 'success' : 'failure'}>{sent ? 'SUCCESSFUL EXECUTION' : children}{ok && !sent && <div className="actions"><button className="action" onClick={finish}>EXECUTE</button></div>}</div> }
+function buildThermalLayout(N, safes) {
+    const nodes = { CORE: [35, 120], PUMP: [105, 120], PURGE: [105, 42] };
+    const edges = [['CORE', 'PUMP'], ['PUMP', 'PURGE']];
+    const temps = {};
+    const target = ['CORE', 'PUMP'];
+    const hot = () => Math.round(95 + Math.random() * 45), cool = () => Math.round(18 + Math.random() * 16);
+    let anchor = 'PUMP', x = 105;
+    for (let i = 1; i <= N; i++) {
+        x += i === 1 ? 80 : 70;
+        const vA = `VALVE A${i}`, vB = `VALVE B${i}`;
+        nodes[vA] = [x, 62]; nodes[vB] = [x, 178];
+        edges.push([anchor, vA], [anchor, vB]);
+        const safe = safes[i - 1];
+        temps[vA] = safe === 'A' ? cool() : hot();
+        temps[vB] = safe === 'B' ? cool() : hot();
+        const safeNode = safe === 'A' ? vA : vB;
+        if (i < N) {
+            x += 70;
+            const m = N > 2 ? `MANIFOLD ${i}` : 'MANIFOLD';
+            nodes[m] = [x, 120];
+            edges.push([vA, m], [vB, m]);
+            target.push(safeNode, m);
+            anchor = m;
+        } else {
+            x += 50;
+            nodes.RADIATOR = [x, 120];
+            edges.push([vA, 'RADIATOR'], [vB, 'RADIATOR']);
+            target.push(safeNode, 'RADIATOR');
+        }
+    }
+    return { nodes, edges, temps, target, width: x + 25 };
+}
 function Thermal() {
-    const nodes = { CORE: [35, 120], PUMP: [105, 120], PURGE: [105, 42], 'VALVE A1': [185, 62], 'VALVE B1': [185, 178], MANIFOLD: [255, 120], 'VALVE A2': [325, 62], 'VALVE B2': [325, 178], RADIATOR: [375, 120] };
-    const edges = [['CORE', 'PUMP'], ['PUMP', 'PURGE'], ['PUMP', 'VALVE A1'], ['PUMP', 'VALVE B1'], ['VALVE A1', 'MANIFOLD'], ['VALVE B1', 'MANIFOLD'], ['MANIFOLD', 'VALVE A2'], ['MANIFOLD', 'VALVE B2'], ['VALVE A2', 'RADIATOR'], ['VALVE B2', 'RADIATOR']];
-    const [safe1] = useState(() => Math.random() < .5 ? 'VALVE A1' : 'VALVE B1');
-    const [safe2] = useState(() => Math.random() < .5 ? 'VALVE A2' : 'VALVE B2');
-    const [temps] = useState(() => {
-        const hot = () => Math.round(95 + Math.random() * 45), cool = () => Math.round(18 + Math.random() * 16);
-        return { 'VALVE A1': safe1 === 'VALVE A1' ? cool() : hot(), 'VALVE B1': safe1 === 'VALVE B1' ? cool() : hot(), 'VALVE A2': safe2 === 'VALVE A2' ? cool() : hot(), 'VALVE B2': safe2 === 'VALVE B2' ? cool() : hot() };
-    });
-    const target = ['CORE', 'PUMP', safe1, 'MANIFOLD', safe2, 'RADIATOR'];
+    const [junctions] = useState(() => 2 + Math.floor(Math.random() * 2));
+    const [safes] = useState(() => Array.from({ length: junctions }, () => Math.random() < .5 ? 'A' : 'B'));
+    const [layout] = useState(() => buildThermalLayout(junctions, safes));
+    const { nodes, edges, temps, target, width } = layout;
     const [path, setPath] = useState([]), [dragging, setDragging] = useState(false), [error, setError] = useState('');
-    const temp = 78 - path.length * 6, pressure = 42 + path.length * 11, ok = path.length === target.length;
+    const temp = 78 - path.length * 5, pressure = 42 + path.length * 9, ok = path.length === target.length;
     const follow = e => {
         if (!dragging || ok) return;
-        const box = e.currentTarget.getBoundingClientRect(), x = (e.clientX - box.left) / box.width * 400, y = (e.clientY - box.top) / box.height * 240;
+        const box = e.currentTarget.getBoundingClientRect(), x = (e.clientX - box.left) / box.width * width, y = (e.clientY - box.top) / box.height * 240;
         const node = Object.keys(nodes).find(n => Math.hypot(nodes[n][0] - x, nodes[n][1] - y) < 23);
         if (!node || path.includes(node)) return;
         if (node === target[path.length]) { setPath(p => [...p, node]); setError('') }
@@ -29,7 +56,7 @@ function Thermal() {
     const start = e => {
         setPath([]); setError(''); setDragging(true);
         e.currentTarget.setPointerCapture?.(e.pointerId);
-        const box = e.currentTarget.getBoundingClientRect(), x = (e.clientX - box.left) / box.width * 400, y = (e.clientY - box.top) / box.height * 240;
+        const box = e.currentTarget.getBoundingClientRect(), x = (e.clientX - box.left) / box.width * width, y = (e.clientY - box.top) / box.height * 240;
         if (Math.hypot(35 - x, 120 - y) < 28) setPath(['CORE']);
         else { setDragging(false); setError('START AT THE HOT CORE') }
     };
@@ -37,18 +64,18 @@ function Thermal() {
     const line = (a, b) => { const [x1, y1] = nodes[a], [x2, y2] = nodes[b], on = onPath(a, b); return <line key={a + b} x1={x1} y1={y1} x2={x2} y2={y2} stroke={on ? '#c9ff4d' : '#34403a'} strokeWidth={on ? 7 : 4} strokeLinecap="round" /> };
     return <>
         <Header title="THERMAL ROUTING" sub={`CORE ${temp}°C · COOLANT ${pressure} kPa`} />
-        <p className="instructions">Hold and drag from the hot core through the pump. Two valve junctions block the loop — at each one, route through the cooler valve, or the coolant flashes in the hot bypass. A purge line branches off the pump but dead-ends before the manifold.</p>
-        <svg viewBox="0 0 400 240" width="100%" style={{ maxWidth: 760, display: 'block', margin: '28px 0', background: '#0c1210', border: '1px solid #34403a', cursor: dragging ? 'grabbing' : 'crosshair', touchAction: 'none' }} onPointerDown={start} onPointerMove={follow} onPointerUp={() => setDragging(false)} onPointerCancel={() => setDragging(false)}>
+        <p className="instructions">Hold and drag from the hot core through the pump. {junctions === 2 ? 'Two valve junctions' : `${junctions} valve junctions`} block the loop — at each one, route through the cooler valve, or the coolant flashes in the hot bypass. A purge line branches off the pump but dead-ends before the manifold.</p>
+        <svg viewBox={`0 0 ${width} 240`} width="100%" style={{ maxWidth: 760, display: 'block', margin: '28px 0', background: '#0c1210', border: '1px solid #34403a', cursor: dragging ? 'grabbing' : 'crosshair', touchAction: 'none' }} onPointerDown={start} onPointerMove={follow} onPointerUp={() => setDragging(false)} onPointerCancel={() => setDragging(false)}>
             {edges.map(([a, b]) => line(a, b))}
             {Object.entries(nodes).map(([n, [x, y]]) => {
-                const done = path.includes(n), isValve = n.startsWith('VALVE');
+                const done = path.includes(n), isValve = n.startsWith('VALVE'), fontSize = n.length > 8 ? 6 : isValve ? 7 : 8;
                 return <g key={n}>
                     <circle cx={x} cy={y} r="20" fill={done ? '#172714' : n === 'CORE' ? '#241512' : '#141d1a'} stroke={done ? '#c9ff4d' : '#5c6b64'} strokeWidth="3" />
-                    <text x={x} y={y + 3} textAnchor="middle" fill="#eef4eb" fontSize={isValve ? 7 : 8}>{n}</text>
+                    <text x={x} y={y + 3} textAnchor="middle" fill="#eef4eb" fontSize={fontSize}>{n}</text>
                     {isValve && <text x={x} y={y + 34} textAnchor="middle" fill="#c7d1cb" fontSize="9">{temps[n]}°C</text>}
                 </g>;
             })}
-            <text x="200" y="222" textAnchor="middle" fill={dragging ? '#c9ff4d' : '#89948d'} fontSize="10">{dragging ? 'DRAGGING COOLANT FLOW' : 'HOLD ON CORE · TRACE THE SAFE ROUTE'}</text>
+            <text x={width / 2} y="222" textAnchor="middle" fill={dragging ? '#c9ff4d' : '#89948d'} fontSize="10">{dragging ? 'DRAGGING COOLANT FLOW' : 'HOLD ON CORE · TRACE THE SAFE ROUTE'}</text>
         </svg>
         <div className="readout" style={{ color: temp > 70 ? 'var(--red)' : temp > 55 ? 'var(--yellow)' : 'var(--green)' }}>CORE {temp}°C · PRESSURE {pressure} kPa</div>
         <button className="action" onClick={() => { setPath([]); setError('') }}>RESET ROUTE</button>
@@ -224,12 +251,13 @@ function Solar() {
 }
 function Contact() {
     const THRESH = 88;
-    const [seed] = useState(() => ({ base: Math.random() * 360, f1: .15 + Math.random() * .1, f2: .26 + Math.random() * .12, amp1: 60 + Math.random() * 30, amp2: 22 + Math.random() * 14, phase1: Math.random() * Math.PI * 2, phase2: Math.random() * Math.PI * 2 }));
+    const HOLD_MS = 550;
+    const [seed] = useState(() => ({ base: Math.random() * 360, f1: .1 + Math.random() * .06, f2: .17 + Math.random() * .08, amp1: 42 + Math.random() * 18, amp2: 14 + Math.random() * 9, phase1: Math.random() * Math.PI * 2, phase2: Math.random() * Math.PI * 2 }));
     const [angle, setAngle] = useState(() => Math.random() * 360);
     const angleRef = useRef(angle);
     const [strength, setStrength] = useState(0);
     const [locked, setLocked] = useState(false);
-    const [message, setMessage] = useState('');
+    const [holdFrac, setHoldFrac] = useState(0);
 
     const angDelta = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d };
     const targetAngle = ms => { const s = ms / 1000; return (seed.base + Math.sin(s * seed.f1 + seed.phase1) * seed.amp1 + Math.sin(s * seed.f2 + seed.phase2) * seed.amp2 + 3600) % 360 };
@@ -237,13 +265,23 @@ function Contact() {
 
     useEffect(() => {
         if (locked) return;
-        let raf, startTs;
+        let raf, startTs, holdStart = null;
         const step = ts => {
             if (!startTs) startTs = ts;
             const elapsed = ts - startTs;
             const tgt = targetAngle(elapsed);
             const diff = angDelta(angleRef.current, tgt);
-            setStrength(signalAt(diff));
+            const s = signalAt(diff);
+            setStrength(s);
+            if (s >= THRESH) {
+                if (holdStart == null) holdStart = ts;
+                const held = ts - holdStart;
+                if (held >= HOLD_MS) { setHoldFrac(1); setLocked(true); return }
+                setHoldFrac(held / HOLD_MS);
+            } else {
+                holdStart = null;
+                setHoldFrac(0);
+            }
             raf = requestAnimationFrame(step);
         };
         raf = requestAnimationFrame(step);
@@ -255,11 +293,7 @@ function Contact() {
         if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-complete' }, '*'), 1200); return () => clearTimeout(id) }
     }, [locked]);
 
-    const setAngleBoth = a => { angleRef.current = a; setAngle(a); setMessage('') };
-    const lockSignal = () => {
-        if (strength >= THRESH) { setLocked(true); setMessage('') }
-        else setMessage('SIGNAL TOO WEAK · KEEP TUNING');
-    };
+    const setAngleBoth = a => { angleRef.current = a; setAngle(a) };
 
     const bars = [20, 45, 70, 90];
     const ASSETS = '600_solar_assets/';
@@ -273,22 +307,22 @@ function Contact() {
 
     return <>
         <Header title="MISSED CONTACT" sub="RSSI -104 dBm · NO DIRECTIONAL LOCK" />
-        <p className="instructions">The satellite's bearing isn't shown — only signal strength. Sweep the dish and hill-climb toward the peak. The satellite keeps drifting, so once you're close you'll need to keep tracking it, not just point and let go.</p>
+        <p className="instructions">The satellite's bearing isn't shown — only signal strength. Sweep the dish and hill-climb toward the peak. Hold the peak steady for a moment and the downlink locks automatically — no need to click anything the instant you hit it.</p>
         <div style={{ display: 'grid', placeItems: 'center', margin: '24px 0' }}>
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: '#0c1210', border: '1px solid #34403a' }}>
                 <ellipse cx={CX} cy={GROUND_Y + 6} rx="72" ry="10" fill="rgba(0,0,0,.35)" />
                 <image href={FRAME_DIR + fr.file} x={imgX} y={imgY} width={dispW} height={DISPLAY_H} style={{ imageRendering: 'pixelated' }} />
                 {locked && <image href={ASSETS + 'scid.png'} x="176" y="34" width="98" height={98 * 222 / 520} />}
                 {bars.map((th, i) => <rect key={th} x={20 + i * 13} y={54 - (10 + i * 7)} width="9" height={10 + i * 7} fill={strength >= th ? '#c9ff4d' : '#2a332f'} stroke="#1c2422" strokeWidth="1" />)}
-                <text x="150" y="292" textAnchor="middle" fontSize="9" fill={strength >= THRESH ? '#c9ff4d' : '#89948d'}>{locked ? 'DOWNLINK ESTABLISHED' : strength >= THRESH ? 'SIGNAL PEAKED · LOCK IT IN' : 'SWEEP THE DISH · HILL-CLIMB THE SIGNAL'}</text>
+                <text x="150" y="292" textAnchor="middle" fontSize="9" fill={strength >= THRESH ? '#c9ff4d' : '#89948d'}>{locked ? 'DOWNLINK ESTABLISHED' : strength >= THRESH ? 'HOLD STEADY · LOCKING' : 'SWEEP THE DISH · HILL-CLIMB THE SIGNAL'}</text>
             </svg>
         </div>
         <div className="readout" style={{ color: strength >= THRESH ? 'var(--green)' : strength > 40 ? 'var(--yellow)' : 'var(--red)' }}>SIGNAL {Math.round(strength)}% · BEARING {Math.round(angle)}°</div>
         <input className="range" type="range" min="0" max="359" value={Math.round(angle)} onChange={e => setAngleBoth(+e.target.value)} disabled={locked} />
         <div className="bar"><i style={{ width: `${strength}%`, background: strength >= THRESH ? 'var(--green)' : strength > 40 ? 'var(--yellow)' : 'var(--red)' }} /></div>
-        <div className="actions"><button className="action" style={{ borderColor: strength >= THRESH ? 'var(--green)' : '#39453f', color: strength >= THRESH ? 'var(--green)' : '#85908a' }} onClick={lockSignal} disabled={locked}>LOCK SIGNAL</button></div>
-        <div className="legend"><span><i className="dot green" />SIGNAL PEAK</span></div>
-        {locked ? <div className="success">DOWNLINK ESTABLISHED · TELEMETRY RECEIVED</div> : message ? <div className="failure">{message}</div> : null}
+        <div className="bar"><i style={{ width: `${holdFrac * 100}%`, background: 'var(--blue)', transition: 'none' }} /></div>
+        <div className="legend"><span><i className="dot green" />SIGNAL PEAK</span><span><i className="dot bluebg" />LOCK PROGRESS</span></div>
+        {locked && <div className="success">DOWNLINK ESTABLISHED · TELEMETRY RECEIVED</div>}
     </>;
 }
 function ReactionWheel() {
@@ -844,6 +878,128 @@ function BitFlip() {
     {phase === 'done' && <div className={fixedCount === 5 ? 'success' : 'failure'}>{fixedCount === 5 ? 'ALL REGISTERS RESTORED · HAMMING CODE VALIDATED' : `${fixedCount}/5 SATELLITES RECOVERED · ${5 - fixedCount} LOST TO UNCORRECTED BIT ERRORS`}</div>}
   </>;
 }
+function Debris() {
+    const DURATION = 30, HIT_LIMIT = 2;
+    const W = 300, H = 400, SHIP_Y = 362, SHIP_W = 34, SHIP_H = 48, SHIP_SPEED = 190, MARGIN = SHIP_W / 2 + 4;
+    const DEBRIS_TYPES = {
+        bolt: { file: 'bolt.png', w: 18, h: 27, vy: [190, 240], weight: 3 },
+        nut: { file: 'nut.png', w: 22, h: 20, vy: [180, 220], weight: 3 },
+        hull: { file: 'scid_body.png', w: 26, h: 37, vy: [75, 105], weight: 2 },
+        panel: { file: 'panel_body.png', w: 34, h: 18, vy: [70, 95], weight: 2 },
+    };
+    const ASSETS = '600_debris_assets/';
+    const params = new URLSearchParams(location.search);
+    const [sats] = useState(() => { const ids = (params.get('sats') || '').split(',').filter(Boolean); return ids.length ? ids : Array.from({ length: 10 }, () => 100 + Math.floor(Math.random() * 900)) });
+
+    const [shipX, setShipX] = useState(W / 2);
+    const [debris, setDebris] = useState([]);
+    const [hits, setHits] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(DURATION);
+    const [phase, setPhase] = useState('run'); // run | won | lost
+    const [flash, setFlash] = useState(false);
+    const heldRef = useRef(0); // -1 left, 1 right, 0 none
+    const shipXRef = useRef(shipX);
+    const debrisRef = useRef([]);
+    const hitsRef = useRef(0);
+    const idRef = useRef(0);
+
+    useEffect(() => {
+        const down = e => {
+            if (e.key === 'ArrowLeft' || e.key === 'a') heldRef.current = -1;
+            else if (e.key === 'ArrowRight' || e.key === 'd') heldRef.current = 1;
+        };
+        const up = e => {
+            if ((e.key === 'ArrowLeft' || e.key === 'a') && heldRef.current === -1) heldRef.current = 0;
+            if ((e.key === 'ArrowRight' || e.key === 'd') && heldRef.current === 1) heldRef.current = 0;
+        };
+        window.addEventListener('keydown', down);
+        window.addEventListener('keyup', up);
+        return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) };
+    }, []);
+
+    useEffect(() => {
+        if (phase !== 'run') return;
+        let raf, startTs, lastT = 0, lastSpawn = 0, nextSpawn = 220;
+        const step = ts => {
+            if (!startTs) startTs = ts;
+            const elapsed = (ts - startTs) / 1000;
+            const dt = Math.min(.05, elapsed - lastT);
+            lastT = elapsed;
+
+            shipXRef.current = Math.max(MARGIN, Math.min(W - MARGIN, shipXRef.current + heldRef.current * SHIP_SPEED * dt));
+            setShipX(shipXRef.current);
+
+            if ((elapsed - lastSpawn) * 1000 >= nextSpawn) {
+                lastSpawn = elapsed;
+                nextSpawn = 250 + Math.random() * 250;
+                const pool = Object.entries(DEBRIS_TYPES).flatMap(([k, v]) => Array(v.weight).fill(k));
+                const type = pool[Math.floor(Math.random() * pool.length)];
+                const t = DEBRIS_TYPES[type];
+                idRef.current += 1;
+                debrisRef.current = [...debrisRef.current, { id: idRef.current, type, x: MARGIN + Math.random() * (W - MARGIN * 2), y: -30, vy: t.vy[0] + Math.random() * (t.vy[1] - t.vy[0]), rot: Math.random() * 360, rotSpeed: (Math.random() - .5) * 140 }];
+            }
+
+            let hitThisFrame = false;
+            debrisRef.current = debrisRef.current.map(d => ({ ...d, y: d.y + d.vy * dt, rot: d.rot + d.rotSpeed * dt })).filter(d => {
+                if (d.y > H + 40) return false;
+                const t = DEBRIS_TYPES[d.type];
+                const dw = t.w * .9, dh = t.h * .9;
+                const overlapX = Math.abs(d.x - shipXRef.current) < (dw / 2 + SHIP_W / 3.2);
+                const overlapY = Math.abs(d.y - SHIP_Y) < (dh / 2 + SHIP_H / 3.2);
+                if (overlapX && overlapY) { hitThisFrame = true; return false }
+                return true;
+            });
+            setDebris(debrisRef.current);
+            if (hitThisFrame) {
+                hitsRef.current += 1;
+                setHits(hitsRef.current);
+                setFlash(true);
+                setTimeout(() => setFlash(false), 220);
+                if (hitsRef.current >= HIT_LIMIT) { setPhase('lost'); return }
+            }
+
+            const remaining = Math.max(0, DURATION - elapsed);
+            setTimeLeft(Math.ceil(remaining));
+            if (remaining <= 0) { setPhase('won'); return }
+            raf = requestAnimationFrame(step);
+        };
+        raf = requestAnimationFrame(step);
+        return () => cancelAnimationFrame(raf);
+    }, [phase]);
+
+    useEffect(() => {
+        if (phase === 'run') return;
+        if (window.parent !== window) {
+            const id = setTimeout(() => window.parent.postMessage({ type: 'debris-resolved', survived: phase === 'won' }, '*'), 1400);
+            return () => clearTimeout(id);
+        }
+    }, [phase]);
+
+    const nudge = dir => { heldRef.current = dir };
+    const release = () => { heldRef.current = 0 };
+
+    return <>
+        <Header title="DEBRIS FIELD" sub={`COLLISION AVOIDANCE · ${timeLeft}s REMAINING · ${hits}/${HIT_LIMIT} IMPACTS`} />
+        <p className="instructions">A rival operator's satellite has broken apart, and wreckage is crossing your orbital plane. This isn't just one satellite at risk — a collision here risks a fragmentation cascade across the whole formation on either side of it. Use ← → (or hold the on-screen controls) to keep clear. Small fragments move fast; large ones are slower but harder to fully dodge.</p>
+        <div style={{ display: 'grid', placeItems: 'center', margin: '18px 0' }}>
+            <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={360} style={{ maxWidth: 340, display: 'block', background: '#05080a', border: '1px solid #34403a', touchAction: 'none' }}>
+                {debris.map(d => {
+                    const t = DEBRIS_TYPES[d.type];
+                    return <image key={d.id} href={ASSETS + t.file} x={d.x - t.w / 2} y={d.y - t.h / 2} width={t.w} height={t.h} transform={`rotate(${d.rot} ${d.x} ${d.y})`} />;
+                })}
+                <image href={ASSETS + 'scid_body.png'} x={shipX - SHIP_W / 2} y={SHIP_Y - SHIP_H / 2} width={SHIP_W} height={SHIP_H} style={{ filter: flash ? 'drop-shadow(0 0 6px #ff5964)' : 'drop-shadow(0 0 4px #c9ff4d)' }} />
+                <text x={W / 2} y={H - 8} textAnchor="middle" fontSize="9" fill="#89948d">{phase === 'run' ? 'HOLD ← → TO MANEUVER' : phase === 'won' ? 'FORMATION CLEAR' : 'CASCADE TRIGGERED'}</text>
+            </svg>
+        </div>
+        <div className="actions">
+            <button className="action" onPointerDown={() => nudge(-1)} onPointerUp={release} onPointerLeave={release} disabled={phase !== 'run'}>◀ LEFT</button>
+            <button className="action" onPointerDown={() => nudge(1)} onPointerUp={release} onPointerLeave={release} disabled={phase !== 'run'}>RIGHT ▶</button>
+        </div>
+        <div className="legend"><span><i className="dot green" />CLEAR</span><span><i className="dot redbg" />IMPACT</span></div>
+        {phase === 'won' && <div className="success">DEBRIS FIELD CLEARED · {sats.length} SATELLITES HELD FORMATION</div>}
+        {phase === 'lost' && <div className="failure">COLLISION CASCADE · {sats.length} SATELLITES LOST</div>}
+    </>;
+}
 function App() {
   const params = new URLSearchParams(location.search);
   const requested = params.get('type');
@@ -862,7 +1018,7 @@ function App() {
     if (!timedOut) return;
     if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-failed' }, '*'), 2200); return () => clearTimeout(id) }
   }, [timedOut]);
-  const C = { thermal: Thermal, power: Power, solar: Solar, contact: Contact, wheel: ReactionWheel, process: Process, orbit: Orbit, sensor: Sensor, attitude: Attitude, startracker: StarTracker, impact: Impact, radiation: Radiation, bitflip: BitFlip }[type];
+  const C = { thermal: Thermal, power: Power, solar: Solar, contact: Contact, wheel: ReactionWheel, process: Process, orbit: Orbit, sensor: Sensor, attitude: Attitude, startracker: StarTracker, impact: Impact, radiation: Radiation, bitflip: BitFlip, debris: Debris }[type];
   return <Frame type={type} setType={setType} remaining={remaining} timedOut={timedOut}>
     {timedOut ? <div className="failure" style={{ margin: '60px 0', fontSize: 14, letterSpacing: '.03em' }}>SATELLITE COMMANDED TOO LATE · SATELLITE LOST</div> : <C />}
   </Frame>
