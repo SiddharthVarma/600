@@ -227,7 +227,7 @@ function Solar() {
     const [w1x, w1y] = polar(angle - TOL, 135), [w2x, w2y] = polar(angle + TOL, 135);
     const sector = `M ${CX} ${CY} L ${w1x} ${w1y} A 135 135 0 0 1 ${w2x} ${w2y} Z`;
     const [sx, sy] = polar(sunAngle, SUN_R);
-    const SCID_W = 150, SCID_H = SCID_W * 222 / 520, SUN_W = 70, SUN_H = SUN_W * 345 / 520;
+    const SCID_W = 150, SCID_H = SCID_W * 644 / 1490, SUN_W = 70, SUN_H = SUN_W * 345 / 520;
 
     return <>
         <Header title="SOLAR ALIGNMENT" sub="ARRAY OFFLINE · BATTERY DEPLETED" />
@@ -238,7 +238,7 @@ function Solar() {
                 <circle cx={CX} cy={CY} r={SUN_R} fill="none" stroke="#242c29" strokeDasharray="3 5" />
                 <path d={sector} fill={aligned ? 'rgba(201,255,77,.28)' : 'rgba(255,209,102,.14)'} stroke={aligned ? '#c9ff4d' : '#ffd166'} strokeWidth="2" />
                 <image href={ASSETS + 'sun.png'} x={sx - SUN_W / 2} y={sy - SUN_H / 2} width={SUN_W} height={SUN_H} style={{ filter: aligned ? 'brightness(1.35) drop-shadow(0 0 16px rgba(255,180,60,.7))' : 'none', transition: 'filter .2s' }} />
-                <image href={ASSETS + 'scid.png'} x={CX - SCID_W / 2} y={CY - SCID_H / 2} width={SCID_W} height={SCID_H} transform={`rotate(${90 - angle} ${CX} ${CY})`} />
+                <image href={ASSETS + 'satellite.png'} x={CX - SCID_W / 2} y={CY - SCID_H / 2} width={SCID_W} height={SCID_H} transform={`rotate(${90 - angle} ${CX} ${CY})`} />
                 <text x="150" y="292" textAnchor="middle" fontSize="9" fill={aligned ? '#c9ff4d' : '#89948d'}>{done ? 'ARRAY CHARGED' : aligned ? 'CHARGING · HOLD STEADY' : 'STEER INTO THE CONE'}</text>
             </svg>
         </div>
@@ -312,7 +312,7 @@ function Contact() {
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: '#0c1210', border: '1px solid #34403a' }}>
                 <ellipse cx={CX} cy={GROUND_Y + 6} rx="72" ry="10" fill="rgba(0,0,0,.35)" />
                 <image href={FRAME_DIR + fr.file} x={imgX} y={imgY} width={dispW} height={DISPLAY_H} style={{ imageRendering: 'pixelated' }} />
-                {locked && <image href={ASSETS + 'scid.png'} x="176" y="34" width="98" height={98 * 222 / 520} />}
+                {locked && <image href={ASSETS + 'satellite.png'} x="164" y="40" width="122" height={122 * 644 / 1490} />}
                 {bars.map((th, i) => <rect key={th} x={20 + i * 13} y={54 - (10 + i * 7)} width="9" height={10 + i * 7} fill={strength >= th ? '#c9ff4d' : '#2a332f'} stroke="#1c2422" strokeWidth="1" />)}
                 <text x="150" y="292" textAnchor="middle" fontSize="9" fill={strength >= THRESH ? '#c9ff4d' : '#89948d'}>{locked ? 'DOWNLINK ESTABLISHED' : strength >= THRESH ? 'HOLD STEADY · LOCKING' : 'SWEEP THE DISH · HILL-CLIMB THE SIGNAL'}</text>
             </svg>
@@ -863,7 +863,7 @@ function BitFlip() {
   return <>
     <Header title="GAMMA RAY BURST" sub={`HAMMING CODE ERROR CORRECTION · ${remaining}s REMAINING`} />
     <p className="instructions">A gamma-ray burst has flipped one bit in each affected satellite's memory register. Every register runs a Hamming code — three overlapping checksum bits (C1/C2/C3), each covering a different set of bit positions. Work out which bit is wrong from which checks fail, then click it to flip it back before the window closes.</p>
-    <div style={{ fontSize: 10, color: '#7b8580', lineHeight: 1.8, margin: '10px 0', border: '1px solid #1c2422', padding: '10px 12px' }}>
+    <div style={{ fontSize: 12, color: '#7b8580', lineHeight: 1.8, margin: '10px 0', border: '1px solid #1c2422', padding: '10px 12px' }}>
       C1 covers bits 1,3,5,7 &nbsp;·&nbsp; C2 covers bits 2,3,6,7 &nbsp;·&nbsp; C3 covers bits 4,5,6,7 — a check fails if an odd number of its bits are wrong.<br />
       Only C1 fails → bit 1 &nbsp;·&nbsp; only C2 → bit 2 &nbsp;·&nbsp; C1+C2 → bit 3 &nbsp;·&nbsp; only C3 → bit 4 &nbsp;·&nbsp; C1+C3 → bit 5 &nbsp;·&nbsp; C2+C3 → bit 6 &nbsp;·&nbsp; all three → bit 7
     </div>
@@ -880,7 +880,7 @@ function BitFlip() {
 }
 function Debris() {
     const DURATION = 30, HIT_LIMIT = 2;
-    const W = 300, H = 400, SHIP_Y = 362, SHIP_W = 34, SHIP_H = 48, SHIP_SPEED = 190, MARGIN = SHIP_W / 2 + 4;
+    const W = 300, H = 400, SHIP_Y = 362, SHIP_W = 64, SHIP_H = SHIP_W * 644 / 1490, SHIP_SPEED = 190, MARGIN = SHIP_W / 2 + 4;
     const DEBRIS_TYPES = {
         bolt: { file: 'bolt.png', w: 18, h: 27, vy: [190, 240], weight: 3 },
         nut: { file: 'nut.png', w: 22, h: 20, vy: [180, 220], weight: 3 },
@@ -888,6 +888,7 @@ function Debris() {
         panel: { file: 'panel_body.png', w: 34, h: 18, vy: [70, 95], weight: 2 },
     };
     const ASSETS = '600_debris_assets/';
+    const SHIP_ASSET = '600_solar_assets/satellite.png';
     const params = new URLSearchParams(location.search);
     const [sats] = useState(() => { const ids = (params.get('sats') || '').split(',').filter(Boolean); return ids.length ? ids : Array.from({ length: 10 }, () => 100 + Math.floor(Math.random() * 900)) });
 
@@ -953,9 +954,13 @@ function Debris() {
             if (hitThisFrame) {
                 hitsRef.current += 1;
                 setHits(hitsRef.current);
+                if (hitsRef.current >= HIT_LIMIT) {
+                    setFlash(true);
+                    setPhase('impact'); // freeze-frame: stop the loop here, hold on the moment of impact
+                    return;
+                }
                 setFlash(true);
                 setTimeout(() => setFlash(false), 220);
-                if (hitsRef.current >= HIT_LIMIT) { setPhase('lost'); return }
             }
 
             const remaining = Math.max(0, DURATION - elapsed);
@@ -968,9 +973,15 @@ function Debris() {
     }, [phase]);
 
     useEffect(() => {
-        if (phase === 'run') return;
+        if (phase !== 'impact') return;
+        const id = setTimeout(() => setPhase('lost'), 650); // hold the freeze-frame before revealing the cascade summary
+        return () => clearTimeout(id);
+    }, [phase]);
+
+    useEffect(() => {
+        if (phase !== 'won' && phase !== 'lost') return;
         if (window.parent !== window) {
-            const id = setTimeout(() => window.parent.postMessage({ type: 'debris-resolved', survived: phase === 'won' }, '*'), 1400);
+            const id = setTimeout(() => window.parent.postMessage({ type: 'debris-resolved', survived: phase === 'won' }, '*'), phase === 'won' ? 1300 : 2200);
             return () => clearTimeout(id);
         }
     }, [phase]);
@@ -980,24 +991,24 @@ function Debris() {
 
     return <>
         <Header title="DEBRIS FIELD" sub={`COLLISION AVOIDANCE · ${timeLeft}s REMAINING · ${hits}/${HIT_LIMIT} IMPACTS`} />
-        <p className="instructions">A rival operator's satellite has broken apart, and wreckage is crossing your orbital plane. This isn't just one satellite at risk — a collision here risks a fragmentation cascade across the whole formation on either side of it. Use ← → (or hold the on-screen controls) to keep clear. Small fragments move fast; large ones are slower but harder to fully dodge.</p>
-        <div style={{ display: 'grid', placeItems: 'center', margin: '18px 0' }}>
+        <p className="instructions">A rival operator's satellite has broken apart (shoddy engineering!), and wreckage is crossing our orbital plane. It isn't just one satellite at risk — a collision here risks a cascade across other satellites in our plane! Use ← → (or hold the on-screen controls) to perform collision avoidance maneuvers.</p>
+        <div style={{ display: 'grid', placeItems: 'center', margin: '18px 0', position: 'relative' }}>
             <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={360} style={{ maxWidth: 340, display: 'block', background: '#05080a', border: '1px solid #34403a', touchAction: 'none' }}>
                 {debris.map(d => {
                     const t = DEBRIS_TYPES[d.type];
                     return <image key={d.id} href={ASSETS + t.file} x={d.x - t.w / 2} y={d.y - t.h / 2} width={t.w} height={t.h} transform={`rotate(${d.rot} ${d.x} ${d.y})`} />;
                 })}
-                <image href={ASSETS + 'scid_body.png'} x={shipX - SHIP_W / 2} y={SHIP_Y - SHIP_H / 2} width={SHIP_W} height={SHIP_H} style={{ filter: flash ? 'drop-shadow(0 0 6px #ff5964)' : 'drop-shadow(0 0 4px #c9ff4d)' }} />
-                <text x={W / 2} y={H - 8} textAnchor="middle" fontSize="9" fill="#89948d">{phase === 'run' ? 'HOLD ← → TO MANEUVER' : phase === 'won' ? 'FORMATION CLEAR' : 'CASCADE TRIGGERED'}</text>
+                <image href={SHIP_ASSET} x={shipX - SHIP_W / 2} y={SHIP_Y - SHIP_H / 2} width={SHIP_W} height={SHIP_H} style={{ filter: flash ? 'drop-shadow(0 0 8px #ff5964)' : 'drop-shadow(0 0 4px #c9ff4d)' }} />
+                {flash && <rect x="0" y="0" width={W} height={H} fill="rgba(255,89,100,.28)" />}
+                <text x={W / 2} y={H - 8} textAnchor="middle" fontSize="9" fill="#89948d">{phase === 'run' ? 'HOLD ← → TO MANEUVER' : phase === 'won' ? 'FORMATION CLEAR' : phase === 'impact' ? 'IMPACT DETECTED' : 'CASCADE TRIGGERED'}</text>
             </svg>
         </div>
         <div className="actions">
             <button className="action" onPointerDown={() => nudge(-1)} onPointerUp={release} onPointerLeave={release} disabled={phase !== 'run'}>◀ LEFT</button>
             <button className="action" onPointerDown={() => nudge(1)} onPointerUp={release} onPointerLeave={release} disabled={phase !== 'run'}>RIGHT ▶</button>
         </div>
-        <div className="legend"><span><i className="dot green" />CLEAR</span><span><i className="dot redbg" />IMPACT</span></div>
         {phase === 'won' && <div className="success">DEBRIS FIELD CLEARED · {sats.length} SATELLITES HELD FORMATION</div>}
-        {phase === 'lost' && <div className="failure">COLLISION CASCADE · {sats.length} SATELLITES LOST</div>}
+        {phase === 'lost' && <div className="failure">DEBRIS NOT OUT-MANEUVERED · {sats.length} SATELLITES LOST</div>}
     </>;
 }
 function App() {

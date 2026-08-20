@@ -354,7 +354,7 @@
 
     .modal-box p {
       color: var(--muted);
-      font-size: 11px;
+      font-size: 13px;
       line-height: 1.7;
     }
 
@@ -489,7 +489,8 @@
     document.getElementById('close').onclick = () => { panel.classList.remove('open'); selected = null; paused = 0; document.getElementById('hint').style.opacity = 1 };
     const repairTypes = { 'THERMAL CONTROL': 'thermal', 'POWER CYCLE': 'power', 'ALIGN SOLAR ARRAY': 'solar', 'RECALIBRATE STAR TRACKER': 'startracker', 'BLIND AQUISITION': 'contact', 'RECONFIGURE WHEELS': 'wheel', 'RESTART PROCESS': 'process', 'ACTIVATE BOOSTER': 'orbit' };
     function openRepair(type) { const deadline = selected ? selected.countdown : ''; const satId = selected ? selected.id : ''; document.getElementById('repairFrame').src = `react.html?type=${type}&deadline=${deadline}&sat=${satId}`; document.getElementById('repairModal').classList.add('show'); }
-    function closeRepair() { document.getElementById('repairModal').classList.remove('show'); document.getElementById('repairFrame').src = ''; }
+    function fadeCloseModal(modalId, frameId) { const modal = document.getElementById(modalId); modal.classList.remove('show'); setTimeout(() => { document.getElementById(frameId).src = ''; }, 260); }
+    function closeRepair() { fadeCloseModal('repairModal', 'repairFrame'); }
     document.querySelectorAll('[data-command]').forEach(b => b.onclick = () => { if (grbActive || debrisActive) return; const command = b.dataset.command; if (selected && selected.anomalyType && repairTypes[command] === selected.anomalyType) { openRepair(repairTypes[command]); return; } document.getElementById('log').textContent = 'COMMAND VERIFICATION FAILED'; document.getElementById('hint').textContent = 'command logged · anomaly persists'; });
     document.getElementById('repairClose').onclick = closeRepair;
     window.addEventListener('message', e => {
@@ -506,8 +507,7 @@
         updateNetwork();
         document.getElementById('log').textContent = `GAMMA RAY BURST RESOLVED · ${savedCount}/5 SATELLITES RECOVERED`;
         document.getElementById('hint').textContent = savedCount === 5 ? 'all registers restored · network nominal' : 'gamma ray burst resolved · satellites lost';
-        document.getElementById('grbModal').classList.remove('show');
-        document.getElementById('grbFrame').src = '';
+        fadeCloseModal('grbModal', 'grbFrame');
         grbActive = false; window.__grbSats = null;
         if (selected && sats.includes(selected)) { panel.classList.remove('open'); selected = null; }
         return;
@@ -520,10 +520,9 @@
           else { s.lost = true; }
         });
         updateNetwork();
-        document.getElementById('log').textContent = survived ? 'DEBRIS FIELD CLEARED · FORMATION INTACT' : `COLLISION CASCADE · ${sats.length} SATELLITES LOST`;
+        document.getElementById('log').textContent = survived ? 'DEBRIS FIELD CLEARED · FORMATION INTACT' : `DEBRIS NOT OUT-MANEUVERED · ${sats.length} SATELLITES LOST`;
         document.getElementById('hint').textContent = survived ? 'evasive maneuvers successful · network nominal' : 'orbital plane segment lost · debris field expanding';
-        document.getElementById('debrisModal').classList.remove('show');
-        document.getElementById('debrisFrame').src = '';
+        fadeCloseModal('debrisModal', 'debrisFrame');
         debrisActive = false; window.__debrisSats = null;
         if (selected && sats.includes(selected)) { panel.classList.remove('open'); selected = null; }
         return;
