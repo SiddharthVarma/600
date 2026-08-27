@@ -185,7 +185,7 @@ function Power() {
     </>;
 }
 function Solar() {
-    const CHARGE_RATE = 100 / 9, DRAIN_RATE = 100 / 25, TOL = 14, SUN_R = 108, CX = 150, CY = 150;
+    const CHARGE_RATE = 100 / 9, DRAIN_RATE = 100 / 11, TOL = 14, SUN_R = 108, CX = 150, CY = 150;
     const ASSETS = '600_solar_assets/';
     const [dir] = useState(() => Math.random() < .5 ? 1 : -1);
     const [speed] = useState(() => 5 + Math.random() * 3);
@@ -195,33 +195,52 @@ function Solar() {
     const [sunAngle, setSunAngle] = useState(() => Math.random() * 360);
     const [charge, setCharge] = useState(0);
     const [done, setDone] = useState(false);
+    const [failed, setFailed] = useState(false);
 
     const angDelta = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d };
     const polar = (deg, r) => { const a = deg * Math.PI / 180; return [CX + Math.cos(a) * r, CY - Math.sin(a) * r] };
+    const [dragging, setDragging] = useState(false);
+    const angleFromPointer = e => {
+        const box = e.currentTarget.getBoundingClientRect();
+        const x = (e.clientX - box.left) / box.width * 300, y = (e.clientY - box.top) / box.height * 300;
+        return (Math.atan2(-(y - CY), x - CX) * 180 / Math.PI + 360) % 360;
+    };
+    const steerStart = e => { if (done || failed) return; setDragging(true); e.currentTarget.setPointerCapture?.(e.pointerId); const v = angleFromPointer(e); angleRef.current = v; setAngle(v) };
+    const steerMove = e => { if (!dragging || done || failed) return; const v = angleFromPointer(e); angleRef.current = v; setAngle(v) };
+    const steerEnd = () => setDragging(false);
 
     useEffect(() => {
-        if (done) return;
-        let raf, lastTs, sunLocal = sunAngle;
+        if (done || failed) return;
+        let raf, lastTs, sunLocal = sunAngle, elapsed = 0;
         const step = ts => {
             if (lastTs == null) lastTs = ts;
             const dt = Math.min(.1, (ts - lastTs) / 1000);
             lastTs = ts;
+            elapsed += dt;
             sunLocal = (sunLocal + dir * speed * dt + 360) % 360;
             const aligned = angDelta(angleRef.current, sunLocal) <= TOL;
             setSunAngle(sunLocal);
-            setCharge(c => Math.min(100, Math.max(0, c + (aligned ? CHARGE_RATE : -DRAIN_RATE) * dt)));
+            setCharge(c => {
+                const next = Math.min(100, Math.max(0, c + (aligned ? CHARGE_RATE : -DRAIN_RATE) * dt));
+                if (next >= 100) setDone(true);
+                else if (next <= 0 && elapsed > 2) setFailed(true);
+                return next;
+            });
             raf = requestAnimationFrame(step);
         };
         raf = requestAnimationFrame(step);
         return () => cancelAnimationFrame(raf);
-    }, [done]);
-
-    useEffect(() => { if (charge >= 100) setDone(true) }, [charge]);
+    }, [done, failed]);
 
     useEffect(() => {
         if (!done) return;
         if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-complete' }, '*'), 1200); return () => clearTimeout(id) }
     }, [done]);
+
+    useEffect(() => {
+        if (!failed) return;
+        if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-failed' }, '*'), 1200); return () => clearTimeout(id) }
+    }, [failed]);
 
     const aligned = angDelta(angle, sunAngle) <= TOL;
     const [w1x, w1y] = polar(angle - TOL, 135), [w2x, w2y] = polar(angle + TOL, 135);
@@ -231,22 +250,21 @@ function Solar() {
 
     return <>
         <Header title="SOLAR ALIGNMENT" sub="ARRAY OFFLINE · BATTERY DEPLETED" />
-        <p className="instructions">Steer the array to keep the sun inside the amber cone. The sun drifts in a slow orbit, so once you're locked on you'll need to keep nudging the slider to stay with it while the battery charges.</p>
+        <p className="instructions">Drag around the dial to steer the array and keep the sun inside the amber cone. The sun drifts in a slow orbit, so once you're locked on you'll need to keep turning with it while the battery charges.</p>
         <div style={{ display: 'grid', placeItems: 'center', margin: '24px 0' }}>
-            <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: 'radial-gradient(circle,#0e1614,#070809 70%)', border: '1px solid #34403a' }}>
+            <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: 'radial-gradient(circle,#0e1614,#070809 70%)', border: '1px solid #34403a', cursor: done || failed ? 'default' : 'grab', touchAction: 'none' }} onPointerDown={steerStart} onPointerMove={steerMove} onPointerUp={steerEnd} onPointerCancel={steerEnd}>
                 {stars.map((s, i) => <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="#fff" opacity={s.o} />)}
                 <circle cx={CX} cy={CY} r={SUN_R} fill="none" stroke="#242c29" strokeDasharray="3 5" />
                 <path d={sector} fill={aligned ? 'rgba(201,255,77,.28)' : 'rgba(255,209,102,.14)'} stroke={aligned ? '#c9ff4d' : '#ffd166'} strokeWidth="2" />
                 <image href={ASSETS + 'sun.png'} x={sx - SUN_W / 2} y={sy - SUN_H / 2} width={SUN_W} height={SUN_H} style={{ filter: aligned ? 'brightness(1.35) drop-shadow(0 0 16px rgba(255,180,60,.7))' : 'none', transition: 'filter .2s' }} />
                 <image href={ASSETS + 'satellite.png'} x={CX - SCID_W / 2} y={CY - SCID_H / 2} width={SCID_W} height={SCID_H} transform={`rotate(${90 - angle} ${CX} ${CY})`} />
-                <text x="150" y="292" textAnchor="middle" fontSize="9" fill={aligned ? '#c9ff4d' : '#89948d'}>{done ? 'ARRAY CHARGED' : aligned ? 'CHARGING · HOLD STEADY' : 'STEER INTO THE CONE'}</text>
+                <text x="150" y="292" textAnchor="middle" fontSize="9" fill={failed ? '#ff5964' : aligned ? '#c9ff4d' : '#89948d'}>{done ? 'ARRAY CHARGED' : failed ? 'BATTERY DEPLETED' : aligned ? 'CHARGING · HOLD STEADY' : dragging ? 'STEERING' : 'DRAG THE DIAL TO STEER'}</text>
             </svg>
         </div>
-        <div className="readout" style={{ color: aligned ? 'var(--green)' : 'var(--yellow)' }}>BATTERY {Math.round(charge)}% · ARRAY {Math.round(angle)}° · SUN {Math.round(sunAngle)}°</div>
-        <input className="range" type="range" min="0" max="359" value={Math.round(angle)} onChange={e => { const v = +e.target.value; angleRef.current = v; setAngle(v) }} disabled={done} />
-        <div className="bar"><i style={{ width: `${charge}%`, background: aligned ? 'var(--green)' : 'var(--yellow)' }} /></div>
+        <div className="readout" style={{ color: failed ? 'var(--red)' : aligned ? 'var(--green)' : 'var(--yellow)' }}>BATTERY {Math.round(charge)}% · ARRAY {Math.round(angle)}° · SUN {Math.round(sunAngle)}°</div>
+        <div className="bar"><i style={{ width: `${charge}%`, background: failed ? 'var(--red)' : aligned ? 'var(--green)' : 'var(--yellow)' }} /></div>
         <div className="legend"><span><i className="dot yellowbg" />ALIGNMENT CONE ±{TOL}°</span><span><i className="dot green" />CHARGING</span></div>
-        {done ? <div className="success">ARRAY CHARGED · BATTERY ONLINE</div> : null}
+        {done ? <div className="success">ARRAY CHARGED · BATTERY ONLINE</div> : failed ? <div className="failure">BATTERY FULLY DEPLETED · ARRAY OFFLINE · SATELLITE LOST</div> : null}
     </>;
 }
 function Contact() {
@@ -307,7 +325,7 @@ function Contact() {
 
     return <>
         <Header title="MISSED CONTACT" sub="RSSI -104 dBm · NO DIRECTIONAL LOCK" />
-        <p className="instructions">The satellite's bearing isn't shown — only signal strength. Sweep the dish and hill-climb toward the peak. Hold the peak steady for a moment and the downlink locks automatically — no need to click anything the instant you hit it.</p>
+        <p className="instructions">The satellite's bearing isn't shown — only signal strength. Sweep the dish and hill-climb toward the peak, then hold it steady for a moment to lock the downlink.</p>
         <div style={{ display: 'grid', placeItems: 'center', margin: '24px 0' }}>
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: '#0c1210', border: '1px solid #34403a' }}>
                 <ellipse cx={CX} cy={GROUND_Y + 6} rx="72" ry="10" fill="rgba(0,0,0,.35)" />
@@ -431,9 +449,6 @@ function Process() {
         return { six, leakSet, decoy, seeds };
     });
     const [phase, setPhase] = useState('run'); // run | won | lost
-    const [retriesLeft, setRetriesLeft] = useState(1);
-    const retriesRef = useRef(1);
-    const [flash, setFlash] = useState(false);
     const [stopped, setStopped] = useState([]);
     const stoppedRef = useRef(stopped);
     useEffect(() => { stoppedRef.current = stopped }, [stopped]);
@@ -445,15 +460,7 @@ function Process() {
         if (phase !== 'run') return;
         let raf, t0 = null, lastSampleT = -1, localSeries = {};
         setup.six.forEach(p => localSeries[p] = []);
-        let cpuHist = [], curCPU = BASE, smoothedSecs = null;
-        const regressionSlope = hist => {
-            const n = hist.length;
-            if (n < 2) return 0;
-            const tMean = hist.reduce((s, p) => s + p.t, 0) / n, cMean = hist.reduce((s, p) => s + p.cpu, 0) / n;
-            let num = 0, den = 0;
-            hist.forEach(p => { num += (p.t - tMean) * (p.cpu - cMean); den += (p.t - tMean) ** 2 });
-            return den ? num / den : 0;
-        };
+        let curCPU = BASE;
         const step = ts => {
             if (t0 == null) t0 = ts;
             const elapsed = (ts - t0) / 1000;
@@ -474,42 +481,36 @@ function Process() {
                 }
                 vals[p] = Math.max(2, Math.min(99, v));
             });
-            curCPU += (Math.min(140, target) - curCPU) * .06;
+            const cappedTarget = Math.min(140, target);
+            curCPU += (cappedTarget - curCPU) * .06;
             const dispCPU = Math.max(0, Math.min(100, curCPU));
             setDisplayCPU(dispCPU);
             if (elapsed - lastSampleT >= .35) {
                 lastSampleT = elapsed;
                 setup.six.forEach(p => { localSeries[p] = [...localSeries[p], vals[p]].slice(-36) });
                 setSeries({ ...localSeries });
-                cpuHist.push({ t: elapsed, cpu: dispCPU });
-                if (cpuHist.length > 6) cpuHist.shift();
-                if (cpuHist.length >= 2) {
-                    const r = regressionSlope(cpuHist);
-                    if (r <= .3 && dispCPU < 55) { setRateInfo({ text: 'STABLE', stable: true }); smoothedSecs = null }
-                    else if (r <= .3) { setRateInfo({ text: 'ELEVATED · NO MARGIN', stable: false }); smoothedSecs = null }
+                // exact rate the target is climbing at, from the simulation's own known parameters — no
+                // curve-fitting, so it can't misread a transient as improvement the way a windowed
+                // regression over noisy history can.
+                const activeLeaks = [...setup.leakSet].filter(p => !stoppedRef.current.includes(p)).length;
+                const leakRate = activeLeaks * RATE;
+                const K = .06 * 60; // per-second decay constant matching the .06-per-frame (~60fps) approach to target
+                if (leakRate <= .05) {
+                    if (cappedTarget <= 100) { setRateInfo({ text: dispCPU < 55 ? 'STABLE' : 'ELEVATED · NO MARGIN', stable: dispCPU < 55 }) }
                     else {
-                        const secs = (100 - dispCPU) / r;
-                        smoothedSecs = smoothedSecs == null ? secs : smoothedSecs * .7 + secs * .3;
-                        setRateInfo({ text: smoothedSecs > 599 ? '>10:00' : `${Math.floor(smoothedSecs / 60)}:${String(Math.floor(smoothedSecs % 60)).padStart(2, '0')}`, stable: false });
+                        // fixed target above 100: exact closed-form time for an exponential approach to cross 100
+                        const secs = Math.max(0, -Math.log(Math.max(1e-6, (cappedTarget - 100) / Math.max(1e-6, cappedTarget - dispCPU))) / K);
+                        setRateInfo({ text: secs > 599 ? '>10:00' : `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`, stable: false });
                     }
+                } else {
+                    const secs = Math.max(0, (100 - dispCPU) / leakRate);
+                    setRateInfo({ text: secs > 599 ? '>10:00' : `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`, stable: false });
                 }
             }
             const allLeaksStopped = [...setup.leakSet].every(p => stoppedRef.current.includes(p));
             const onlyLeaksStopped = stoppedRef.current.length === setup.leakSet.size;
             if (allLeaksStopped && onlyLeaksStopped && dispCPU < 50 && elapsed > 1) { setPhase('won'); return }
-            if (curCPU >= 100) {
-                if (retriesRef.current > 0) {
-                    retriesRef.current -= 1;
-                    setRetriesLeft(retriesRef.current);
-                    setStopped([]);
-                    setFlash(true);
-                    setTimeout(() => setFlash(false), 1600);
-                    t0 = null; lastSampleT = -1; curCPU = BASE; cpuHist = []; smoothedSecs = null;
-                    localSeries = {}; setup.six.forEach(p => localSeries[p] = []);
-                    setSeries({ ...localSeries });
-                    setDisplayCPU(BASE);
-                } else { setPhase('lost'); return }
-            }
+            if (curCPU >= 100) { setPhase('lost'); return }
             raf = requestAnimationFrame(step);
         };
         raf = requestAnimationFrame(step);
@@ -527,18 +528,23 @@ function Process() {
 
     const toggle = p => { if (phase !== 'run') return; setStopped(s => s.includes(p) ? s.filter(x => x !== p) : [...s, p]) };
     const leaksStoppedCount = [...setup.leakSet].filter(p => stopped.includes(p)).length;
-    const spark = p => { const arr = series[p] || []; if (arr.length < 2) return ''; return arr.map((v, i) => `${(i / (arr.length - 1 || 1) * 80).toFixed(1)},${(30 - v / 100 * 28).toFixed(1)}`).join(' ') };
+    const spark = p => { const arr = series[p] || []; if (arr.length < 2) return null; const w = 80, h = 32; const pts = arr.map((v, i) => [+(i / (arr.length - 1 || 1) * w).toFixed(1), +(h - 3 - Math.min(100, v) / 100 * (h - 6)).toFixed(1)]); return { pts, line: pts.map(pt => pt.join(',')).join(' '), area: `0,${h} ${pts.map(pt => pt.join(',')).join(' ')} ${w},${h}` } };
 
     return <>
-        <Header title="MEMORY LEAK" sub={`CPU ${Math.round(displayCPU)}% · ${leaksStoppedCount}/3 LEAKS ISOLATED · ${retriesLeft} RETRY LEFT`} />
-        <p className="instructions">Three of these six subprocesses are leaking memory and driving CPU toward critical. Watch each one's live trend — a real leak climbs continuously; a decoy spikes early then flattens out. Isolate the three real leaks before CPU breaches 100%. You get one emergency restart — a second breach loses the satellite for good.</p>
+        <Header title="MEMORY LEAK" sub={`CPU ${Math.round(displayCPU)}% · ${leaksStoppedCount}/3 LEAKS ISOLATED`} />
+        <p className="instructions">Three of these six subprocesses are leaking memory and driving CPU toward critical. Watch each one's live trend — a real leak climbs continuously; a decoy spikes early then flattens out. Isolate the three real leaks before CPU breaches 100% — a single breach loses the satellite for good.</p>
         <div className="pixel-grid">
             {setup.six.map(p => {
                 const off = stopped.includes(p), actual = setup.leakSet.has(p);
+                const sp = spark(p), last = sp && sp.pts[sp.pts.length - 1];
                 return <button className={'node ' + (off ? (actual ? 'done' : 'fail') : '')} onClick={() => toggle(p)} key={p} disabled={phase !== 'run'}>
                     {p}
-                    <svg viewBox="0 0 80 30" width="100%" height="30" style={{ display: 'block', margin: '8px 0 4px' }}>
-                        <polyline points={spark(p)} fill="none" stroke={off ? (actual ? '#0c1210' : '#0c1210') : '#8fd9ff'} strokeWidth="1.6" />
+                    <svg viewBox="0 0 80 32" width="100%" height="32" style={{ display: 'block', margin: '8px 0 4px' }}>
+                        <line x1="0" y1="9" x2="80" y2="9" stroke="#1c2422" strokeWidth="1" />
+                        <line x1="0" y1="20" x2="80" y2="20" stroke="#1c2422" strokeWidth="1" />
+                        {sp && !off && <polygon points={sp.area} fill="#8fd9ff" opacity=".14" />}
+                        {sp && <polyline points={sp.line} fill="none" stroke={off ? '#0c1210' : '#8fd9ff'} strokeWidth="1.7" strokeLinejoin="round" />}
+                        {sp && !off && last && <circle cx={last[0]} cy={last[1]} r="2" fill="#8fd9ff" style={{ filter: 'drop-shadow(0 0 3px rgba(143,217,255,.8))' }} />}
                     </svg>
                     <small>{off ? (actual ? 'ISOLATED' : 'SERVICE OFFLINE') : 'MONITORING'}</small>
                 </button>;
@@ -546,7 +552,6 @@ function Process() {
         </div>
         <div className="bar"><i style={{ width: `${displayCPU}%`, background: displayCPU > 80 ? 'var(--red)' : displayCPU > 55 ? 'var(--yellow)' : 'var(--green)' }} /></div>
         <div className="readout" style={{ color: displayCPU > 80 ? 'var(--red)' : displayCPU > 55 ? 'var(--yellow)' : 'var(--green)' }}>CPU {Math.round(displayCPU)}% · TIME TO CRITICAL {rate.stable ? 'STABLE' : rate.text}</div>
-        {flash && <div className="failure">CPU CRITICAL · EMERGENCY RESTART · {retriesLeft} RETRY REMAINING</div>}
         {phase === 'won' && <div className="success">LEAKS CONTAINED · CPU BELOW SAFE THRESHOLD</div>}
         {phase === 'lost' && <div className="failure">SATELLITE LOST · CPU OVERRUN</div>}
     </>;
