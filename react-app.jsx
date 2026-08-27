@@ -185,14 +185,21 @@ function Power() {
     </>;
 }
 function Solar() {
-    const CHARGE_RATE = 100 / 9, DRAIN_RATE = 100 / 11, TOL = 14, SUN_R = 108, CX = 150, CY = 150;
+    const CHARGE_RATE = 100 / 9, DRAIN_RATE = 100 / 11, SUN_R = 108, CX = 150, CY = 150;
     const ASSETS = '600_solar_assets/';
     const [dir] = useState(() => Math.random() < .5 ? 1 : -1);
     const [speed] = useState(() => 5 + Math.random() * 3);
     const [stars] = useState(() => Array.from({ length: 40 }, () => ({ x: Math.random() * 300, y: Math.random() * 300, r: Math.random() * 1.2 + .3, o: Math.random() * .6 + .2 })));
-    const [angle, setAngle] = useState(() => Math.random() * 360);
+    // Spawn the array a fair, bounded distance from the sun (20-40°) rather than two fully independent
+    // randoms -- otherwise the two can land ~180° apart, which is unrecoverable before the grace period ends.
+    const [initial] = useState(() => {
+        const sun0 = Math.random() * 360;
+        const off = (20 + Math.random() * 20) * (Math.random() < .5 ? 1 : -1);
+        return { sun0, angle0: (sun0 + off + 360) % 360 };
+    });
+    const [angle, setAngle] = useState(() => initial.angle0);
     const angleRef = useRef(angle);
-    const [sunAngle, setSunAngle] = useState(() => Math.random() * 360);
+    const [sunAngle, setSunAngle] = useState(() => initial.sun0);
     const [charge, setCharge] = useState(0);
     const [done, setDone] = useState(false);
     const [failed, setFailed] = useState(false);
@@ -218,12 +225,15 @@ function Solar() {
             lastTs = ts;
             elapsed += dt;
             sunLocal = (sunLocal + dir * speed * dt + 360) % 360;
-            const aligned = angDelta(angleRef.current, sunLocal) <= TOL;
+            // Real panels fall off faster than pure Lambert's cosine law once you're well off-axis --
+            // surface reflectance rises sharply at high incidence angles (Fresnel losses), so effective
+            // output drops steeper than cosine alone. Clamped at 0 past 90° off-boresight.
+            const efficiency = Math.pow(Math.max(0, Math.cos(angDelta(angleRef.current, sunLocal) * Math.PI / 180)), 5);
             setSunAngle(sunLocal);
             setCharge(c => {
-                const next = Math.min(100, Math.max(0, c + (aligned ? CHARGE_RATE : -DRAIN_RATE) * dt));
+                const next = Math.min(100, Math.max(0, c + (CHARGE_RATE * efficiency - DRAIN_RATE * (1 - efficiency)) * dt));
                 if (next >= 100) setDone(true);
-                else if (next <= 0 && elapsed > 2) setFailed(true);
+                else if (next <= 0 && elapsed > 12) setFailed(true); // long enough to actually read the instructions paragraph before failure is even possible
                 return next;
             });
             raf = requestAnimationFrame(step);
@@ -242,28 +252,30 @@ function Solar() {
         if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-failed' }, '*'), 1200); return () => clearTimeout(id) }
     }, [failed]);
 
-    const aligned = angDelta(angle, sunAngle) <= TOL;
-    const [w1x, w1y] = polar(angle - TOL, 135), [w2x, w2y] = polar(angle + TOL, 135);
-    const sector = `M ${CX} ${CY} L ${w1x} ${w1y} A 135 135 0 0 1 ${w2x} ${w2y} Z`;
+    const offset = angDelta(angle, sunAngle);
+    const efficiency = Math.pow(Math.max(0, Math.cos(offset * Math.PI / 180)), 5);
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const glowColor = `#${[lerp(255, 201, efficiency), lerp(89, 255, efficiency), lerp(100, 77, efficiency)].map(v => Math.round(v).toString(16).padStart(2, '0')).join('')}`;
     const [sx, sy] = polar(sunAngle, SUN_R);
     const SCID_W = 150, SCID_H = SCID_W * 644 / 1490, SUN_W = 70, SUN_H = SUN_W * 345 / 520;
+    const [bx, by] = polar(angle, 118);
 
     return <>
         <Header title="SOLAR ALIGNMENT" sub="ARRAY OFFLINE · BATTERY DEPLETED" />
-        <p className="instructions">Drag around the dial to steer the array and keep the sun inside the amber cone. The sun drifts in a slow orbit, so once you're locked on you'll need to keep turning with it while the battery charges.</p>
+        <p className="instructions">Drag around the dial to steer the array toward the sun. Output peaks dead-on and drops off steeply the further you drift — real panels lose more than the ideal cosine response once you're well off-axis, as reflectance rises at shallow angles. Stay close to the sun to keep charging; drift too far and you're draining. The sun keeps moving, so you'll need to keep turning with it.</p>
         <div style={{ display: 'grid', placeItems: 'center', margin: '24px 0' }}>
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: 'radial-gradient(circle,#0e1614,#070809 70%)', border: '1px solid #34403a', cursor: done || failed ? 'default' : 'grab', touchAction: 'none' }} onPointerDown={steerStart} onPointerMove={steerMove} onPointerUp={steerEnd} onPointerCancel={steerEnd}>
                 {stars.map((s, i) => <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="#fff" opacity={s.o} />)}
                 <circle cx={CX} cy={CY} r={SUN_R} fill="none" stroke="#242c29" strokeDasharray="3 5" />
-                <path d={sector} fill={aligned ? 'rgba(201,255,77,.28)' : 'rgba(255,209,102,.14)'} stroke={aligned ? '#c9ff4d' : '#ffd166'} strokeWidth="2" />
-                <image href={ASSETS + 'sun.png'} x={sx - SUN_W / 2} y={sy - SUN_H / 2} width={SUN_W} height={SUN_H} style={{ filter: aligned ? 'brightness(1.35) drop-shadow(0 0 16px rgba(255,180,60,.7))' : 'none', transition: 'filter .2s' }} />
-                <image href={ASSETS + 'satellite.png'} x={CX - SCID_W / 2} y={CY - SCID_H / 2} width={SCID_W} height={SCID_H} transform={`rotate(${90 - angle} ${CX} ${CY})`} />
-                <text x="150" y="292" textAnchor="middle" fontSize="9" fill={failed ? '#ff5964' : aligned ? '#c9ff4d' : '#89948d'}>{done ? 'ARRAY CHARGED' : failed ? 'BATTERY DEPLETED' : aligned ? 'CHARGING · HOLD STEADY' : dragging ? 'STEERING' : 'DRAG THE DIAL TO STEER'}</text>
+                <line x1={CX} y1={CY} x2={bx} y2={by} stroke={glowColor} strokeWidth={1.5 + efficiency * 2} opacity={.35 + efficiency * .5} style={{ filter: efficiency > .1 ? `drop-shadow(0 0 ${4 + efficiency * 8}px ${glowColor})` : 'none' }} />
+                <image href={ASSETS + 'sun.png'} x={sx - SUN_W / 2} y={sy - SUN_H / 2} width={SUN_W} height={SUN_H} style={{ filter: `brightness(${1 + efficiency * .45}) drop-shadow(0 0 ${efficiency * 18}px rgba(255,180,60,.8))`, transition: 'filter .15s' }} />
+                <image href={ASSETS + 'satellite.png'} x={CX - SCID_W / 2} y={CY - SCID_H / 2} width={SCID_W} height={SCID_H} transform={`rotate(${90 - angle} ${CX} ${CY})`} style={{ filter: `brightness(${1 + efficiency * .3}) drop-shadow(0 0 ${efficiency * 10}px ${glowColor})`, transition: 'filter .15s' }} />
+                <text x="150" y="292" textAnchor="middle" fontSize="9" fill={failed ? '#ff5964' : glowColor}>{done ? 'ARRAY CHARGED' : failed ? 'BATTERY DEPLETED' : dragging ? 'STEERING' : `OUTPUT ${Math.round(efficiency * 100)}%`}</text>
             </svg>
         </div>
-        <div className="readout" style={{ color: failed ? 'var(--red)' : aligned ? 'var(--green)' : 'var(--yellow)' }}>BATTERY {Math.round(charge)}% · ARRAY {Math.round(angle)}° · SUN {Math.round(sunAngle)}°</div>
-        <div className="bar"><i style={{ width: `${charge}%`, background: failed ? 'var(--red)' : aligned ? 'var(--green)' : 'var(--yellow)' }} /></div>
-        <div className="legend"><span><i className="dot yellowbg" />ALIGNMENT CONE ±{TOL}°</span><span><i className="dot green" />CHARGING</span></div>
+        <div className="readout" style={{ color: failed ? 'var(--red)' : glowColor }}>BATTERY {Math.round(charge)}% · OUTPUT {Math.round(efficiency * 100)}% · OFFSET {Math.round(offset)}°</div>
+        <div className="bar"><i style={{ width: `${charge}%`, background: failed ? 'var(--red)' : glowColor }} /></div>
+        <div className="legend"><span><i className="dot yellowbg" />PANEL OUTPUT</span><span><i className="dot green" />CHARGING</span></div>
         {done ? <div className="success">ARRAY CHARGED · BATTERY ONLINE</div> : failed ? <div className="failure">BATTERY FULLY DEPLETED · ARRAY OFFLINE · SATELLITE LOST</div> : null}
     </>;
 }
@@ -824,6 +836,8 @@ function BitFlip() {
   const [fixPos, setFixPos] = useState(() => setup.sats.map(() => null));
   const [phase, setPhase] = useState('run'); // run | done
   const [remaining, setRemaining] = useState(TIME);
+  const WRONG_PENALTY = 5;
+  const triedRef = useRef(setup.sats.map(() => new Set()));
 
   useEffect(() => {
     if (phase !== 'run') return;
@@ -842,6 +856,11 @@ function BitFlip() {
     if (phase !== 'run') return;
     const pos = bi + 1;
     setFixPos(fp => fp.map((p, i) => i === si ? (p === pos ? null : pos) : p));
+    const s = setup.sats[si];
+    if (pos !== s.corruptPos && !triedRef.current[si].has(pos)) {
+      triedRef.current[si].add(pos);
+      setRemaining(r => Math.max(0, r - WRONG_PENALTY));
+    }
   };
 
   const results = bitsState.map(bits => hammingSyndrome(bits));
@@ -867,7 +886,7 @@ function BitFlip() {
 
   return <>
     <Header title="GAMMA RAY BURST" sub={`HAMMING CODE ERROR CORRECTION · ${remaining}s REMAINING`} />
-    <p className="instructions">A gamma-ray burst has flipped one bit in each affected satellite's memory register. Every register runs a Hamming code — three overlapping checksum bits (C1/C2/C3), each covering a different set of bit positions. Work out which bit is wrong from which checks fail, then click it to flip it back before the window closes.</p>
+    <p className="instructions">A gamma-ray burst has flipped one bit in each affected satellite's memory register. Every register runs a Hamming code — three overlapping checksum bits (C1/C2/C3), each covering a different set of bit positions. Work out which bit is wrong from which checks fail, then click it to flip it back before the window closes. A wrong guess costs {WRONG_PENALTY}s off the clock.</p>
     <div style={{ fontSize: 12, color: '#7b8580', lineHeight: 1.8, margin: '10px 0', border: '1px solid #1c2422', padding: '10px 12px' }}>
       C1 covers bits 1,3,5,7 &nbsp;·&nbsp; C2 covers bits 2,3,6,7 &nbsp;·&nbsp; C3 covers bits 4,5,6,7 — a check fails if an odd number of its bits are wrong.<br />
       Only C1 fails → bit 1 &nbsp;·&nbsp; only C2 → bit 2 &nbsp;·&nbsp; C1+C2 → bit 3 &nbsp;·&nbsp; only C3 → bit 4 &nbsp;·&nbsp; C1+C3 → bit 5 &nbsp;·&nbsp; C2+C3 → bit 6 &nbsp;·&nbsp; all three → bit 7
