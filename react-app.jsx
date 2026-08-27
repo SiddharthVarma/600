@@ -651,7 +651,10 @@ function Orbit() {
     const active = locked || drag;
     const evalNow = evaluateMag(drag);
     const pts = stage === 'plot' && active ? points(active) : null;
-    const approachPts = locked ? points(locked) : null;
+    // The plotted burn only has to land within radiusTol of r2, not exactly on it -- so the transfer
+    // animation targets the true circular radius (same angle) rather than the player's imprecise value,
+    // otherwise the handoff into the coast phase (which assumes you're exactly on r2) visibly snaps.
+    const approachPts = locked ? points({ angle: locked.angle, dist: cfg.r2 }) : null;
     const currentAngle = stage === 'coast' && locked ? (locked.angle + sweepDeg * sweepT) % 360 : null;
     const inWindow = currentAngle != null && angDelta(currentAngle, cfg.windowCenter) <= cfg.windowWidth / 2;
     const nearWindow = !inWindow && currentAngle != null && angDelta(currentAngle, cfg.windowCenter) <= cfg.windowWidth / 2 + 18;
