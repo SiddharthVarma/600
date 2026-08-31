@@ -65,7 +65,7 @@ function Thermal() {
     return <>
         <Header title="THERMAL ROUTING" sub={`CORE ${temp}°C · COOLANT ${pressure} kPa`} />
         <p className="instructions">Hold and drag from the hot core through the pump. {junctions === 2 ? 'Two valve junctions' : `${junctions} valve junctions`} block the loop — at each one, route through the cooler valve, or the coolant flashes in the hot bypass. A purge line branches off the pump but dead-ends before the manifold.</p>
-        <svg viewBox={`0 0 ${width} 240`} width="100%" style={{ maxWidth: 760, display: 'block', margin: '28px 0', background: '#0c1210', border: '1px solid #34403a', cursor: dragging ? 'grabbing' : 'crosshair', touchAction: 'none' }} onPointerDown={start} onPointerMove={follow} onPointerUp={() => setDragging(false)} onPointerCancel={() => setDragging(false)}>
+        <svg viewBox={`0 0 ${width} 240`} width="100%" style={{ maxWidth: 760, display: 'block', margin: '12px 0', background: '#0c1210', border: '1px solid #34403a', cursor: dragging ? 'grabbing' : 'crosshair', touchAction: 'none' }} onPointerDown={start} onPointerMove={follow} onPointerUp={() => setDragging(false)} onPointerCancel={() => setDragging(false)}>
             {edges.map(([a, b]) => line(a, b))}
             {Object.entries(nodes).map(([n, [x, y]]) => {
                 const done = path.includes(n), isValve = n.startsWith('VALVE'), fontSize = n.length > 8 ? 6 : isValve ? 7 : 8;
@@ -154,7 +154,7 @@ function Power() {
     return <>
         <Header title="POWER BUS" sub="VOLTAGE OSCILLATION · MULTI-RAIL FEED REQUIRED" />
         <p className="instructions">Each load needs its combined bus voltage inside the range shown. Two loads need just one bus each; the two buses left over are the pair for the third. Stage one or more buses, then click a load to commit them — click a staged bus again to remove it, or clear the selection outright.</p>
-        <svg viewBox="0 0 620 340" width="100%" style={{ maxWidth: 720, display: 'block', margin: '26px 0', background: '#0c1210', border: '1px solid #34403a' }}>
+        <svg viewBox="0 0 620 340" width="100%" style={{ maxWidth: 720, display: 'block', margin: '12px 0', background: '#0c1210', border: '1px solid #34403a' }}>
             {Object.entries(connections).flatMap(([li, busIdxs]) => busIdxs.map(bi => {
                 const y1 = busYs[bi] + 26, y2 = loadYs[+li] + 42;
                 return <path key={li + '-' + bi} d={`M 150 ${y1} C 260 ${y1}, 340 ${y2}, 450 ${y2}`} fill="none" stroke="#c9ff4d" strokeWidth="6" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 6px #c9ff4d)' }} />;
@@ -263,7 +263,7 @@ function Solar() {
     return <>
         <Header title="SOLAR ALIGNMENT" sub="ARRAY OFFLINE · BATTERY DEPLETED" />
         <p className="instructions">Drag around the dial to steer the array toward the sun. Output peaks dead-on and drops off steeply the further you drift — real panels lose more than the ideal cosine response once you're well off-axis, as reflectance rises at shallow angles. Stay close to the sun to keep charging; drift too far and you're draining. The sun keeps moving, so you'll need to keep turning with it.</p>
-        <div style={{ display: 'grid', placeItems: 'center', margin: '24px 0' }}>
+        <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: 'radial-gradient(circle,#0e1614,#070809 70%)', border: '1px solid #34403a', cursor: done || failed ? 'default' : 'grab', touchAction: 'none' }} onPointerDown={steerStart} onPointerMove={steerMove} onPointerUp={steerEnd} onPointerCancel={steerEnd}>
                 {stars.map((s, i) => <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="#fff" opacity={s.o} />)}
                 <circle cx={CX} cy={CY} r={SUN_R} fill="none" stroke="#242c29" strokeDasharray="3 5" />
@@ -338,7 +338,7 @@ function Contact() {
     return <>
         <Header title="MISSED CONTACT" sub="RSSI -104 dBm · NO DIRECTIONAL LOCK" />
         <p className="instructions">The satellite's bearing isn't shown — only signal strength. Sweep the dish and hill-climb toward the peak, then hold it steady for a moment to lock the downlink.</p>
-        <div style={{ display: 'grid', placeItems: 'center', margin: '24px 0' }}>
+        <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: '#0c1210', border: '1px solid #34403a' }}>
                 <ellipse cx={CX} cy={GROUND_Y + 6} rx="72" ry="10" fill="rgba(0,0,0,.35)" />
                 <image href={FRAME_DIR + fr.file} x={imgX} y={imgY} width={dispW} height={DISPLAY_H} style={{ imageRendering: 'pixelated' }} />
@@ -422,7 +422,7 @@ function ReactionWheel() {
     return <>
         <Header title="REACTION WHEEL FAULT" sub={`WHEEL ${setup.failedIdx + 1} OFFLINE · UNCOMMANDED TUMBLE`} />
         <p className="instructions">One reaction wheel has failed and can't be commanded. The satellite is drifting — click each working wheel to cycle its commanded speed (OFF · 25% · 50% · 75% · 100%) until the combined torque cancels the drift. Direction and magnitude both have to line up.</p>
-        <div style={{ display: 'grid', placeItems: 'center', margin: '24px 0' }}>
+        <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: '#0c1210', border: '1px solid #34403a' }}>
                 <circle cx={CX} cy={CY} r="104" fill="none" stroke="#242c29" strokeDasharray="3 5" />
                 {arrow(driftAngle, 72, '#ff5964')}
@@ -571,8 +571,13 @@ function Process() {
 function Orbit() {
     const cx = 150, cy = 150;
     const [cfg] = useState(() => {
-        const raiseMode = Math.random() < .5, r2 = 60 + Math.random() * 20, delta = 20 + Math.random() * 12;
-        const r1 = raiseMode ? Math.max(26, r2 - delta) : r2 + delta;
+        const raiseMode = Math.random() < .5;
+        let r2 = 60 + Math.random() * 20, delta = 20 + Math.random() * 12;
+        let r1 = raiseMode ? Math.max(26, r2 - delta) : r2 + delta;
+        // Normalize so the larger orbit always fills the frame consistently -- otherwise a small random
+        // draw renders as a tiny cluster lost in empty space instead of using the available canvas.
+        const scale = 120 / Math.max(r1, r2);
+        r1 *= scale; r2 *= scale;
         const startAngle = Math.random() * 360, windowCenter = (startAngle + 130 + Math.random() * 100) % 360;
         return { raiseMode, r1, r2, minSafeR: 40, radiusTol: 9, startAngle, windowCenter, windowWidth: 50 };
     });
@@ -660,7 +665,11 @@ function Orbit() {
     const nearWindow = !inWindow && currentAngle != null && angDelta(currentAngle, cfg.windowCenter) <= cfg.windowWidth / 2 + 18;
     const trail = stage === 'coast' && locked ? Array.from({ length: 25 }, (_, i) => polar(locked.angle + sweepDeg * sweepT * i / 24, cfg.r2)) : [];
     const satNow = stage === 'approach' && approachPts ? bezierAt(approachPts, t) : stage === 'coast' && currentAngle != null ? polar(currentAngle, cfg.r2) : stage === 'success' ? polar(cfg.windowCenter, cfg.r2) : satStart;
-    const arcPts = Array.from({ length: 9 }, (_, i) => polar(cfg.windowCenter - cfg.windowWidth / 2 + cfg.windowWidth * i / 8, cfg.r2));
+    // The insertion window shows only a broad, vague sector at first and narrows to its true size as the
+    // coast phase progresses -- you don't get precise timing info until you're actually getting close.
+    const revealT = stage === 'coast' ? Math.min(1, sweepT / .65) : 0;
+    const displayWidth = cfg.windowWidth * 3 - (cfg.windowWidth * 3 - cfg.windowWidth) * revealT;
+    const arcPts = Array.from({ length: 9 }, (_, i) => polar(cfg.windowCenter - displayWidth / 2 + displayWidth * i / 8, cfg.r2));
     const sectorPath = `M ${cx} ${cy} L ${arcPts.map(p => p.join(',')).join(' L ')} Z`;
     const [wlx, wly] = polar(cfg.windowCenter, cfg.r2 + 16);
 
@@ -671,8 +680,8 @@ function Orbit() {
 
     return <>
         <Header title="ORBITAL BURN" sub={`ORBIT ${cfg.raiseMode ? 'DECAYING' : 'OVER-BOOSTED'} · TWO-BURN TRANSFER REQUIRED`} />
-        <p className="instructions">Drag from the satellite to plot a transfer burn onto the home orbital plane — not too hot, not too weak. Ignite the burn, then watch the coast: fire the circularization burn only while the satellite is inside the insertion window, or the orbit stays unstable and you'll have to replot.</p>
-        <div style={{ display: 'grid', placeItems: 'center', margin: '24px 0' }}>
+        <p className="instructions">Drag from the satellite to plot a transfer burn onto the home orbital plane — not too hot, not too weak. Ignite the burn, then watch the coast: the insertion window only shows a rough sector at first and narrows as you approach it, so fire the circularization burn once you're confident you're inside it — miss it and the orbit stays unstable, and you'll have to replot.</p>
+        <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: '#0c1210', border: '1px solid #34403a', cursor: stage === 'plot' && !locked ? 'crosshair' : 'default', touchAction: 'none' }} onPointerDown={start} onPointerMove={move} onPointerUp={release} onPointerCancel={release}>
                 <circle cx={cx} cy={cy} r={cfg.minSafeR} fill="rgba(255,89,100,.12)" stroke="#ff5964" strokeWidth="1" strokeDasharray="2 4" />
                 <circle cx={cx} cy={cy} r={cfg.r1} fill="none" stroke="#ff5964" strokeWidth="1.5" strokeDasharray="3 5" opacity=".75" />
@@ -804,10 +813,10 @@ function hammingSyndrome(bits) {
 }
 function HammingRow({ label, bits, syn, onToggle, disabled, reference, restored }) {
   const ok = restored != null ? restored : syn.pos === 0;
-  return <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '8px 0', borderLeft: '2px solid ' + (ok ? 'transparent' : 'var(--red)'), paddingLeft: 10, borderBottom: '1px solid #1c2422', flexWrap: 'wrap' }}>
+  return <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '5px 0', borderLeft: '2px solid ' + (ok ? 'transparent' : 'var(--red)'), paddingLeft: 10, borderBottom: '1px solid #1c2422', flexWrap: 'wrap' }}>
     <div style={{ width: 78, fontSize: 11, color: reference ? '#7b8580' : '#9aa39c' }}>{label}</div>
     <div style={{ display: 'flex', gap: 4 }}>
-      {bits.map((b, i) => <button key={i} onClick={() => onToggle(i)} disabled={disabled} style={{ width: 26, height: 26, border: '1px solid #39453f', background: b ? '#1c2b16' : '#0d1211', color: b ? 'var(--green)' : '#5c6b64', fontSize: 12, cursor: disabled ? 'default' : 'pointer' }}>{b}</button>)}
+      {bits.map((b, i) => <button key={i} onClick={() => onToggle(i)} disabled={disabled} style={{ width: 24, height: 24, border: '1px solid #39453f', background: b ? '#1c2b16' : '#0d1211', color: b ? 'var(--green)' : '#5c6b64', fontSize: 12, cursor: disabled ? 'default' : 'pointer' }}>{b}</button>)}
     </div>
     <div style={{ display: 'flex', gap: 8, fontSize: 10 }}>
       <span style={{ color: syn.c1 ? 'var(--red)' : 'var(--green)' }}>C1:{syn.c1 ? '✕' : '✓'}</span>
@@ -890,15 +899,15 @@ function BitFlip() {
   return <>
     <Header title="GAMMA RAY BURST" sub={`HAMMING CODE ERROR CORRECTION · ${remaining}s REMAINING`} />
     <p className="instructions">A gamma-ray burst has flipped one bit in each affected satellite's memory register. Every register runs a Hamming code — three overlapping checksum bits (C1/C2/C3), each covering a different set of bit positions. Work out which bit is wrong from which checks fail, then click it to flip it back before the window closes. A wrong guess costs {WRONG_PENALTY}s off the clock.</p>
-    <div style={{ fontSize: 12, color: '#7b8580', lineHeight: 1.8, margin: '10px 0', border: '1px solid #1c2422', padding: '10px 12px' }}>
+    <div style={{ fontSize: 12, color: '#7b8580', lineHeight: 1.5, margin: '8px 0', border: '1px solid #1c2422', padding: '8px 10px' }}>
       C1 covers bits 1,3,5,7 &nbsp;·&nbsp; C2 covers bits 2,3,6,7 &nbsp;·&nbsp; C3 covers bits 4,5,6,7 — a check fails if an odd number of its bits are wrong.<br />
       Only C1 fails → bit 1 &nbsp;·&nbsp; only C2 → bit 2 &nbsp;·&nbsp; C1+C2 → bit 3 &nbsp;·&nbsp; only C3 → bit 4 &nbsp;·&nbsp; C1+C3 → bit 5 &nbsp;·&nbsp; C2+C3 → bit 6 &nbsp;·&nbsp; all three → bit 7
     </div>
-    <div style={{ marginTop: 18 }}>
-      <div style={{ fontSize: 11, letterSpacing: '.14em', color: '#7b8580', marginBottom: 6 }}>EXAMPLE · CLEAN READING</div>
+    <div style={{ marginTop: 8 }}>
+      <div style={{ fontSize: 11, letterSpacing: '.14em', color: '#7b8580', marginBottom: 4 }}>EXAMPLE · CLEAN READING</div>
       <HammingRow label="REF 000" bits={setup.ref} syn={refSyn} onToggle={() => { }} disabled reference />
     </div>
-    <div style={{ marginTop: 18, display: 'grid', gap: 2 }}>
+    <div style={{ marginTop: 8, display: 'grid', gap: 0 }}>
       <div style={{ fontSize: 11, letterSpacing: '.14em', color: '#7b8580', marginBottom: 6 }}>AFFECTED SATELLITES</div>
       {setup.sats.map((s, si) => <HammingRow key={s.id} label={s.id} bits={bitsState[si]} syn={results[si]} restored={restored[si]} onToggle={bi => toggle(si, bi)} disabled={phase !== 'run'} />)}
     </div>
@@ -1019,7 +1028,7 @@ function Debris() {
     return <>
         <Header title="DEBRIS FIELD" sub={`COLLISION AVOIDANCE · ${timeLeft}s REMAINING · ${hits}/${HIT_LIMIT} IMPACTS`} />
         <p className="instructions">A rival operator's satellite has broken apart (shoddy engineering!), and wreckage is crossing our orbital plane. It isn't just one satellite at risk — a collision here risks a cascade across other satellites in our plane! Use ← → (or hold the on-screen controls) to perform collision avoidance maneuvers.</p>
-        <div style={{ display: 'grid', placeItems: 'center', margin: '18px 0', position: 'relative' }}>
+        <div style={{ display: 'grid', placeItems: 'center', margin: '10px 0', position: 'relative' }}>
             <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={360} style={{ maxWidth: 340, display: 'block', background: '#05080a', border: '1px solid #34403a', touchAction: 'none' }}>
                 {debris.map(d => {
                     const t = DEBRIS_TYPES[d.type];

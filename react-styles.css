@@ -27,7 +27,7 @@ input {
 
 .app {
     min-height: 100vh;
-    padding: 30px;
+    padding: 18px;
     max-width: 1100px;
     margin: auto
 }
@@ -37,7 +37,7 @@ input {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--line);
-    padding-bottom: 20px
+    padding-bottom: 12px
 }
 
 .brand {
@@ -83,7 +83,7 @@ input {
 
 .board {
     border: 1px solid var(--line);
-    padding: 26px;
+    padding: 16px;
     min-height: 590px;
     user-select: none;
     -webkit-user-select: none
@@ -104,9 +104,10 @@ input {
 
 .instructions {
     color: #98a19b;
-    line-height: 1.7;
+    line-height: 1.5;
     font-size: 14px;
-    max-width: 650px
+    max-width: 650px;
+    margin: 8px 0 12px
 }
 
 .pixel-grid {
@@ -172,8 +173,8 @@ input {
 }
 
 .readout {
-    font-size: 28px;
-    margin: 16px 0;
+    font-size: 21px;
+    margin: 8px 0;
     color: var(--yellow)
 }
 
@@ -244,14 +245,14 @@ input {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
-    margin-top: 24px
+    margin-top: 10px
 }
 
 .action {
     border: 1px solid var(--green);
     background: transparent;
     color: var(--green);
-    padding: 12px 16px;
+    padding: 9px 14px;
     cursor: pointer
 }
 
@@ -263,15 +264,15 @@ input {
 .success {
     color: var(--green);
     border-left: 3px solid var(--green);
-    padding: 12px;
-    margin-top: 22px
+    padding: 9px 12px;
+    margin-top: 10px
 }
 
 .failure {
     color: var(--red);
     border-left: 3px solid var(--red);
-    padding: 12px;
-    margin-top: 22px
+    padding: 9px 12px;
+    margin-top: 10px
 }
 
 .legend {
@@ -279,7 +280,7 @@ input {
     gap: 18px;
     color: #8b958e;
     font-size: 11px;
-    margin-top: 24px
+    margin-top: 10px
 }
 
 .dot {
