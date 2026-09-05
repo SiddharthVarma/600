@@ -64,7 +64,7 @@ function Thermal() {
     const line = (a, b) => { const [x1, y1] = nodes[a], [x2, y2] = nodes[b], on = onPath(a, b); return <line key={a + b} x1={x1} y1={y1} x2={x2} y2={y2} stroke={on ? '#c9ff4d' : '#34403a'} strokeWidth={on ? 7 : 4} strokeLinecap="round" /> };
     return <>
         <Header title="THERMAL ROUTING" sub={`CORE ${temp}°C · COOLANT ${pressure} kPa`} />
-        <p className="instructions">Hold and drag from the hot core through the pump. {junctions === 2 ? 'Two valve junctions' : `${junctions} valve junctions`} block the loop — at each one, route through the cooler valve, or the coolant flashes in the hot bypass. A purge line branches off the pump but dead-ends before the manifold.</p>
+        <p className="instructions">Drag from the core through the pump, routing the cooler valve at each of the {junctions} junctions — the hot side flashes in the bypass. The purge line is a dead end.</p>
         <svg viewBox={`0 0 ${width} 240`} width="100%" style={{ maxWidth: 760, display: 'block', margin: '12px 0', background: '#0c1210', border: '1px solid #34403a', cursor: dragging ? 'grabbing' : 'crosshair', touchAction: 'none' }} onPointerDown={start} onPointerMove={follow} onPointerUp={() => setDragging(false)} onPointerCancel={() => setDragging(false)}>
             {edges.map(([a, b]) => line(a, b))}
             {Object.entries(nodes).map(([n, [x, y]]) => {
@@ -153,7 +153,7 @@ function Power() {
 
     return <>
         <Header title="POWER BUS" sub="VOLTAGE OSCILLATION · MULTI-RAIL FEED REQUIRED" />
-        <p className="instructions">Each load needs its combined bus voltage inside the range shown. Two loads need just one bus each; the two buses left over are the pair for the third. Stage one or more buses, then click a load to commit them — click a staged bus again to remove it, or clear the selection outright.</p>
+        <p className="instructions">Stage buses so their combined voltage lands in a load's range, then click the load to commit. Two loads need one bus each; the leftover two pair for the third.</p>
         <svg viewBox="0 0 620 340" width="100%" style={{ maxWidth: 720, display: 'block', margin: '12px 0', background: '#0c1210', border: '1px solid #34403a' }}>
             {Object.entries(connections).flatMap(([li, busIdxs]) => busIdxs.map(bi => {
                 const y1 = busYs[bi] + 26, y2 = loadYs[+li] + 42;
@@ -262,7 +262,7 @@ function Solar() {
 
     return <>
         <Header title="SOLAR ALIGNMENT" sub="ARRAY OFFLINE · BATTERY DEPLETED" />
-        <p className="instructions">Drag around the dial to steer the array toward the sun. Output peaks dead-on and drops off steeply the further you drift — real panels lose more than the ideal cosine response once you're well off-axis, as reflectance rises at shallow angles. Stay close to the sun to keep charging; drift too far and you're draining. The sun keeps moving, so you'll need to keep turning with it.</p>
+        <p className="instructions">Drag the dial to steer toward the sun. Output peaks dead-on and falls off sharply the further you drift.</p>
         <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: 'radial-gradient(circle,#0e1614,#070809 70%)', border: '1px solid #34403a', cursor: done || failed ? 'default' : 'grab', touchAction: 'none' }} onPointerDown={steerStart} onPointerMove={steerMove} onPointerUp={steerEnd} onPointerCancel={steerEnd}>
                 {stars.map((s, i) => <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="#fff" opacity={s.o} />)}
@@ -343,7 +343,7 @@ function Contact() {
 
     return <>
         <Header title="MISSED CONTACT" sub="RSSI -104 dBm · NO DIRECTIONAL LOCK" />
-        <p className="instructions">The satellite's bearing isn't shown — only signal strength. Sweep the dish and hill-climb toward the peak, then hold it steady for a moment to lock the downlink.</p>
+        <p className="instructions">Only signal strength is shown, not bearing. Sweep toward the peak and hold steady to lock.</p>
         <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: '#0c1210', border: '1px solid #34403a' }}>
                 <ellipse cx={CX} cy={GROUND_Y + 6} rx="72" ry="10" fill="rgba(0,0,0,.35)" />
@@ -427,7 +427,7 @@ function ReactionWheel() {
 
     return <>
         <Header title="REACTION WHEEL FAULT" sub={`WHEEL ${setup.failedIdx + 1} OFFLINE · UNCOMMANDED TUMBLE`} />
-        <p className="instructions">One reaction wheel has failed and can't be commanded. The satellite is drifting — click each working wheel to cycle its commanded speed (OFF · 25% · 50% · 75% · 100%) until the combined torque cancels the drift. Direction and magnitude both have to line up.</p>
+        <p className="instructions">One wheel has failed. Cycle each working wheel's speed until the combined torque cancels the drift — direction and magnitude both matter.</p>
         <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: '#0c1210', border: '1px solid #34403a' }}>
                 <circle cx={CX} cy={CY} r="104" fill="none" stroke="#242c29" strokeDasharray="3 5" />
@@ -550,7 +550,7 @@ function Process() {
 
     return <>
         <Header title="MEMORY LEAK" sub={`CPU ${Math.round(displayCPU)}% · ${leaksStoppedCount}/3 LEAKS ISOLATED`} />
-        <p className="instructions">Three of these six subprocesses are leaking memory and driving CPU toward critical. Watch each one's live trend — a real leak climbs continuously; a decoy spikes early then flattens out. Isolate the three real leaks before CPU breaches 100% — a single breach loses the satellite for good.</p>
+        <p className="instructions">Three of six processes are leaking memory. A real leak climbs continuously; a decoy spikes then flattens. Isolate the three leaks before CPU hits 100%.</p>
         <div className="pixel-grid">
             {setup.six.map(p => {
                 const off = stopped.includes(p), actual = setup.leakSet.has(p);
@@ -686,7 +686,7 @@ function Orbit() {
 
     return <>
         <Header title="ORBITAL BURN" sub={`ORBIT ${cfg.raiseMode ? 'DECAYING' : 'OVER-BOOSTED'} · TWO-BURN TRANSFER REQUIRED`} />
-        <p className="instructions">Drag from the satellite to plot a transfer burn onto the home orbital plane — not too hot, not too weak. Ignite the burn, then watch the coast: the insertion window only shows a rough sector at first and narrows as you approach it, so fire the circularization burn once you're confident you're inside it — miss it and the orbit stays unstable, and you'll have to replot.</p>
+        <p className="instructions">Drag to plot a transfer burn — not too hot, not too weak. Ignite, then fire the circularization burn once inside the insertion window (it narrows as you approach). Miss it and you'll have to replot.</p>
         <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: '#0c1210', border: '1px solid #34403a', cursor: stage === 'plot' && !locked ? 'crosshair' : 'default', touchAction: 'none' }} onPointerDown={start} onPointerMove={move} onPointerUp={release} onPointerCancel={release}>
                 <circle cx={cx} cy={cy} r={cfg.minSafeR} fill="rgba(255,89,100,.12)" stroke="#ff5964" strokeWidth="1" strokeDasharray="2 4" />
@@ -766,7 +766,7 @@ function StarTracker() {
     }, [drag && drag.id]);
     return <>
         <Header title="STAR TRACKER LOCK" sub="LOST LOCK · CATALOG MATCH REQUIRED" />
-        <p className="instructions">The tracker's catalog reference is on the left. Drag stars from the rack onto the sensor grid to rebuild the same pattern — any bright star fills a bright slot, any dim star fills a dim slot, but the position has to be right. Wrong drops cost a strike; three strikes clears the grid.</p>
+        <p className="instructions">Drag stars from the rack to rebuild the catalog pattern on the left — match brightness and position. Wrong drops cost a strike; three clears the grid.</p>
         <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'flex-start', marginTop: 18 }}>
             <div>
                 <div style={{ fontSize: 11, letterSpacing: '.14em', color: '#7b8580', marginBottom: 8 }}>CATALOG REF · SECTOR 14-B</div>
@@ -904,7 +904,7 @@ function BitFlip() {
 
     return <>
         <Header title="GAMMA RAY BURST" sub={`HAMMING CODE ERROR CORRECTION · ${remaining}s REMAINING`} />
-        <p className="instructions">A gamma-ray burst has flipped one bit in each affected satellite's memory register. Every register runs a Hamming code — three overlapping checksum bits (C1/C2/C3), each covering a different set of bit positions. Work out which bit is wrong from which checks fail, then click it to flip it back before the window closes. A wrong guess costs {WRONG_PENALTY}s off the clock.</p>
+        <p className="instructions">Each register runs a Hamming code — three checksum bits (C1/C2/C3) covering overlapping bit positions. Work out the bad bit from which checks fail, then click to flip it back. Wrong guesses cost {WRONG_PENALTY}s.</p>
         <div style={{ fontSize: 12, color: '#7b8580', lineHeight: 1.5, margin: '8px 0', border: '1px solid #1c2422', padding: '8px 10px' }}>
             C1 covers bits 1,3,5,7 &nbsp;·&nbsp; C2 covers bits 2,3,6,7 &nbsp;·&nbsp; C3 covers bits 4,5,6,7 — a check fails if an odd number of its bits are wrong.<br />
             Only C1 fails → bit 1 &nbsp;·&nbsp; only C2 → bit 2 &nbsp;·&nbsp; C1+C2 → bit 3 &nbsp;·&nbsp; only C3 → bit 4 &nbsp;·&nbsp; C1+C3 → bit 5 &nbsp;·&nbsp; C2+C3 → bit 6 &nbsp;·&nbsp; all three → bit 7
@@ -1033,7 +1033,7 @@ function Debris() {
 
     return <>
         <Header title="DEBRIS FIELD" sub={`COLLISION AVOIDANCE · ${timeLeft}s REMAINING · ${hits}/${HIT_LIMIT} IMPACTS`} />
-        <p className="instructions">A rival operator's satellite has broken apart, and wreckage is crossing our orbital plane. It isn't just one satellite at risk — a collision here risks a cascade across other satellites in our plane! Use ← → (or hold the on-screen controls) to avoid oncoming debris.</p>
+        <p className="instructions">A rival satellite broke apart — wreckage is crossing our plane, risking a cascade across nearby satellites. Use ← → to dodge debris.</p>
         <div style={{ display: 'grid', placeItems: 'center', margin: '10px 0', position: 'relative' }}>
             <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={360} style={{ maxWidth: 340, display: 'block', background: '#05080a', border: '1px solid #34403a', touchAction: 'none' }}>
                 {debris.map(d => {
