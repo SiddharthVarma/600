@@ -64,8 +64,8 @@ function Thermal() {
     const line = (a, b) => { const [x1, y1] = nodes[a], [x2, y2] = nodes[b], on = onPath(a, b); return <line key={a + b} x1={x1} y1={y1} x2={x2} y2={y2} stroke={on ? '#c9ff4d' : '#34403a'} strokeWidth={on ? 7 : 4} strokeLinecap="round" /> };
     return <>
         <Header title="THERMAL ROUTING" sub={`CORE ${temp}°C · COOLANT ${pressure} kPa`} />
-        <p className="instructions">Hold and drag from the hot core through the pump. {junctions === 2 ? 'Two valve junctions' : `${junctions} valve junctions`} block the loop — at each one, route through the cooler valve, or the coolant flashes in the hot bypass. A purge line branches off the pump but dead-ends before the manifold.</p>
-        <svg viewBox={`0 0 ${width} 240`} width="100%" style={{ maxWidth: 760, display: 'block', margin: '28px 0', background: '#0c1210', border: '1px solid #34403a', cursor: dragging ? 'grabbing' : 'crosshair', touchAction: 'none' }} onPointerDown={start} onPointerMove={follow} onPointerUp={() => setDragging(false)} onPointerCancel={() => setDragging(false)}>
+        <p className="instructions">Drag from the core through the pump, routing the cooler valve at each of the {junctions} junctions — the hot side flashes in the bypass. The purge line is a dead end.</p>
+        <svg viewBox={`0 0 ${width} 240`} width="100%" style={{ maxWidth: 760, display: 'block', margin: '12px 0', background: '#0c1210', border: '1px solid #34403a', cursor: dragging ? 'grabbing' : 'crosshair', touchAction: 'none' }} onPointerDown={start} onPointerMove={follow} onPointerUp={() => setDragging(false)} onPointerCancel={() => setDragging(false)}>
             {edges.map(([a, b]) => line(a, b))}
             {Object.entries(nodes).map(([n, [x, y]]) => {
                 const done = path.includes(n), isValve = n.startsWith('VALVE'), fontSize = n.length > 8 ? 6 : isValve ? 7 : 8;
@@ -153,8 +153,8 @@ function Power() {
 
     return <>
         <Header title="POWER BUS" sub="VOLTAGE OSCILLATION · MULTI-RAIL FEED REQUIRED" />
-        <p className="instructions">Each load needs its combined bus voltage inside the range shown. Two loads need just one bus each; the two buses left over are the pair for the third. Stage one or more buses, then click a load to commit them — click a staged bus again to remove it, or clear the selection outright.</p>
-        <svg viewBox="0 0 620 340" width="100%" style={{ maxWidth: 720, display: 'block', margin: '26px 0', background: '#0c1210', border: '1px solid #34403a' }}>
+        <p className="instructions">Stage buses so their combined voltage lands in a load's range, then click the load to commit. Two loads need one bus each; the leftover two pair for the third.</p>
+        <svg viewBox="0 0 620 340" width="100%" style={{ maxWidth: 720, display: 'block', margin: '12px 0', background: '#0c1210', border: '1px solid #34403a' }}>
             {Object.entries(connections).flatMap(([li, busIdxs]) => busIdxs.map(bi => {
                 const y1 = busYs[bi] + 26, y2 = loadYs[+li] + 42;
                 return <path key={li + '-' + bi} d={`M 150 ${y1} C 260 ${y1}, 340 ${y2}, 450 ${y2}`} fill="none" stroke="#c9ff4d" strokeWidth="6" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 6px #c9ff4d)' }} />;
@@ -185,75 +185,111 @@ function Power() {
     </>;
 }
 function Solar() {
-    const CHARGE_RATE = 100 / 9, DRAIN_RATE = 100 / 25, TOL = 14, SUN_R = 108, CX = 150, CY = 150;
+    const CHARGE_RATE = 100 / 9, DRAIN_RATE = 100 / 11, SUN_R = 108, CX = 150, CY = 150;
     const ASSETS = '600_solar_assets/';
     const [dir] = useState(() => Math.random() < .5 ? 1 : -1);
     const [speed] = useState(() => 5 + Math.random() * 3);
     const [stars] = useState(() => Array.from({ length: 40 }, () => ({ x: Math.random() * 300, y: Math.random() * 300, r: Math.random() * 1.2 + .3, o: Math.random() * .6 + .2 })));
-    const [angle, setAngle] = useState(() => Math.random() * 360);
+    // Spawn the array a fair, bounded distance from the sun (20-40°) rather than two fully independent
+    // randoms -- otherwise the two can land ~180° apart, which is unrecoverable before the grace period ends.
+    const [initial] = useState(() => {
+        const sun0 = Math.random() * 360;
+        const off = (20 + Math.random() * 20) * (Math.random() < .5 ? 1 : -1);
+        return { sun0, angle0: (sun0 + off + 360) % 360 };
+    });
+    const [angle, setAngle] = useState(() => initial.angle0);
     const angleRef = useRef(angle);
-    const [sunAngle, setSunAngle] = useState(() => Math.random() * 360);
+    const [sunAngle, setSunAngle] = useState(() => initial.sun0);
     const [charge, setCharge] = useState(0);
     const [done, setDone] = useState(false);
+    const [failed, setFailed] = useState(false);
 
     const angDelta = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d };
     const polar = (deg, r) => { const a = deg * Math.PI / 180; return [CX + Math.cos(a) * r, CY - Math.sin(a) * r] };
+    const [dragging, setDragging] = useState(false);
+    const angleFromPointer = e => {
+        const box = e.currentTarget.getBoundingClientRect();
+        const x = (e.clientX - box.left) / box.width * 300, y = (e.clientY - box.top) / box.height * 300;
+        return (Math.atan2(-(y - CY), x - CX) * 180 / Math.PI + 360) % 360;
+    };
+    const steerStart = e => { if (done || failed) return; setDragging(true); e.currentTarget.setPointerCapture?.(e.pointerId); const v = angleFromPointer(e); angleRef.current = v; setAngle(v) };
+    const steerMove = e => { if (!dragging || done || failed) return; const v = angleFromPointer(e); angleRef.current = v; setAngle(v) };
+    const steerEnd = () => setDragging(false);
 
     useEffect(() => {
-        if (done) return;
-        let raf, lastTs, sunLocal = sunAngle;
+        if (done || failed) return;
+        let raf, lastTs, sunLocal = sunAngle, elapsed = 0;
         const step = ts => {
             if (lastTs == null) lastTs = ts;
             const dt = Math.min(.1, (ts - lastTs) / 1000);
             lastTs = ts;
+            elapsed += dt;
             sunLocal = (sunLocal + dir * speed * dt + 360) % 360;
-            const aligned = angDelta(angleRef.current, sunLocal) <= TOL;
+            // Real panels fall off faster than pure Lambert's cosine law once you're well off-axis --
+            // surface reflectance rises sharply at high incidence angles (Fresnel losses), so effective
+            // output drops steeper than cosine alone. Clamped at 0 past 90° off-boresight.
+            const efficiency = Math.pow(Math.max(0, Math.cos(angDelta(angleRef.current, sunLocal) * Math.PI / 180)), 5);
             setSunAngle(sunLocal);
-            setCharge(c => Math.min(100, Math.max(0, c + (aligned ? CHARGE_RATE : -DRAIN_RATE) * dt)));
+            setCharge(c => {
+                const next = Math.min(100, Math.max(0, c + (CHARGE_RATE * efficiency - DRAIN_RATE * (1 - efficiency)) * dt));
+                if (next >= 100) setDone(true);
+                else if (next <= 0 && elapsed > 12) setFailed(true); // long enough to actually read the instructions paragraph before failure is even possible
+                return next;
+            });
             raf = requestAnimationFrame(step);
         };
         raf = requestAnimationFrame(step);
         return () => cancelAnimationFrame(raf);
-    }, [done]);
-
-    useEffect(() => { if (charge >= 100) setDone(true) }, [charge]);
+    }, [done, failed]);
 
     useEffect(() => {
         if (!done) return;
         if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-complete' }, '*'), 1200); return () => clearTimeout(id) }
     }, [done]);
 
-    const aligned = angDelta(angle, sunAngle) <= TOL;
-    const [w1x, w1y] = polar(angle - TOL, 135), [w2x, w2y] = polar(angle + TOL, 135);
-    const sector = `M ${CX} ${CY} L ${w1x} ${w1y} A 135 135 0 0 1 ${w2x} ${w2y} Z`;
+    useEffect(() => {
+        if (!failed) return;
+        if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-failed' }, '*'), 1200); return () => clearTimeout(id) }
+    }, [failed]);
+
+    const offset = angDelta(angle, sunAngle);
+    const efficiency = Math.pow(Math.max(0, Math.cos(offset * Math.PI / 180)), 5);
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const glowColor = `#${[lerp(255, 201, efficiency), lerp(89, 255, efficiency), lerp(100, 77, efficiency)].map(v => Math.round(v).toString(16).padStart(2, '0')).join('')}`;
     const [sx, sy] = polar(sunAngle, SUN_R);
     const SCID_W = 150, SCID_H = SCID_W * 644 / 1490, SUN_W = 70, SUN_H = SUN_W * 345 / 520;
+    const [bx, by] = polar(angle, 118);
 
     return <>
         <Header title="SOLAR ALIGNMENT" sub="ARRAY OFFLINE · BATTERY DEPLETED" />
-        <p className="instructions">Steer the array to keep the sun inside the amber cone. The sun drifts in a slow orbit, so once you're locked on you'll need to keep nudging the slider to stay with it while the battery charges.</p>
-        <div style={{ display: 'grid', placeItems: 'center', margin: '24px 0' }}>
-            <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: 'radial-gradient(circle,#0e1614,#070809 70%)', border: '1px solid #34403a' }}>
+        <p className="instructions">Drag the dial to steer toward the sun. Output peaks dead-on and falls off sharply the further you drift.</p>
+        <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
+            <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: 'radial-gradient(circle,#0e1614,#070809 70%)', border: '1px solid #34403a', cursor: done || failed ? 'default' : 'grab', touchAction: 'none' }} onPointerDown={steerStart} onPointerMove={steerMove} onPointerUp={steerEnd} onPointerCancel={steerEnd}>
                 {stars.map((s, i) => <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="#fff" opacity={s.o} />)}
                 <circle cx={CX} cy={CY} r={SUN_R} fill="none" stroke="#242c29" strokeDasharray="3 5" />
-                <path d={sector} fill={aligned ? 'rgba(201,255,77,.28)' : 'rgba(255,209,102,.14)'} stroke={aligned ? '#c9ff4d' : '#ffd166'} strokeWidth="2" />
-                <image href={ASSETS + 'sun.png'} x={sx - SUN_W / 2} y={sy - SUN_H / 2} width={SUN_W} height={SUN_H} style={{ filter: aligned ? 'brightness(1.35) drop-shadow(0 0 16px rgba(255,180,60,.7))' : 'none', transition: 'filter .2s' }} />
-                <image href={ASSETS + 'satellite.png'} x={CX - SCID_W / 2} y={CY - SCID_H / 2} width={SCID_W} height={SCID_H} transform={`rotate(${90 - angle} ${CX} ${CY})`} />
-                <text x="150" y="292" textAnchor="middle" fontSize="9" fill={aligned ? '#c9ff4d' : '#89948d'}>{done ? 'ARRAY CHARGED' : aligned ? 'CHARGING · HOLD STEADY' : 'STEER INTO THE CONE'}</text>
+                <line x1={CX} y1={CY} x2={bx} y2={by} stroke={glowColor} strokeWidth={1.5 + efficiency * 2} opacity={.35 + efficiency * .5} style={{ filter: efficiency > .1 ? `drop-shadow(0 0 ${4 + efficiency * 8}px ${glowColor})` : 'none' }} />
+                <image href={ASSETS + 'sun.png'} x={sx - SUN_W / 2} y={sy - SUN_H / 2} width={SUN_W} height={SUN_H} style={{ filter: `brightness(${1 + efficiency * .45}) drop-shadow(0 0 ${efficiency * 18}px rgba(255,180,60,.8))`, transition: 'filter .15s' }} />
+                <image href={ASSETS + 'satellite.png'} x={CX - SCID_W / 2} y={CY - SCID_H / 2} width={SCID_W} height={SCID_H} transform={`rotate(${90 - angle} ${CX} ${CY})`} style={{ filter: `brightness(${1 + efficiency * .3}) drop-shadow(0 0 ${efficiency * 10}px ${glowColor})`, transition: 'filter .15s' }} />
+                <text x="150" y="292" textAnchor="middle" fontSize="9" fill={failed ? '#ff5964' : glowColor}>{done ? 'ARRAY CHARGED' : failed ? 'BATTERY DEPLETED' : dragging ? 'STEERING' : `OUTPUT ${Math.round(efficiency * 100)}%`}</text>
             </svg>
         </div>
-        <div className="readout" style={{ color: aligned ? 'var(--green)' : 'var(--yellow)' }}>BATTERY {Math.round(charge)}% · ARRAY {Math.round(angle)}° · SUN {Math.round(sunAngle)}°</div>
-        <input className="range" type="range" min="0" max="359" value={Math.round(angle)} onChange={e => { const v = +e.target.value; angleRef.current = v; setAngle(v) }} disabled={done} />
-        <div className="bar"><i style={{ width: `${charge}%`, background: aligned ? 'var(--green)' : 'var(--yellow)' }} /></div>
-        <div className="legend"><span><i className="dot yellowbg" />ALIGNMENT CONE ±{TOL}°</span><span><i className="dot green" />CHARGING</span></div>
-        {done ? <div className="success">ARRAY CHARGED · BATTERY ONLINE</div> : null}
+        <div className="readout" style={{ color: failed ? 'var(--red)' : glowColor }}>BATTERY {Math.round(charge)}% · OUTPUT {Math.round(efficiency * 100)}% · OFFSET {Math.round(offset)}°</div>
+        <div className="bar"><i style={{ width: `${charge}%`, background: failed ? 'var(--red)' : glowColor }} /></div>
+        <div className="legend"><span><i className="dot yellowbg" />PANEL OUTPUT</span><span><i className="dot green" />CHARGING</span></div>
+        {done ? <div className="success">ARRAY CHARGED · BATTERY ONLINE</div> : failed ? <div className="failure">BATTERY FULLY DEPLETED · ARRAY OFFLINE · SATELLITE LOST</div> : null}
     </>;
 }
 function Contact() {
     const THRESH = 88;
     const HOLD_MS = 550;
     const [seed] = useState(() => ({ base: Math.random() * 360, f1: .1 + Math.random() * .06, f2: .17 + Math.random() * .08, amp1: 42 + Math.random() * 18, amp2: 14 + Math.random() * 9, phase1: Math.random() * Math.PI * 2, phase2: Math.random() * Math.PI * 2 }));
-    const [angle, setAngle] = useState(() => Math.random() * 360);
+    // Start the dish well away from the signal peak (60-160°) rather than fully independent of it --
+    // otherwise it can spawn already inside the lock window with zero sweeping required.
+    const [angle, setAngle] = useState(() => {
+        const target0 = (seed.base + Math.sin(seed.phase1) * seed.amp1 + Math.sin(seed.phase2) * seed.amp2 + 360) % 360;
+        const off = (60 + Math.random() * 100) * (Math.random() < .5 ? 1 : -1);
+        return (target0 + off + 360) % 360;
+    });
     const angleRef = useRef(angle);
     const [strength, setStrength] = useState(0);
     const [locked, setLocked] = useState(false);
@@ -307,8 +343,8 @@ function Contact() {
 
     return <>
         <Header title="MISSED CONTACT" sub="RSSI -104 dBm · NO DIRECTIONAL LOCK" />
-        <p className="instructions">The satellite's bearing isn't shown — only signal strength. Sweep the dish and hill-climb toward the peak. Hold the peak steady for a moment and the downlink locks automatically — no need to click anything the instant you hit it.</p>
-        <div style={{ display: 'grid', placeItems: 'center', margin: '24px 0' }}>
+        <p className="instructions">Only signal strength is shown, not bearing. Sweep toward the peak and hold steady to lock.</p>
+        <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: '#0c1210', border: '1px solid #34403a' }}>
                 <ellipse cx={CX} cy={GROUND_Y + 6} rx="72" ry="10" fill="rgba(0,0,0,.35)" />
                 <image href={FRAME_DIR + fr.file} x={imgX} y={imgY} width={dispW} height={DISPLAY_H} style={{ imageRendering: 'pixelated' }} />
@@ -391,8 +427,8 @@ function ReactionWheel() {
 
     return <>
         <Header title="REACTION WHEEL FAULT" sub={`WHEEL ${setup.failedIdx + 1} OFFLINE · UNCOMMANDED TUMBLE`} />
-        <p className="instructions">One reaction wheel has failed and can't be commanded. The satellite is drifting — click each working wheel to cycle its commanded speed (OFF · 25% · 50% · 75% · 100%) until the combined torque cancels the drift. Direction and magnitude both have to line up.</p>
-        <div style={{ display: 'grid', placeItems: 'center', margin: '24px 0' }}>
+        <p className="instructions">One wheel has failed. Cycle each working wheel's speed until the combined torque cancels the drift — direction and magnitude both matter.</p>
+        <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: '#0c1210', border: '1px solid #34403a' }}>
                 <circle cx={CX} cy={CY} r="104" fill="none" stroke="#242c29" strokeDasharray="3 5" />
                 {arrow(driftAngle, 72, '#ff5964')}
@@ -431,9 +467,6 @@ function Process() {
         return { six, leakSet, decoy, seeds };
     });
     const [phase, setPhase] = useState('run'); // run | won | lost
-    const [retriesLeft, setRetriesLeft] = useState(1);
-    const retriesRef = useRef(1);
-    const [flash, setFlash] = useState(false);
     const [stopped, setStopped] = useState([]);
     const stoppedRef = useRef(stopped);
     useEffect(() => { stoppedRef.current = stopped }, [stopped]);
@@ -445,15 +478,7 @@ function Process() {
         if (phase !== 'run') return;
         let raf, t0 = null, lastSampleT = -1, localSeries = {};
         setup.six.forEach(p => localSeries[p] = []);
-        let cpuHist = [], curCPU = BASE, smoothedSecs = null;
-        const regressionSlope = hist => {
-            const n = hist.length;
-            if (n < 2) return 0;
-            const tMean = hist.reduce((s, p) => s + p.t, 0) / n, cMean = hist.reduce((s, p) => s + p.cpu, 0) / n;
-            let num = 0, den = 0;
-            hist.forEach(p => { num += (p.t - tMean) * (p.cpu - cMean); den += (p.t - tMean) ** 2 });
-            return den ? num / den : 0;
-        };
+        let curCPU = BASE;
         const step = ts => {
             if (t0 == null) t0 = ts;
             const elapsed = (ts - t0) / 1000;
@@ -474,42 +499,36 @@ function Process() {
                 }
                 vals[p] = Math.max(2, Math.min(99, v));
             });
-            curCPU += (Math.min(140, target) - curCPU) * .06;
+            const cappedTarget = Math.min(140, target);
+            curCPU += (cappedTarget - curCPU) * .06;
             const dispCPU = Math.max(0, Math.min(100, curCPU));
             setDisplayCPU(dispCPU);
             if (elapsed - lastSampleT >= .35) {
                 lastSampleT = elapsed;
                 setup.six.forEach(p => { localSeries[p] = [...localSeries[p], vals[p]].slice(-36) });
                 setSeries({ ...localSeries });
-                cpuHist.push({ t: elapsed, cpu: dispCPU });
-                if (cpuHist.length > 6) cpuHist.shift();
-                if (cpuHist.length >= 2) {
-                    const r = regressionSlope(cpuHist);
-                    if (r <= .3 && dispCPU < 55) { setRateInfo({ text: 'STABLE', stable: true }); smoothedSecs = null }
-                    else if (r <= .3) { setRateInfo({ text: 'ELEVATED · NO MARGIN', stable: false }); smoothedSecs = null }
+                // exact rate the target is climbing at, from the simulation's own known parameters — no
+                // curve-fitting, so it can't misread a transient as improvement the way a windowed
+                // regression over noisy history can.
+                const activeLeaks = [...setup.leakSet].filter(p => !stoppedRef.current.includes(p)).length;
+                const leakRate = activeLeaks * RATE;
+                const K = .06 * 60; // per-second decay constant matching the .06-per-frame (~60fps) approach to target
+                if (leakRate <= .05) {
+                    if (cappedTarget <= 100) { setRateInfo({ text: dispCPU < 55 ? 'STABLE' : 'ELEVATED · NO MARGIN', stable: dispCPU < 55 }) }
                     else {
-                        const secs = (100 - dispCPU) / r;
-                        smoothedSecs = smoothedSecs == null ? secs : smoothedSecs * .7 + secs * .3;
-                        setRateInfo({ text: smoothedSecs > 599 ? '>10:00' : `${Math.floor(smoothedSecs / 60)}:${String(Math.floor(smoothedSecs % 60)).padStart(2, '0')}`, stable: false });
+                        // fixed target above 100: exact closed-form time for an exponential approach to cross 100
+                        const secs = Math.max(0, -Math.log(Math.max(1e-6, (cappedTarget - 100) / Math.max(1e-6, cappedTarget - dispCPU))) / K);
+                        setRateInfo({ text: secs > 599 ? '>10:00' : `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`, stable: false });
                     }
+                } else {
+                    const secs = Math.max(0, (100 - dispCPU) / leakRate);
+                    setRateInfo({ text: secs > 599 ? '>10:00' : `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`, stable: false });
                 }
             }
             const allLeaksStopped = [...setup.leakSet].every(p => stoppedRef.current.includes(p));
             const onlyLeaksStopped = stoppedRef.current.length === setup.leakSet.size;
             if (allLeaksStopped && onlyLeaksStopped && dispCPU < 50 && elapsed > 1) { setPhase('won'); return }
-            if (curCPU >= 100) {
-                if (retriesRef.current > 0) {
-                    retriesRef.current -= 1;
-                    setRetriesLeft(retriesRef.current);
-                    setStopped([]);
-                    setFlash(true);
-                    setTimeout(() => setFlash(false), 1600);
-                    t0 = null; lastSampleT = -1; curCPU = BASE; cpuHist = []; smoothedSecs = null;
-                    localSeries = {}; setup.six.forEach(p => localSeries[p] = []);
-                    setSeries({ ...localSeries });
-                    setDisplayCPU(BASE);
-                } else { setPhase('lost'); return }
-            }
+            if (curCPU >= 100) { setPhase('lost'); return }
             raf = requestAnimationFrame(step);
         };
         raf = requestAnimationFrame(step);
@@ -527,18 +546,23 @@ function Process() {
 
     const toggle = p => { if (phase !== 'run') return; setStopped(s => s.includes(p) ? s.filter(x => x !== p) : [...s, p]) };
     const leaksStoppedCount = [...setup.leakSet].filter(p => stopped.includes(p)).length;
-    const spark = p => { const arr = series[p] || []; if (arr.length < 2) return ''; return arr.map((v, i) => `${(i / (arr.length - 1 || 1) * 80).toFixed(1)},${(30 - v / 100 * 28).toFixed(1)}`).join(' ') };
+    const spark = p => { const arr = series[p] || []; if (arr.length < 2) return null; const w = 80, h = 32; const pts = arr.map((v, i) => [+(i / (arr.length - 1 || 1) * w).toFixed(1), +(h - 3 - Math.min(100, v) / 100 * (h - 6)).toFixed(1)]); return { pts, line: pts.map(pt => pt.join(',')).join(' '), area: `0,${h} ${pts.map(pt => pt.join(',')).join(' ')} ${w},${h}` } };
 
     return <>
-        <Header title="MEMORY LEAK" sub={`CPU ${Math.round(displayCPU)}% · ${leaksStoppedCount}/3 LEAKS ISOLATED · ${retriesLeft} RETRY LEFT`} />
-        <p className="instructions">Three of these six subprocesses are leaking memory and driving CPU toward critical. Watch each one's live trend — a real leak climbs continuously; a decoy spikes early then flattens out. Isolate the three real leaks before CPU breaches 100%. You get one emergency restart — a second breach loses the satellite for good.</p>
+        <Header title="MEMORY LEAK" sub={`CPU ${Math.round(displayCPU)}% · ${leaksStoppedCount}/3 LEAKS ISOLATED`} />
+        <p className="instructions">Three of six processes are leaking memory. A real leak climbs continuously; a decoy spikes then flattens. Isolate the three leaks before CPU hits 100%.</p>
         <div className="pixel-grid">
             {setup.six.map(p => {
                 const off = stopped.includes(p), actual = setup.leakSet.has(p);
+                const sp = spark(p), last = sp && sp.pts[sp.pts.length - 1];
                 return <button className={'node ' + (off ? (actual ? 'done' : 'fail') : '')} onClick={() => toggle(p)} key={p} disabled={phase !== 'run'}>
                     {p}
-                    <svg viewBox="0 0 80 30" width="100%" height="30" style={{ display: 'block', margin: '8px 0 4px' }}>
-                        <polyline points={spark(p)} fill="none" stroke={off ? (actual ? '#0c1210' : '#0c1210') : '#8fd9ff'} strokeWidth="1.6" />
+                    <svg viewBox="0 0 80 32" width="100%" height="32" style={{ display: 'block', margin: '8px 0 4px' }}>
+                        <line x1="0" y1="9" x2="80" y2="9" stroke="#1c2422" strokeWidth="1" />
+                        <line x1="0" y1="20" x2="80" y2="20" stroke="#1c2422" strokeWidth="1" />
+                        {sp && !off && <polygon points={sp.area} fill="#8fd9ff" opacity=".14" />}
+                        {sp && <polyline points={sp.line} fill="none" stroke={off ? '#0c1210' : '#8fd9ff'} strokeWidth="1.7" strokeLinejoin="round" />}
+                        {sp && !off && last && <circle cx={last[0]} cy={last[1]} r="2" fill="#8fd9ff" style={{ filter: 'drop-shadow(0 0 3px rgba(143,217,255,.8))' }} />}
                     </svg>
                     <small>{off ? (actual ? 'ISOLATED' : 'SERVICE OFFLINE') : 'MONITORING'}</small>
                 </button>;
@@ -546,7 +570,6 @@ function Process() {
         </div>
         <div className="bar"><i style={{ width: `${displayCPU}%`, background: displayCPU > 80 ? 'var(--red)' : displayCPU > 55 ? 'var(--yellow)' : 'var(--green)' }} /></div>
         <div className="readout" style={{ color: displayCPU > 80 ? 'var(--red)' : displayCPU > 55 ? 'var(--yellow)' : 'var(--green)' }}>CPU {Math.round(displayCPU)}% · TIME TO CRITICAL {rate.stable ? 'STABLE' : rate.text}</div>
-        {flash && <div className="failure">CPU CRITICAL · EMERGENCY RESTART · {retriesLeft} RETRY REMAINING</div>}
         {phase === 'won' && <div className="success">LEAKS CONTAINED · CPU BELOW SAFE THRESHOLD</div>}
         {phase === 'lost' && <div className="failure">SATELLITE LOST · CPU OVERRUN</div>}
     </>;
@@ -554,8 +577,13 @@ function Process() {
 function Orbit() {
     const cx = 150, cy = 150;
     const [cfg] = useState(() => {
-        const raiseMode = Math.random() < .5, r2 = 60 + Math.random() * 20, delta = 20 + Math.random() * 12;
-        const r1 = raiseMode ? Math.max(26, r2 - delta) : r2 + delta;
+        const raiseMode = Math.random() < .5;
+        let r2 = 60 + Math.random() * 20, delta = 20 + Math.random() * 12;
+        let r1 = raiseMode ? Math.max(26, r2 - delta) : r2 + delta;
+        // Normalize so the larger orbit always fills the frame consistently -- otherwise a small random
+        // draw renders as a tiny cluster lost in empty space instead of using the available canvas.
+        const scale = 120 / Math.max(r1, r2);
+        r1 *= scale; r2 *= scale;
         const startAngle = Math.random() * 360, windowCenter = (startAngle + 130 + Math.random() * 100) % 360;
         return { raiseMode, r1, r2, minSafeR: 40, radiusTol: 9, startAngle, windowCenter, windowWidth: 50 };
     });
@@ -634,13 +662,20 @@ function Orbit() {
     const active = locked || drag;
     const evalNow = evaluateMag(drag);
     const pts = stage === 'plot' && active ? points(active) : null;
-    const approachPts = locked ? points(locked) : null;
+    // The plotted burn only has to land within radiusTol of r2, not exactly on it -- so the transfer
+    // animation targets the true circular radius (same angle) rather than the player's imprecise value,
+    // otherwise the handoff into the coast phase (which assumes you're exactly on r2) visibly snaps.
+    const approachPts = locked ? points({ angle: locked.angle, dist: cfg.r2 }) : null;
     const currentAngle = stage === 'coast' && locked ? (locked.angle + sweepDeg * sweepT) % 360 : null;
     const inWindow = currentAngle != null && angDelta(currentAngle, cfg.windowCenter) <= cfg.windowWidth / 2;
     const nearWindow = !inWindow && currentAngle != null && angDelta(currentAngle, cfg.windowCenter) <= cfg.windowWidth / 2 + 18;
     const trail = stage === 'coast' && locked ? Array.from({ length: 25 }, (_, i) => polar(locked.angle + sweepDeg * sweepT * i / 24, cfg.r2)) : [];
     const satNow = stage === 'approach' && approachPts ? bezierAt(approachPts, t) : stage === 'coast' && currentAngle != null ? polar(currentAngle, cfg.r2) : stage === 'success' ? polar(cfg.windowCenter, cfg.r2) : satStart;
-    const arcPts = Array.from({ length: 9 }, (_, i) => polar(cfg.windowCenter - cfg.windowWidth / 2 + cfg.windowWidth * i / 8, cfg.r2));
+    // The insertion window shows only a broad, vague sector at first and narrows to its true size as the
+    // coast phase progresses -- you don't get precise timing info until you're actually getting close.
+    const revealT = stage === 'coast' ? Math.min(1, sweepT / .65) : 0;
+    const displayWidth = cfg.windowWidth * 3 - (cfg.windowWidth * 3 - cfg.windowWidth) * revealT;
+    const arcPts = Array.from({ length: 9 }, (_, i) => polar(cfg.windowCenter - displayWidth / 2 + displayWidth * i / 8, cfg.r2));
     const sectorPath = `M ${cx} ${cy} L ${arcPts.map(p => p.join(',')).join(' L ')} Z`;
     const [wlx, wly] = polar(cfg.windowCenter, cfg.r2 + 16);
 
@@ -651,8 +686,8 @@ function Orbit() {
 
     return <>
         <Header title="ORBITAL BURN" sub={`ORBIT ${cfg.raiseMode ? 'DECAYING' : 'OVER-BOOSTED'} · TWO-BURN TRANSFER REQUIRED`} />
-        <p className="instructions">Drag from the satellite to plot a transfer burn onto the home orbital plane — not too hot, not too weak. Ignite the burn, then watch the coast: fire the circularization burn only while the satellite is inside the insertion window, or the orbit stays unstable and you'll have to replot.</p>
-        <div style={{ display: 'grid', placeItems: 'center', margin: '24px 0' }}>
+        <p className="instructions">Drag to plot a transfer burn — not too hot, not too weak. Ignite, then fire the circularization burn once inside the insertion window (it narrows as you approach). Miss it and you'll have to replot.</p>
+        <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
             <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: '#0c1210', border: '1px solid #34403a', cursor: stage === 'plot' && !locked ? 'crosshair' : 'default', touchAction: 'none' }} onPointerDown={start} onPointerMove={move} onPointerUp={release} onPointerCancel={release}>
                 <circle cx={cx} cy={cy} r={cfg.minSafeR} fill="rgba(255,89,100,.12)" stroke="#ff5964" strokeWidth="1" strokeDasharray="2 4" />
                 <circle cx={cx} cy={cy} r={cfg.r1} fill="none" stroke="#ff5964" strokeWidth="1.5" strokeDasharray="3 5" opacity=".75" />
@@ -731,7 +766,7 @@ function StarTracker() {
     }, [drag && drag.id]);
     return <>
         <Header title="STAR TRACKER LOCK" sub="LOST LOCK · CATALOG MATCH REQUIRED" />
-        <p className="instructions">The tracker's catalog reference is on the left. Drag stars from the rack onto the sensor grid to rebuild the same pattern — any bright star fills a bright slot, any dim star fills a dim slot, but the position has to be right. Wrong drops cost a strike; three strikes clears the grid.</p>
+        <p className="instructions">Drag stars from the rack to rebuild the catalog pattern on the left — match brightness and position. Wrong drops cost a strike; three clears the grid.</p>
         <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'flex-start', marginTop: 18 }}>
             <div>
                 <div style={{ fontSize: 11, letterSpacing: '.14em', color: '#7b8580', marginBottom: 8 }}>CATALOG REF · SECTOR 14-B</div>
@@ -765,118 +800,125 @@ function StarTracker() {
 function Impact() { const [pick, setPick] = useState(null), [fault] = useState(() => shuffle(['COMMS', 'POWER', 'THERMAL', 'PAYLOAD', 'GUIDANCE', 'BATTERY'])[0]); return <><Header title="MODULE IMPACT" sub="PRESSURE LOSS · STRUCTURAL BREACH DETECTED" /><p className="instructions">Isolate the damaged module before the pressure loss spreads. The breach location varies by incident.</p><div className="pixel-grid">{['COMMS', 'POWER', 'THERMAL', 'PAYLOAD', 'GUIDANCE', 'BATTERY'].map(x => <button className={'module ' + (pick === x ? (x === fault ? 'done' : 'fail') : '')} onClick={() => setPick(x)} key={x}>{x}</button>)}</div><Result ok={pick === fault}>{pick === fault ? 'MODULE ISOLATED · PRESSURE STABLE' : 'Trace the pressure-loss indicator to the damaged module.'}</Result></> }
 function Radiation() { const [t, setT] = useState(0); useEffect(() => { if (t > 0) { const id = setTimeout(() => setT(t - 1), 1000); return () => clearTimeout(id) } }, [t]); return <><Header title="RADIATION EVENT" sub="SOLAR PARTICLE FLUX ELEVATED" /><p className="instructions">This is a transient event. Enter shielding protocol, then wait. Intervening too early risks unnecessary degradation.</p><div className="readout">{t ? `FLUX FALLING · ${t}s` : 'FLUX NOMINAL'}</div><button className="action" onClick={() => setT(8)} disabled={t > 0}>{t ? 'WAITING FOR CLEAR' : 'ENTER SHIELDING PROTOCOL'}</button><Result ok={t === 0 && false}>{t === 0 ? 'Wait for the event to pass without cycling power.' : ''}</Result></> }
 function genHammingWord() {
-  // builds a genuine valid Hamming(7,4) codeword: 4 free data bits at
-  // positions 3,5,6,7, with 3 check bits at positions 1,2,4 chosen so every
-  // overlapping parity check comes out even (i.e. a "clean" register).
-  const d = [Math.random() < .5 ? 1 : 0, Math.random() < .5 ? 1 : 0, Math.random() < .5 ? 1 : 0, Math.random() < .5 ? 1 : 0];
-  const b = Array(8).fill(0);
-  b[3] = d[0]; b[5] = d[1]; b[6] = d[2]; b[7] = d[3];
-  b[1] = b[3] ^ b[5] ^ b[7];
-  b[2] = b[3] ^ b[6] ^ b[7];
-  b[4] = b[5] ^ b[6] ^ b[7];
-  return b.slice(1); // index 0..6 = bit position 1..7
+    // builds a genuine valid Hamming(7,4) codeword: 4 free data bits at
+    // positions 3,5,6,7, with 3 check bits at positions 1,2,4 chosen so every
+    // overlapping parity check comes out even (i.e. a "clean" register).
+    const d = [Math.random() < .5 ? 1 : 0, Math.random() < .5 ? 1 : 0, Math.random() < .5 ? 1 : 0, Math.random() < .5 ? 1 : 0];
+    const b = Array(8).fill(0);
+    b[3] = d[0]; b[5] = d[1]; b[6] = d[2]; b[7] = d[3];
+    b[1] = b[3] ^ b[5] ^ b[7];
+    b[2] = b[3] ^ b[6] ^ b[7];
+    b[4] = b[5] ^ b[6] ^ b[7];
+    return b.slice(1); // index 0..6 = bit position 1..7
 }
 function hammingSyndrome(bits) {
-  const c1 = bits[0] ^ bits[2] ^ bits[4] ^ bits[6];
-  const c2 = bits[1] ^ bits[2] ^ bits[5] ^ bits[6];
-  const c3 = bits[3] ^ bits[4] ^ bits[5] ^ bits[6];
-  return { c1, c2, c3, pos: c1 * 1 + c2 * 2 + c3 * 4 }; // pos 0 = no error, else the exact corrupted bit (1-7)
+    const c1 = bits[0] ^ bits[2] ^ bits[4] ^ bits[6];
+    const c2 = bits[1] ^ bits[2] ^ bits[5] ^ bits[6];
+    const c3 = bits[3] ^ bits[4] ^ bits[5] ^ bits[6];
+    return { c1, c2, c3, pos: c1 * 1 + c2 * 2 + c3 * 4 }; // pos 0 = no error, else the exact corrupted bit (1-7)
 }
 function HammingRow({ label, bits, syn, onToggle, disabled, reference, restored }) {
-  const ok = restored != null ? restored : syn.pos === 0;
-  return <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '8px 0', borderLeft: '2px solid ' + (ok ? 'transparent' : 'var(--red)'), paddingLeft: 10, borderBottom: '1px solid #1c2422', flexWrap: 'wrap' }}>
-    <div style={{ width: 78, fontSize: 11, color: reference ? '#7b8580' : '#9aa39c' }}>{label}</div>
-    <div style={{ display: 'flex', gap: 4 }}>
-      {bits.map((b, i) => <button key={i} onClick={() => onToggle(i)} disabled={disabled} style={{ width: 26, height: 26, border: '1px solid #39453f', background: b ? '#1c2b16' : '#0d1211', color: b ? 'var(--green)' : '#5c6b64', fontSize: 12, cursor: disabled ? 'default' : 'pointer' }}>{b}</button>)}
-    </div>
-    <div style={{ display: 'flex', gap: 8, fontSize: 10 }}>
-      <span style={{ color: syn.c1 ? 'var(--red)' : 'var(--green)' }}>C1:{syn.c1 ? '✕' : '✓'}</span>
-      <span style={{ color: syn.c2 ? 'var(--red)' : 'var(--green)' }}>C2:{syn.c2 ? '✕' : '✓'}</span>
-      <span style={{ color: syn.c3 ? 'var(--red)' : 'var(--green)' }}>C3:{syn.c3 ? '✕' : '✓'}</span>
-    </div>
-    <div style={{ fontSize: 10, color: ok ? 'var(--green)' : 'var(--red)', minWidth: 100 }}>{ok ? 'NO ERROR' : 'ERROR DETECTED'}</div>
-  </div>;
+    const ok = restored != null ? restored : syn.pos === 0;
+    return <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '5px 0', borderLeft: '2px solid ' + (ok ? 'transparent' : 'var(--red)'), paddingLeft: 10, borderBottom: '1px solid #1c2422', flexWrap: 'wrap' }}>
+        <div style={{ width: 78, fontSize: 11, color: reference ? '#7b8580' : '#9aa39c' }}>{label}</div>
+        <div style={{ display: 'flex', gap: 4 }}>
+            {bits.map((b, i) => <button key={i} onClick={() => onToggle(i)} disabled={disabled} style={{ width: 24, height: 24, border: '1px solid #39453f', background: b ? '#1c2b16' : '#0d1211', color: b ? 'var(--green)' : '#5c6b64', fontSize: 12, cursor: disabled ? 'default' : 'pointer' }}>{b}</button>)}
+        </div>
+        <div style={{ display: 'flex', gap: 8, fontSize: 10 }}>
+            <span style={{ color: syn.c1 ? 'var(--red)' : 'var(--green)' }}>C1:{syn.c1 ? '✕' : '✓'}</span>
+            <span style={{ color: syn.c2 ? 'var(--red)' : 'var(--green)' }}>C2:{syn.c2 ? '✕' : '✓'}</span>
+            <span style={{ color: syn.c3 ? 'var(--red)' : 'var(--green)' }}>C3:{syn.c3 ? '✕' : '✓'}</span>
+        </div>
+        <div style={{ fontSize: 10, color: ok ? 'var(--green)' : 'var(--red)', minWidth: 100 }}>{ok ? 'NO ERROR' : 'ERROR DETECTED'}</div>
+    </div>;
 }
 function BitFlip() {
-  const TIME = 100;
-  const [setup] = useState(() => {
-    const idsParam = new URLSearchParams(location.search).get('sats');
-    const ids = idsParam ? idsParam.split(',').filter(Boolean) : Array.from({ length: 5 }, () => String(100 + Math.floor(Math.random() * 900)));
-    const ref = genHammingWord();
-    const sats = ids.map(rawId => {
-      const id = 'SAT ' + String(rawId).padStart(3, '0');
-      const original = genHammingWord();
-      const corruptPos = 1 + Math.floor(Math.random() * 7);
-      const bits = [...original];
-      bits[corruptPos - 1] ^= 1;
-      return { id: id, satId: rawId, original, bits, corruptPos };
+    const TIME = 100;
+    const [setup] = useState(() => {
+        const idsParam = new URLSearchParams(location.search).get('sats');
+        const ids = idsParam ? idsParam.split(',').filter(Boolean) : Array.from({ length: 5 }, () => String(100 + Math.floor(Math.random() * 900)));
+        const ref = genHammingWord();
+        const sats = ids.map(rawId => {
+            const id = 'SAT ' + String(rawId).padStart(3, '0');
+            const original = genHammingWord();
+            const corruptPos = 1 + Math.floor(Math.random() * 7);
+            const bits = [...original];
+            bits[corruptPos - 1] ^= 1;
+            return { id: id, satId: rawId, original, bits, corruptPos };
+        });
+        return { ref, sats };
     });
-    return { ref, sats };
-  });
-  // fixPos[i] = the single bit position (1-7) currently flipped back for satellite i, or null if untouched.
-  // Only ever one bit differs from the true corrupted state, so a clean syndrome and a correct fix are
-  // mathematically the same thing -- there's no way to land on a different, coincidentally-valid word.
-  const [fixPos, setFixPos] = useState(() => setup.sats.map(() => null));
-  const [phase, setPhase] = useState('run'); // run | done
-  const [remaining, setRemaining] = useState(TIME);
+    // fixPos[i] = the single bit position (1-7) currently flipped back for satellite i, or null if untouched.
+    // Only ever one bit differs from the true corrupted state, so a clean syndrome and a correct fix are
+    // mathematically the same thing -- there's no way to land on a different, coincidentally-valid word.
+    const [fixPos, setFixPos] = useState(() => setup.sats.map(() => null));
+    const [phase, setPhase] = useState('run'); // run | done
+    const [remaining, setRemaining] = useState(TIME);
+    const WRONG_PENALTY = 5;
+    const triedRef = useRef(setup.sats.map(() => new Set()));
 
-  useEffect(() => {
-    if (phase !== 'run') return;
-    if (remaining <= 0) { setPhase('done'); return }
-    const id = setTimeout(() => setRemaining(r => r - 1), 1000);
-    return () => clearTimeout(id);
-  }, [remaining, phase]);
+    useEffect(() => {
+        if (phase !== 'run') return;
+        if (remaining <= 0) { setPhase('done'); return }
+        const id = setTimeout(() => setRemaining(r => r - 1), 1000);
+        return () => clearTimeout(id);
+    }, [remaining, phase]);
 
-  const bitsState = setup.sats.map((s, si) => {
-    const b = [...s.bits];
-    if (fixPos[si] != null) b[fixPos[si] - 1] ^= 1;
-    return b;
-  });
+    const bitsState = setup.sats.map((s, si) => {
+        const b = [...s.bits];
+        if (fixPos[si] != null) b[fixPos[si] - 1] ^= 1;
+        return b;
+    });
 
-  const toggle = (si, bi) => {
-    if (phase !== 'run') return;
-    const pos = bi + 1;
-    setFixPos(fp => fp.map((p, i) => i === si ? (p === pos ? null : pos) : p));
-  };
+    const toggle = (si, bi) => {
+        if (phase !== 'run') return;
+        const pos = bi + 1;
+        setFixPos(fp => fp.map((p, i) => i === si ? (p === pos ? null : pos) : p));
+        const s = setup.sats[si];
+        if (pos !== s.corruptPos && !triedRef.current[si].has(pos)) {
+            triedRef.current[si].add(pos);
+            setRemaining(r => Math.max(0, r - WRONG_PENALTY));
+        }
+    };
 
-  const results = bitsState.map(bits => hammingSyndrome(bits));
-  const restored = setup.sats.map((s, i) => fixPos[i] === s.corruptPos);
-  const fixedCount = restored.filter(Boolean).length;
+    const results = bitsState.map(bits => hammingSyndrome(bits));
+    const restored = setup.sats.map((s, i) => fixPos[i] === s.corruptPos);
+    const fixedCount = restored.filter(Boolean).length;
 
-  useEffect(() => {
-    if (fixedCount === 5 && phase === 'run') setPhase('done');
-  }, [fixedCount, phase]);
+    useEffect(() => {
+        if (fixedCount === 5 && phase === 'run') setPhase('done');
+    }, [fixedCount, phase]);
 
-  useEffect(() => {
-    if (phase !== 'done') return;
-    if (window.parent !== window) {
-      const id = setTimeout(() => {
-        const results = setup.sats.map((s, i) => ({ satId: s.satId, fixed: restored[i] }));
-        window.parent.postMessage({ type: 'grb-resolved', results }, '*');
-      }, 1400);
-      return () => clearTimeout(id);
-    }
-  }, [phase]);
+    useEffect(() => {
+        if (phase !== 'done') return;
+        if (window.parent !== window) {
+            const id = setTimeout(() => {
+                const results = setup.sats.map((s, i) => ({ satId: s.satId, fixed: restored[i] }));
+                window.parent.postMessage({ type: 'grb-resolved', results }, '*');
+            }, 1400);
+            return () => clearTimeout(id);
+        }
+    }, [phase]);
 
-  const refSyn = hammingSyndrome(setup.ref);
+    const refSyn = hammingSyndrome(setup.ref);
 
-  return <>
-    <Header title="GAMMA RAY BURST" sub={`HAMMING CODE ERROR CORRECTION · ${remaining}s REMAINING`} />
-    <p className="instructions">A gamma-ray burst has flipped one bit in each affected satellite's memory register. Every register runs a Hamming code — three overlapping checksum bits (C1/C2/C3), each covering a different set of bit positions. Work out which bit is wrong from which checks fail, then click it to flip it back before the window closes.</p>
-    <div style={{ fontSize: 12, color: '#7b8580', lineHeight: 1.8, margin: '10px 0', border: '1px solid #1c2422', padding: '10px 12px' }}>
-      C1 covers bits 1,3,5,7 &nbsp;·&nbsp; C2 covers bits 2,3,6,7 &nbsp;·&nbsp; C3 covers bits 4,5,6,7 — a check fails if an odd number of its bits are wrong.<br />
-      Only C1 fails → bit 1 &nbsp;·&nbsp; only C2 → bit 2 &nbsp;·&nbsp; C1+C2 → bit 3 &nbsp;·&nbsp; only C3 → bit 4 &nbsp;·&nbsp; C1+C3 → bit 5 &nbsp;·&nbsp; C2+C3 → bit 6 &nbsp;·&nbsp; all three → bit 7
-    </div>
-    <div style={{ marginTop: 18 }}>
-      <div style={{ fontSize: 11, letterSpacing: '.14em', color: '#7b8580', marginBottom: 6 }}>EXAMPLE · CLEAN READING</div>
-      <HammingRow label="REF 000" bits={setup.ref} syn={refSyn} onToggle={() => { }} disabled reference />
-    </div>
-    <div style={{ marginTop: 18, display: 'grid', gap: 2 }}>
-      <div style={{ fontSize: 11, letterSpacing: '.14em', color: '#7b8580', marginBottom: 6 }}>AFFECTED SATELLITES</div>
-      {setup.sats.map((s, si) => <HammingRow key={s.id} label={s.id} bits={bitsState[si]} syn={results[si]} restored={restored[si]} onToggle={bi => toggle(si, bi)} disabled={phase !== 'run'} />)}
-    </div>
-    {phase === 'done' && <div className={fixedCount === 5 ? 'success' : 'failure'}>{fixedCount === 5 ? 'ALL REGISTERS RESTORED · HAMMING CODE VALIDATED' : `${fixedCount}/5 SATELLITES RECOVERED · ${5 - fixedCount} LOST TO UNCORRECTED BIT ERRORS`}</div>}
-  </>;
+    return <>
+        <Header title="GAMMA RAY BURST" sub={`HAMMING CODE ERROR CORRECTION · ${remaining}s REMAINING`} />
+        <p className="instructions">A gamma-ray burst has flipped one bit in each affected satellite's memory register. Each register runs a Hamming code — three checksum bits (C1/C2/C3) covering overlapping bit positions. Work out the bad bit from which checks fail, then click to flip it back. Wrong guesses cost {WRONG_PENALTY}s.</p>
+        <div style={{ fontSize: 12, color: '#7b8580', lineHeight: 1.5, margin: '8px 0', border: '1px solid #1c2422', padding: '8px 10px' }}>
+            C1 covers bits 1,3,5,7 &nbsp;·&nbsp; C2 covers bits 2,3,6,7 &nbsp;·&nbsp; C3 covers bits 4,5,6,7 — a check fails if an odd number of its bits are wrong.<br />
+            Only C1 fails → bit 1 &nbsp;·&nbsp; only C2 → bit 2 &nbsp;·&nbsp; C1+C2 → bit 3 &nbsp;·&nbsp; only C3 → bit 4 &nbsp;·&nbsp; C1+C3 → bit 5 &nbsp;·&nbsp; C2+C3 → bit 6 &nbsp;·&nbsp; all three → bit 7
+        </div>
+        <div style={{ marginTop: 8 }}>
+            <div style={{ fontSize: 11, letterSpacing: '.14em', color: '#7b8580', marginBottom: 4 }}>EXAMPLE · CLEAN READING</div>
+            <HammingRow label="REF 000" bits={setup.ref} syn={refSyn} onToggle={() => { }} disabled reference />
+        </div>
+        <div style={{ marginTop: 8, display: 'grid', gap: 0 }}>
+            <div style={{ fontSize: 11, letterSpacing: '.14em', color: '#7b8580', marginBottom: 6 }}>AFFECTED SATELLITES</div>
+            {setup.sats.map((s, si) => <HammingRow key={s.id} label={s.id} bits={bitsState[si]} syn={results[si]} restored={restored[si]} onToggle={bi => toggle(si, bi)} disabled={phase !== 'run'} />)}
+        </div>
+        {phase === 'done' && <div className={fixedCount === 5 ? 'success' : 'failure'}>{fixedCount === 5 ? 'ALL REGISTERS RESTORED · HAMMING CODE VALIDATED' : `${fixedCount}/5 SATELLITES RECOVERED · ${5 - fixedCount} LOST TO UNCORRECTED BIT ERRORS`}</div>}
+    </>;
 }
 function Debris() {
     const DURATION = 30, HIT_LIMIT = 2;
@@ -991,8 +1033,8 @@ function Debris() {
 
     return <>
         <Header title="DEBRIS FIELD" sub={`COLLISION AVOIDANCE · ${timeLeft}s REMAINING · ${hits}/${HIT_LIMIT} IMPACTS`} />
-        <p className="instructions">A rival operator's satellite has broken apart (shoddy engineering!), and wreckage is crossing our orbital plane. It isn't just one satellite at risk — a collision here risks a cascade across other satellites in our plane! Use ← → (or hold the on-screen controls) to perform collision avoidance maneuvers.</p>
-        <div style={{ display: 'grid', placeItems: 'center', margin: '18px 0', position: 'relative' }}>
+        <p className="instructions">A rival satellite broke apart — wreckage is crossing our plane, risking a cascade across nearby satellites. Use ← → to dodge debris.</p>
+        <div style={{ display: 'grid', placeItems: 'center', margin: '10px 0', position: 'relative' }}>
             <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={360} style={{ maxWidth: 340, display: 'block', background: '#05080a', border: '1px solid #34403a', touchAction: 'none' }}>
                 {debris.map(d => {
                     const t = DEBRIS_TYPES[d.type];
@@ -1012,27 +1054,27 @@ function Debris() {
     </>;
 }
 function App() {
-  const params = new URLSearchParams(location.search);
-  const requested = params.get('type');
-  const [type, setType] = useState(games.some(g => g[0] === requested) ? requested : 'thermal');
-  const [remaining, setRemaining] = useState(() => { const n = parseInt(params.get('deadline'), 10); return Number.isFinite(n) && n > 0 ? n : null });
-  const [timedOut, setTimedOut] = useState(false);
-  useEffect(() => {
-    if (remaining == null || timedOut) return;
-    const id = setTimeout(() => {
-      if (remaining <= 1) { setTimedOut(true); setRemaining(0) }
-      else setRemaining(remaining - 1);
-    }, 1000);
-    return () => clearTimeout(id);
-  }, [remaining, timedOut]);
-  useEffect(() => {
-    if (!timedOut) return;
-    if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-failed' }, '*'), 2200); return () => clearTimeout(id) }
-  }, [timedOut]);
-  const C = { thermal: Thermal, power: Power, solar: Solar, contact: Contact, wheel: ReactionWheel, process: Process, orbit: Orbit, sensor: Sensor, attitude: Attitude, startracker: StarTracker, impact: Impact, radiation: Radiation, bitflip: BitFlip, debris: Debris }[type];
-  return <Frame type={type} setType={setType} remaining={remaining} timedOut={timedOut}>
-    {timedOut ? <div className="failure" style={{ margin: '60px 0', fontSize: 14, letterSpacing: '.03em' }}>SATELLITE COMMANDED TOO LATE · SATELLITE LOST</div> : <C />}
-  </Frame>
+    const params = new URLSearchParams(location.search);
+    const requested = params.get('type');
+    const [type, setType] = useState(games.some(g => g[0] === requested) ? requested : 'thermal');
+    const [remaining, setRemaining] = useState(() => { const n = parseInt(params.get('deadline'), 10); return Number.isFinite(n) && n > 0 ? n : null });
+    const [timedOut, setTimedOut] = useState(false);
+    useEffect(() => {
+        if (remaining == null || timedOut) return;
+        const id = setTimeout(() => {
+            if (remaining <= 1) { setTimedOut(true); setRemaining(0) }
+            else setRemaining(remaining - 1);
+        }, 1000);
+        return () => clearTimeout(id);
+    }, [remaining, timedOut]);
+    useEffect(() => {
+        if (!timedOut) return;
+        if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-failed' }, '*'), 2200); return () => clearTimeout(id) }
+    }, [timedOut]);
+    const C = { thermal: Thermal, power: Power, solar: Solar, contact: Contact, wheel: ReactionWheel, process: Process, orbit: Orbit, sensor: Sensor, attitude: Attitude, startracker: StarTracker, impact: Impact, radiation: Radiation, bitflip: BitFlip, debris: Debris }[type];
+    return <Frame type={type} setType={setType} remaining={remaining} timedOut={timedOut}>
+        {timedOut ? <div className="failure" style={{ margin: '60px 0', fontSize: 14, letterSpacing: '.03em' }}>SATELLITE COMMANDED TOO LATE · SATELLITE LOST</div> : <C />}
+    </Frame>
 };
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 
