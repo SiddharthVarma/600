@@ -1090,7 +1090,7 @@ function Flare() {
     const NB = 160, DURATION = 45, CALM = 3; // NB frequency bins across the band; the flare builds after a CALM start
     const S_DB = 24, THRESH = 10, HALF = 4, PER_SAT = 4; // carrier level over the noise floor, SNR needed to upload, carrier half-width in bins, clean seconds per command
     const F0 = 10.7, F1 = 12.7; // Ku downlink band, GHz
-    const ROWS = 110, ROW_RATE = 24, SPEC_H = 84, FALL_H = 180; // waterfall keeps ~4.6s of history
+    const ROWS = 110, ROW_RATE = 24, SPEC_H = 84, FALL_H = 176; // waterfall keeps ~4.6s of history
     const LIMIT_DB = S_DB - THRESH; // the noise under the carrier must stay below this for the link to hold
     const params = new URLSearchParams(location.search);
     const [sats] = useState(() => { const ids = (params.get('sats') || '').split(',').filter(Boolean); return ids.length ? ids : Array.from({ length: 6 }, () => String(100 + Math.floor(Math.random() * 900))) });
@@ -1181,8 +1181,8 @@ function Flare() {
                 g.fillStyle = ok ? 'rgba(201,255,77,.12)' : 'rgba(255,89,100,.18)'; g.fillRect((c - HALF) / NB * w, 0, (2 * HALF + 1) / NB * w, h);
                 g.strokeStyle = '#ffd166'; g.setLineDash([4, 4]); g.beginPath(); g.moveTo(0, y(LIMIT_DB)); g.lineTo(w, y(LIMIT_DB)); g.stroke(); g.setLineDash([]);
                 g.font = '9px "Courier New", monospace';
-                g.fillStyle = '#ffd166'; g.fillText('LINK LIMIT', 4, y(LIMIT_DB) - 3);
-                g.fillStyle = ok ? '#c9ff4d' : '#ff5964'; g.textAlign = 'center'; g.fillText('YOUR CARRIER', Math.max(32, Math.min(w - 32, (c + .5) / NB * w)), 10); g.textAlign = 'left';
+                g.fillStyle = '#ffd166'; g.fillText('NOISE THRESHOLD', 4, y(LIMIT_DB) - 3);
+                g.fillStyle = ok ? '#c9ff4d' : '#ff5964'; g.textAlign = 'center'; g.fillText('YOUR SIGNAL', Math.max(32, Math.min(w - 32, (c + .5) / NB * w)), 10); g.textAlign = 'left';
                 g.strokeStyle = '#b9c7bf'; g.lineWidth = 1.2; g.beginPath(); rx.forEach((d, b) => { const x = (b + .5) / NB * w; b ? g.lineTo(x, y(d)) : g.moveTo(x, y(d)) }); g.stroke();
             }
             setView({ t, snr: disp, prog, c });
@@ -1209,7 +1209,7 @@ function Flare() {
     const ok = view.snr >= THRESH, freq = F0 + (view.c + .5) / NB * (F1 - F0);
     return <>
         <Header title="SOLAR FLARE" sub={`RADIO BLACKOUT · Ku DOWNLINK · ${Math.max(0, Math.ceil(DURATION - view.t))}s REMAINING`} />
-        <p className="instructions">Your carrier is the shaded strip. Keep it where the noise stays under the yellow <span style={{ color: 'var(--yellow)' }}>LINK LIMIT</span> — the dark parts of the waterfall. Drag or hold ← → to move it. Commands only upload while the link holds.</p>
+        <p className="instructions">The solar flare cut contact with these satellites. Drag your signal (the shaded strip) or hold ← → to where the noise is below the yellow <span style={{ color: 'var(--yellow)' }}>NOISE THRESHOLD</span> line. The satellites reconnect one by one while you stay there.</p>
         <div style={{ maxWidth: 720, cursor: phase === 'run' ? 'ew-resize' : 'default', touchAction: 'none' }} {...drag}>
             <div style={{ fontSize: 10, letterSpacing: '.14em', color: '#7b8580', marginBottom: 4 }}>SPECTRUM</div>
             <canvas ref={specRef} style={{ width: '100%', height: SPEC_H, display: 'block', border: '1px solid #34403a' }} />
@@ -1217,14 +1217,15 @@ function Flare() {
             <canvas ref={fallRef} style={{ width: '100%', height: FALL_H, display: 'block', border: '1px solid #34403a' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#7b8580', marginTop: 4 }}>{[0, 1, 2, 3, 4].map(i => <span key={i}>{(F0 + i * (F1 - F0) / 4).toFixed(2)} GHz</span>)}</div>
         </div>
-        <div className="readout" style={{ color: ok ? 'var(--green)' : 'var(--red)' }}>SNR {view.snr.toFixed(1)} dB · CARRIER {freq.toFixed(3)} GHz · {ok ? 'UPLOADING' : 'LINK DROPPED'}</div>
+        <div className="readout" style={{ color: ok ? 'var(--green)' : 'var(--red)' }}>SNR {view.snr.toFixed(1)} dB · SIGNAL {freq.toFixed(3)} GHz · {ok ? 'RECONNECTING' : 'LINK DROPPED'}</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', maxWidth: 720 }}>
-            {sats.map((id, i) => { const p = Math.max(0, Math.min(1, view.prog / PER_SAT - i)); return <div key={id} style={{ flex: '1 1 0', minWidth: 80, position: 'relative', border: '1px solid ' + (p >= 1 ? 'var(--green)' : '#39453f'), padding: '6px 8px', fontSize: 11, color: p >= 1 ? '#070809' : phase === 'done' ? 'var(--red)' : '#9aa39c', overflow: 'hidden' }}>
+            {sats.map((id, i) => { const p = Math.max(0, Math.min(1, view.prog / PER_SAT - i)); return <div key={id} style={{ flex: '1 1 0', minWidth: 80, position: 'relative', border: '1px solid ' + (p >= 1 ? 'var(--green)' : '#39453f'), padding: '4px 8px', fontSize: 11, color: p >= 1 ? '#070809' : phase === 'done' ? 'var(--red)' : '#9aa39c', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', inset: 0, width: `${p * 100}%`, background: p >= 1 ? 'var(--green)' : 'rgba(201,255,77,.25)' }} />
-                <span style={{ position: 'relative' }}>SAT {String(id).padStart(3, '0')} {p >= 1 ? '· SAFE' : ''}</span>
+                <div style={{ position: 'relative' }}>SAT {String(id).padStart(3, '0')}</div>
+                <div style={{ position: 'relative', fontSize: 9, letterSpacing: '.1em', marginTop: 2 }}>{p >= 1 ? 'ONLINE' : 'OFFLINE'}</div>
             </div> })}
         </div>
-        {phase === 'done' && <div className={saved === sats.length ? 'success' : 'failure'}>{saved === sats.length ? 'ALL SATELLITES IN SAFE MODE · LINK HELD' : `${saved}/${sats.length} SATELLITES COMMANDED · ${sats.length - saved} LOST TO RADIO BLACKOUT`}</div>}
+        {phase === 'done' && <div className={saved === sats.length ? 'success' : 'failure'}>{saved === sats.length ? 'ALL SATELLITES RECONNECTED · LINK HELD' : `${saved}/${sats.length} SATELLITES RECONNECTED · ${sats.length - saved} LOST`}</div>}
     </>;
 }
 function App() {
