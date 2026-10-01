@@ -1093,7 +1093,7 @@ function Flare() {
     const ROWS = 110, ROW_RATE = 24, SPEC_H = 84, FALL_H = 176; // waterfall keeps ~4.6s of history
     const LIMIT_DB = S_DB - THRESH; // the noise under the carrier must stay below this for the link to hold
     const params = new URLSearchParams(location.search);
-    const [sats] = useState(() => { const ids = (params.get('sats') || '').split(',').filter(Boolean); return ids.length ? ids : Array.from({ length: 6 }, () => String(100 + Math.floor(Math.random() * 900))) });
+    const [sats] = useState(() => { const ids = (params.get('sats') || '').split(',').filter(Boolean); return ids.length ? ids : Array.from({ length: 7 }, () => String(100 + Math.floor(Math.random() * 900))) });
     const [world] = useState(() => {
         const flashes = []; for (let ft = 6 + Math.random() * 3; ft < DURATION; ft += 5 + Math.random() * 3) flashes.push([ft, 12 + Math.random() * 8]);
         return { flashes, bursts: [], next: CALM, start: NB / 2 };

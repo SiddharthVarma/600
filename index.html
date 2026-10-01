@@ -642,7 +642,7 @@
     }
     setTimeout(scheduleDebris, 90000);
 
-    const FLARE_SATS = 6;
+    const FLARE_SATS = 7;
     function scheduleFlare() { setTimeout(() => { triggerFlare(); scheduleFlare(); }, 230000 + Math.random() * 160000); }
     function triggerFlare() {
       if (eventActive()) return;
