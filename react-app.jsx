@@ -2,7 +2,7 @@ const { useState, useEffect, useRef } = React;
 const shuffle = a => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[x[i], x[j]] = [x[j], x[i]] } return x };
 const allSubsets = n => { const res = []; for (let m = 1; m < (1 << n); m++) { const s = []; for (let b = 0; b < n; b++)if (m & (1 << b)) s.push(b); res.push(s) } return res };
 const PROCESS_POOL = ['PACKET RETRY', 'TELEMETRY CACHE', 'IMAGE PIPELINE', 'LOG AGGREGATOR', 'PAYLOAD INDEXER', 'MEMORY SCRUBBER', 'ATTITUDE SOLVER', 'MOTION SCHEDULE', 'STAR TRACKER FEED', 'DOWNLINK BUFFER', 'EPHEMERIS CALCULATOR', 'FAULT MONITOR'];
-const games = [['thermal', 'THERMAL ROUTING', 'Valve sequencing'], ['power', 'POWER BUS', 'Route power by the numbers'], ['solar', 'SOLAR ALIGNMENT', 'Point at the sun'], ['contact', 'MISSED CONTACT', 'Hunt the signal peak'], ['wheel', 'REACTION WHEEL FAULT', 'Balance the torque'], ['process', 'PROCESS FAULT', 'Contain the leak in time'], ['orbit', 'ORBITAL BURN', 'Plot a transfer burn'], ['sensor', 'SENSOR FAULT', 'Find the outlier'], ['attitude', 'ATTITUDE DRIFT', 'Stabilize pointing'], ['startracker', 'STAR TRACKER LOCK', 'Rebuild the star field'], ['impact', 'MODULE IMPACT', 'Isolate the breach'], ['radiation', 'RADIATION EVENT', 'Wait it out'], ['bitflip', 'HAMMING CODE FAULT', 'GRB event · correct the bit flips'], ['debris', 'DEBRIS FIELD', 'Collision cascade · dodge the wreckage']];
+const games = [['thermal', 'THERMAL ROUTING', 'Valve sequencing'], ['power', 'POWER BUS', 'Route power by the numbers'], ['solar', 'SOLAR ALIGNMENT', 'Point at the sun'], ['contact', 'MISSED CONTACT', 'Search the pass for the signal'], ['wheel', 'REACTION WHEEL FAULT', 'Balance the torque'], ['process', 'PROCESS FAULT', 'Contain the leak in time'], ['orbit', 'ORBITAL BURN', 'Plot a transfer burn'], ['startracker', 'STAR TRACKER LOCK', 'Rebuild the star field'], ['bitflip', 'HAMMING CODE FAULT', 'GRB event · correct the bit flips'], ['debris', 'DEBRIS FIELD', 'Collision cascade · dodge the wreckage'], ['flare', 'SOLAR FLARE', 'Radio blackout · hold the downlink']];
 function Frame({ type, setType, children, remaining, timedOut }) { const params = new URLSearchParams(location.search); const embedded = Boolean(params.get('type')); const multi = Boolean(params.get('sats')); const satId = params.get('sat'); const satLabel = multi ? 'MULTIPLE SATELLITES · EMERGENCY OVERRIDE' : satId ? `SAT ${String(satId).padStart(3, '0')} · MANUAL OVERRIDE` : 'SAT 421 · MANUAL OVERRIDE'; return <div className="app"><header className="top"><span className="brand">SIX HUNDRED / REPAIR LAB</span><span className="eyebrow">{satLabel}{remaining != null && !timedOut && <span style={{ color: remaining <= 10 ? 'var(--red)' : undefined, marginLeft: 10 }}>· REPAIR WINDOW {remaining}s</span>}</span></header><div className={'layout ' + (embedded ? 'embedded' : '')} style={embedded ? { display: 'block', marginTop: 0 } : {}}>{!embedded && <nav className="menu">{games.map(([id, name]) => <button key={id} className={type === id ? 'active' : ''} onClick={() => setType(id)}>{name}</button>)}</nav>}<main className="board" style={embedded ? { minHeight: '100%', border: 0 } : {}}>{children}</main></div></div> }
 function Header({ title, sub }) { return <><div className="eyebrow">Critical subsystem interaction</div><h1>{title}</h1><div className="signal">{sub}</div></> }
 function Result({ ok, children }) { const [sent, setSent] = useState(false); const finish = () => { if (!sent && window.parent !== window) { setSent(true); setTimeout(() => window.parent.postMessage({ type: 'repair-complete' }, '*'), 1200) } }; return children && <div className={ok ? 'success' : 'failure'}>{sent ? 'SUCCESSFUL EXECUTION' : children}{ok && !sent && <div className="actions"><button className="action" onClick={finish}>EXECUTE</button></div>}</div> }
@@ -280,85 +280,122 @@ function Solar() {
     </>;
 }
 function Contact() {
-    const THRESH = 88;
-    const HOLD_MS = 550;
-    const [seed] = useState(() => ({ base: Math.random() * 360, f1: .1 + Math.random() * .06, f2: .17 + Math.random() * .08, amp1: 42 + Math.random() * 18, amp2: 14 + Math.random() * 9, phase1: Math.random() * Math.PI * 2, phase2: Math.random() * Math.PI * 2 }));
-    // Start the dish well away from the signal peak (60-160°) rather than fully independent of it --
-    // otherwise it can spawn already inside the lock window with zero sweeping required.
-    const [angle, setAngle] = useState(() => {
-        const target0 = (seed.base + Math.sin(seed.phase1) * seed.amp1 + Math.sin(seed.phase2) * seed.amp2 + 360) % 360;
-        const off = (60 + Math.random() * 100) * (Math.random() < .5 ? 1 : -1);
-        return (target0 + off + 360) % 360;
-    });
-    const angleRef = useRef(angle);
-    const [strength, setStrength] = useState(0);
-    const [locked, setLocked] = useState(false);
-    const [holdFrac, setHoldFrac] = useState(0);
+    const MASK = 10, SIGMA = 10, THRESH = 70, LOCK_S = 2;
+    const PX = 150, PY = 150, PR = 128; // sky plot: centre = zenith, rim = horizon
+    const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+    const unit = (a, e) => [Math.cos(e * D2R) * Math.sin(a * D2R), Math.cos(e * D2R) * Math.cos(a * D2R), Math.sin(e * D2R)];
+    const toAzEl = v => [((Math.atan2(v[0], v[1]) * R2D) % 360 + 360) % 360, Math.asin(Math.max(-1, Math.min(1, v[2]))) * R2D];
+    const sepDeg = (u, v) => Math.acos(Math.max(-1, Math.min(1, u[0] * v[0] + u[1] * v[1] + u[2] * v[2]))) * R2D;
+    const plot = (az, el) => { const r = PR * (90 - Math.max(0, el)) / 90; return [PX + r * Math.sin(az * D2R), PY - r * Math.cos(az * D2R)] };
 
-    const angDelta = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d };
-    const targetAngle = ms => { const s = ms / 1000; return (seed.base + Math.sin(s * seed.f1 + seed.phase1) * seed.amp1 + Math.sin(s * seed.f2 + seed.phase2) * seed.amp2 + 3600) % 360 };
-    const signalAt = diff => { const raw = Math.cos(diff * Math.PI / 180); return raw > 0 ? Math.pow(raw, 4) * 100 : 0 };
+    // One pass: a great circle through the culmination point, with theta(t) = atan(t/tau) -- a straight-line
+    // flyby, slow near the horizon and fastest overhead. The real satellite sits ahead of or behind the stale
+    // prediction along its track, plus a small cross-track error. Opens with the prediction at 12° rising and
+    // sets under the mask D seconds later, sized to fit inside the repair window.
+    const [pass] = useState(() => {
+        const n = parseInt(new URLSearchParams(location.search).get('deadline'), 10);
+        const D = Math.max(22, Math.min(34, (Number.isFinite(n) ? n : 38) - 4));
+        const azC = Math.random() * 360, maxEl = 25 + Math.random() * 55, dir = Math.random() < .5 ? 1 : -1;
+        const C = unit(azC, maxEl), p = [dir * Math.cos(azC * D2R), -dir * Math.sin(azC * D2R), 0];
+        const nrm = [C[1] * p[2] - C[2] * p[1], C[2] * p[0] - C[0] * p[2], C[0] * p[1] - C[1] * p[0]];
+        const se = Math.sin(maxEl * D2R);
+        const thA = Math.acos(Math.sin(12 * D2R) / se), thB = Math.acos(Math.sin(MASK * D2R) / se);
+        const tau = D / (Math.tan(thA) + Math.tan(thB));
+        const dTheta = (14 + Math.random() * 10) * (Math.random() < .5 ? 1 : -1) * D2R;
+        const xt = Math.tan((1.5 + Math.random() * 1.5) * D2R) * (Math.random() < .5 ? 1 : -1);
+        const theta = t => Math.atan((t - tau * Math.tan(thA)) / tau);
+        const along = (a, x) => { const v = [0, 1, 2].map(i => C[i] * Math.cos(a) + p[i] * Math.sin(a) + nrm[i] * x); const m = Math.hypot(...v); return v.map(c => c / m) };
+        const track = []; for (let d = -90; d <= 90; d += 3) track.push(toAzEl(along(d * D2R, 0)));
+        return { D, pred: t => along(theta(t), 0), truth: t => along(theta(t) + dTheta, xt), track };
+    });
+
+    const [ant, setAnt] = useState(() => toAzEl(pass.pred(0))); // the antenna starts on the predicted position
+    const antRef = useRef(ant), goalRef = useRef(ant);
+    const [view, setView] = useState({ t: 0, sig: 0, prog: 0, truth: null });
+    const [phase, setPhase] = useState('search'); // search | locked | los
+    const [dragging, setDragging] = useState(false);
 
     useEffect(() => {
-        if (locked) return;
-        let raf, startTs, holdStart = null;
+        if (phase !== 'search') return;
+        let raf, last, t = 0, disp = 0, prog = 0, rose = false;
         const step = ts => {
-            if (!startTs) startTs = ts;
-            const elapsed = ts - startTs;
-            const tgt = targetAngle(elapsed);
-            const diff = angDelta(angleRef.current, tgt);
-            const s = signalAt(diff);
-            setStrength(s);
-            if (s >= THRESH) {
-                if (holdStart == null) holdStart = ts;
-                const held = ts - holdStart;
-                if (held >= HOLD_MS) { setHoldFrac(1); setLocked(true); return }
-                setHoldFrac(held / HOLD_MS);
-            } else {
-                holdStart = null;
-                setHoldFrac(0);
-            }
+            if (last == null) last = ts;
+            const dt = Math.min(.05, (ts - last) / 1000); last = ts; t += dt;
+            const tv = pass.truth(t), tel = toAzEl(tv)[1];
+            if (tel >= MASK) rose = true;
+            // LOS: it set below the mask, or the station's scheduled contact ended (a satellite trailing the
+            // prediction on a high pass never quite reaches the far horizon in this flyby model)
+            if ((rose && tel < MASK) || t >= pass.D + 4) { setView(v => ({ ...v, t, truth: toAzEl(tv) })); setPhase('los'); return }
+            const [az, el] = goalRef.current; // the antenna points exactly where the player drags
+            antRef.current = [az, el];
+            const raw = tel >= MASK ? 100 * Math.exp(-((sepDeg(unit(az, el), tv) / SIGMA) ** 2)) : 0;
+            disp += (raw - disp) * (1 - Math.exp(-dt / .25)); // receiver integration: the reading lags a fast sweep
+            prog = disp >= THRESH ? prog + dt : Math.max(0, prog - 2 * dt);
+            setAnt([az, el]);
+            if (prog >= LOCK_S) { setView({ t, sig: disp, prog: 1, truth: toAzEl(tv) }); setPhase('locked'); return }
+            setView({ t, sig: disp, prog: prog / LOCK_S, truth: null });
             raf = requestAnimationFrame(step);
         };
         raf = requestAnimationFrame(step);
         return () => cancelAnimationFrame(raf);
-    }, [locked]);
+    }, [phase]);
 
     useEffect(() => {
-        if (!locked) return;
-        if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-complete' }, '*'), 1200); return () => clearTimeout(id) }
-    }, [locked]);
+        if (phase === 'search' || window.parent === window) return;
+        const id = setTimeout(() => window.parent.postMessage({ type: phase === 'locked' ? 'repair-complete' : 'repair-failed' }, '*'), 1400);
+        return () => clearTimeout(id);
+    }, [phase]);
 
-    const setAngleBoth = a => { angleRef.current = a; setAngle(a) };
+    const aim = e => {
+        const b = e.currentTarget.getBoundingClientRect();
+        const x = (e.clientX - b.left) / b.width * 300 - PX, y = (e.clientY - b.top) / b.height * 300 - PY;
+        goalRef.current = [(Math.atan2(x, -y) * R2D + 360) % 360, 90 - Math.min(PR, Math.hypot(x, y)) / PR * 90];
+    };
+    const down = e => { if (phase !== 'search') return; e.currentTarget.setPointerCapture?.(e.pointerId); setDragging(true); aim(e) };
+    const move = e => { if (dragging && phase === 'search') aim(e) };
+    const up = () => setDragging(false);
 
-    const bars = [20, 45, 70, 90];
-    const ASSETS = '600_solar_assets/';
+    const [ax, ay] = plot(ant[0], ant[1]);
+    const [px, py] = plot(...toAzEl(pass.pred(view.t)));
+    const trackPts = pass.track.map(([a, e]) => plot(a, e).join(',')).join(' ');
+    const sigColor = view.sig >= THRESH ? '#c9ff4d' : view.sig > 40 ? '#ffd166' : '#ff5964';
+    const lockPx = Math.sqrt(Math.log(100 / THRESH)) * SIGMA / 90 * PR; // on-plot radius of the lock zone
     const FRAME_DIR = '600_gn_antenna_pixel_frames/';
     const FRAMES = [{ file: 'antenna_r01_f01.png', w: 96, h: 168 }, { file: 'antenna_r01_f02.png', w: 128, h: 168 }, { file: 'antenna_r01_f03.png', w: 128, h: 173 }, { file: 'antenna_r01_f04.png', w: 105, h: 176 }, { file: 'antenna_r01_f05.png', w: 103, h: 177 }, { file: 'antenna_r01_f06.png', w: 96, h: 186 }, { file: 'antenna_r01_f07.png', w: 93, h: 184 }, { file: 'antenna_r01_f08.png', w: 99, h: 176 }, { file: 'antenna_r01_f09.png', w: 103, h: 176 }, { file: 'antenna_r01_f10.png', w: 128, h: 170 }, { file: 'antenna_r01_f11.png', w: 128, h: 166 }, { file: 'antenna_r01_f12.png', w: 96, h: 159 }];
-    const DISPLAY_H = 170, GROUND_Y = 232, CX = 150;
-    const frameIdx = Math.round(angle / 30) % 12;
-    const fr = FRAMES[frameIdx];
-    const dispW = DISPLAY_H * (fr.w / fr.h);
-    const imgX = CX - dispW / 2, imgY = GROUND_Y - DISPLAY_H;
+    const fr = FRAMES[Math.round(ant[0] / 30) % 12];
+    const bars = [20, 45, 70, 90];
 
     return <>
-        <Header title="MISSED CONTACT" sub="RSSI -104 dBm · NO DIRECTIONAL LOCK" />
-        <p className="instructions">Only signal strength is shown, not bearing. Sweep toward the peak and hold steady to lock.</p>
-        <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
-            <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: '#0c1210', border: '1px solid #34403a' }}>
-                <ellipse cx={CX} cy={GROUND_Y + 6} rx="72" ry="10" fill="rgba(0,0,0,.35)" />
-                <image href={FRAME_DIR + fr.file} x={imgX} y={imgY} width={dispW} height={DISPLAY_H} style={{ imageRendering: 'pixelated' }} />
-                {locked && <image href={ASSETS + 'satellite.png'} x="164" y="40" width="122" height={122 * 644 / 1490} />}
-                {bars.map((th, i) => <rect key={th} x={20 + i * 13} y={54 - (10 + i * 7)} width="9" height={10 + i * 7} fill={strength >= th ? '#c9ff4d' : '#2a332f'} stroke="#1c2422" strokeWidth="1" />)}
-                <text x="150" y="292" textAnchor="middle" fontSize="9" fill={strength >= THRESH ? '#c9ff4d' : '#89948d'}>{locked ? 'DOWNLINK ESTABLISHED' : strength >= THRESH ? 'HOLD STEADY · LOCKING' : 'SWEEP THE DISH · HILL-CLIMB THE SIGNAL'}</text>
+        <Header title="MISSED CONTACT" sub="STALE EPHEMERIS · BLIND ACQUISITION" />
+        <p className="instructions">The predicted pass is plotted, but the prediction is stale — the satellite is ahead of or behind it along the track. Drag to point the antenna crosshair, search along the track, then hold on the signal to lock before the LOS.</p>
+        <div style={{ display: 'flex', gap: 24, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', margin: '12px 0' }}>
+            <svg viewBox="0 0 300 300" width="330" height="330" style={{ background: '#0c1210', border: '1px solid #34403a', cursor: phase === 'search' ? 'crosshair' : 'default', touchAction: 'none' }} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+                <circle cx={PX} cy={PY} r={PR * (1 - MASK / 180)} fill="none" stroke="rgba(255,89,100,.13)" strokeWidth={PR * MASK / 90} />
+                {[PR, PR * 2 / 3, PR / 3].map(r => <circle key={r} cx={PX} cy={PY} r={r} fill="none" stroke="#27302d" strokeWidth={r === PR ? 1.5 : 1} />)}
+                {Array.from({ length: 12 }, (_, i) => { const a = i * 30 * D2R; return <line key={i} x1={PX} y1={PY} x2={PX + PR * Math.sin(a)} y2={PY - PR * Math.cos(a)} stroke="#1c2422" /> })}
+                {[['N', 0], ['E', 90], ['S', 180], ['W', 270]].map(([l, a]) => <text key={l} x={PX + (PR + 11) * Math.sin(a * D2R)} y={PY - (PR + 11) * Math.cos(a * D2R) + 3} textAnchor="middle" fontSize="9" fill="#7b8580">{l}</text>)}
+                <text x={PX + 3} y={PY - PR / 3 - 3} fontSize="7" fill="#4c5750">60°</text>
+                <text x={PX + 3} y={PY - PR * 2 / 3 - 3} fontSize="7" fill="#4c5750">30°</text>
+                <polyline points={trackPts} fill="none" stroke="#55b6ff" strokeWidth="1.2" strokeDasharray="3 4" opacity=".7" />
+                <circle cx={px} cy={py} r="5" fill="none" stroke="#55b6ff" strokeWidth="1.5" />
+                <circle cx={ax} cy={ay} r={SIGMA / 90 * PR} fill="none" stroke={sigColor} strokeWidth=".8" opacity=".35" />
+                <circle cx={ax} cy={ay} r={lockPx} fill="none" stroke={sigColor} strokeWidth="1.8" />
+                <line x1={ax - 11} y1={ay} x2={ax + 11} y2={ay} stroke={sigColor} strokeWidth="1" />
+                <line x1={ax} y1={ay - 11} x2={ax} y2={ay + 11} stroke={sigColor} strokeWidth="1" />
+                {view.truth && (() => { const [tx, ty] = plot(...view.truth); return <g><circle cx={tx} cy={ty} r="10" fill="none" stroke={phase === 'locked' ? '#c9ff4d' : '#ff5964'} strokeWidth="1.5" /><image href="600_solar_assets/satellite.png" x={tx - 16} y={ty - 7} width="32" height={32 * 644 / 1490} /></g> })()}
+                {bars.map((th, i) => <rect key={th} x={10 + i * 8} y={30 - (6 + i * 5)} width="5" height={6 + i * 5} fill={view.sig >= th ? '#c9ff4d' : '#2a332f'} />)}
             </svg>
+            <div style={{ textAlign: 'center' }}>
+                <img src={FRAME_DIR + fr.file} alt="" style={{ height: 130, imageRendering: 'pixelated' }} />
+                <div style={{ fontSize: 11, color: '#89948d', letterSpacing: '.12em', marginTop: 8 }}>AZ {Math.round(ant[0])}° · EL {Math.round(ant[1])}°</div>
+                <div style={{ fontSize: 11, color: '#89948d', letterSpacing: '.12em', marginTop: 4 }}>{phase === 'search' ? `PREDICTED LOS IN ${Math.max(0, Math.ceil(pass.D - view.t))}s` : phase === 'locked' ? 'TRACKING' : 'LOSS OF SIGNAL'}</div>
+            </div>
         </div>
-        <div className="readout" style={{ color: strength >= THRESH ? 'var(--green)' : strength > 40 ? 'var(--yellow)' : 'var(--red)' }}>SIGNAL {Math.round(strength)}% · BEARING {Math.round(angle)}°</div>
-        <input className="range" type="range" min="0" max="359" value={Math.round(angle)} onChange={e => setAngleBoth(+e.target.value)} disabled={locked} />
-        <div className="bar"><i style={{ width: `${strength}%`, background: strength >= THRESH ? 'var(--green)' : strength > 40 ? 'var(--yellow)' : 'var(--red)' }} /></div>
-        <div className="bar"><i style={{ width: `${holdFrac * 100}%`, background: 'var(--blue)', transition: 'none' }} /></div>
-        <div className="legend"><span><i className="dot green" />SIGNAL PEAK</span><span><i className="dot bluebg" />LOCK PROGRESS</span></div>
-        {locked && <div className="success">DOWNLINK ESTABLISHED · TELEMETRY RECEIVED</div>}
+        <div className="readout" style={{ color: sigColor }}>SIGNAL {Math.round(view.sig)}% · {phase === 'locked' ? 'LOCKED' : view.sig >= THRESH ? 'HOLD STEADY · LOCKING' : dragging ? 'SLEWING' : 'SEARCHING'}</div>
+        <div className="bar"><i style={{ width: `${view.prog * 100}%`, background: 'var(--blue)', transition: 'none' }} /></div>
+        <div className="legend"><span><i className="dot bluebg" />PREDICTED PASS</span><span><i className="dot green" />ANTENNA · LOCK ZONE</span><span><i className="dot redbg" />ELEVATION MASK</span></div>
+        {phase === 'locked' && <div className="success">DOWNLINK ESTABLISHED · TELEMETRY RECEIVED</div>}
+        {phase === 'los' && <div className="failure">LOSS OF SIGNAL · PASS SET BEFORE LOCK</div>}
     </>;
 }
 function ReactionWheel() {
@@ -709,8 +746,6 @@ function Orbit() {
         {stage === 'success' ? <div className="success">CIRCULARIZATION ACCURATE · ORBIT {cfg.raiseMode ? 'RAISED' : 'LOWERED'} INTO HOME PLANE</div> : (error && stage === 'plot') ? <div className="failure">{error}</div> : null}
     </>;
 }
-function Sensor() { const [pick, setPick] = useState(null), [fault] = useState(() => shuffle(['A', 'B', 'C'])[0]), [vals] = useState(() => { const out = { A: 71, B: 71, C: 71 }; out[fault] = 88 + Math.floor(Math.random() * 9); return out }); return <><Header title="SENSOR FAULT" sub="TEMPERATURE STREAMS DISAGREE" /><p className="instructions">Compare the redundant sensors. Select the outlier and switch it offline.</p><div className="pixel-grid">{['A', 'B', 'C'].map(x => <button className={'node ' + (pick === x ? (x === fault ? 'done' : 'fail') : '')} onClick={() => setPick(x)} key={x}>SENSOR {x}<br /><small>{vals[x]}°C</small></button>)}</div><Result ok={pick === fault}>{pick === fault ? `SENSOR ${fault} ISOLATED · CONSENSUS RESTORED` : 'One stream is statistically abnormal.'}</Result></> }
-function Attitude() { const [a, setA] = useState(-28); const ok = Math.abs(a) <= 3; return <><Header title="ATTITUDE DRIFT" sub="POINTING ERROR 28° · ANTENNA MISALIGNED" /><p className="instructions">Use the reaction wheels to bring the antenna back to Earth-pointing. Stop inside the narrow lock window.</p><div className="readout">{a}°</div><input className="range" type="range" min="-90" max="90" value={a} onChange={e => setA(+e.target.value)} /><Result ok={ok}>{ok ? 'ATTITUDE LOCKED · DOWNLINK READY' : 'Fine-tune the pointing error to ±3°.'}</Result></> }
 function genStarSetup() {
     const N = 7, TRUE = 6;
     const cells = []; for (let r = 0; r < N; r++)for (let c = 0; c < N; c++)cells.push([c, r]);
@@ -797,8 +832,6 @@ function StarTracker() {
         <Result ok={ok}>{ok ? 'PATTERN MATCHED · LOCK REACQUIRED' : 'Match the catalog reference exactly to reacquire lock.'}</Result>
     </>
 }
-function Impact() { const [pick, setPick] = useState(null), [fault] = useState(() => shuffle(['COMMS', 'POWER', 'THERMAL', 'PAYLOAD', 'GUIDANCE', 'BATTERY'])[0]); return <><Header title="MODULE IMPACT" sub="PRESSURE LOSS · STRUCTURAL BREACH DETECTED" /><p className="instructions">Isolate the damaged module before the pressure loss spreads. The breach location varies by incident.</p><div className="pixel-grid">{['COMMS', 'POWER', 'THERMAL', 'PAYLOAD', 'GUIDANCE', 'BATTERY'].map(x => <button className={'module ' + (pick === x ? (x === fault ? 'done' : 'fail') : '')} onClick={() => setPick(x)} key={x}>{x}</button>)}</div><Result ok={pick === fault}>{pick === fault ? 'MODULE ISOLATED · PRESSURE STABLE' : 'Trace the pressure-loss indicator to the damaged module.'}</Result></> }
-function Radiation() { const [t, setT] = useState(0); useEffect(() => { if (t > 0) { const id = setTimeout(() => setT(t - 1), 1000); return () => clearTimeout(id) } }, [t]); return <><Header title="RADIATION EVENT" sub="SOLAR PARTICLE FLUX ELEVATED" /><p className="instructions">This is a transient event. Enter shielding protocol, then wait. Intervening too early risks unnecessary degradation.</p><div className="readout">{t ? `FLUX FALLING · ${t}s` : 'FLUX NOMINAL'}</div><button className="action" onClick={() => setT(8)} disabled={t > 0}>{t ? 'WAITING FOR CLEAR' : 'ENTER SHIELDING PROTOCOL'}</button><Result ok={t === 0 && false}>{t === 0 ? 'Wait for the event to pass without cycling power.' : ''}</Result></> }
 function genHammingWord() {
     // builds a genuine valid Hamming(7,4) codeword: 4 free data bits at
     // positions 3,5,6,7, with 3 check bits at positions 1,2,4 chosen so every
@@ -1053,6 +1086,148 @@ function Debris() {
         {phase === 'lost' && <div className="failure">DEBRIS NOT OUT-MANEUVERED · {sats.length} SATELLITES LOST</div>}
     </>;
 }
+function Flare() {
+    const NB = 160, DURATION = 45, CALM = 3; // NB frequency bins across the band; the flare builds after a CALM start
+    const S_DB = 24, THRESH = 10, HALF = 4, PER_SAT = 4; // carrier level over the noise floor, SNR needed to upload, carrier half-width in bins, clean seconds per command
+    const F0 = 10.7, F1 = 12.7; // Ku downlink band, GHz
+    const ROWS = 110, ROW_RATE = 24, SPEC_H = 84, FALL_H = 176; // waterfall keeps ~4.6s of history
+    const LIMIT_DB = S_DB - THRESH; // the noise under the carrier must stay below this for the link to hold
+    const params = new URLSearchParams(location.search);
+    const [sats] = useState(() => { const ids = (params.get('sats') || '').split(',').filter(Boolean); return ids.length ? ids : Array.from({ length: 7 }, () => String(100 + Math.floor(Math.random() * 900))) });
+    const [world] = useState(() => {
+        const flashes = []; for (let ft = 6 + Math.random() * 3; ft < DURATION; ft += 5 + Math.random() * 3) flashes.push([ft, 12 + Math.random() * 8]);
+        return { flashes, bursts: [], next: CALM, start: NB / 2 };
+    });
+    const carrierRef = useRef(world.start), heldRef = useRef(0), draggingRef = useRef(false);
+    const specRef = useRef(null), fallRef = useRef(null);
+    const [view, setView] = useState({ t: 0, snr: S_DB, prog: 0, c: world.start });
+    const [phase, setPhase] = useState('run'); // run | done
+    const TOTAL = PER_SAT * sats.length;
+    const clampC = c => Math.max(HALF, Math.min(NB - 1 - HALF, c));
+
+    // flare intensity: quiet start, impulsive rise, long decay
+    const envelope = t => t < CALM ? 0 : t < 8 ? .35 + .65 * (t - CALM) / (8 - CALM) : t < 22 ? 1 : 1 - .45 * (t - 22) / (DURATION - 22);
+    const spawn = t => {
+        while (t >= world.next) {
+            const slow = Math.random() < .2; // most bursts drift fast from high to low frequency; some are broad and slow
+            world.bursts.push({
+                t0: world.next, c0: Math.random() * NB * 1.15,
+                v: slow ? -(3 + Math.random() * 5) : -(14 + Math.random() * 26),
+                sig: slow ? 12 + Math.random() * 6 : 4 + Math.random() * 5,
+                pk: slow ? 18 + Math.random() * 5 : 22 + Math.random() * 8,
+                life: slow ? 5 + Math.random() * 3 : 3 + Math.random() * 3,
+            });
+            world.next += (.35 + Math.random() * .6) / Math.max(.35, envelope(world.next));
+        }
+        world.bursts = world.bursts.filter(b => t - b.t0 < b.life);
+    };
+    const noise = t => { // linear power per bin, noise floor = 1
+        const n = new Array(NB).fill(1);
+        world.bursts.forEach(bu => {
+            const a = t - bu.t0, fade = Math.max(0, Math.min(1, a / .3, (bu.life - a) / .5)), c = bu.c0 + bu.v * a, amp = 10 ** (bu.pk / 10) * fade;
+            for (let b = Math.max(0, Math.floor(c - 3 * bu.sig)); b < Math.min(NB, c + 3 * bu.sig + 1); b++) n[b] += amp * Math.exp(-(((b - c) / bu.sig) ** 2));
+        });
+        let fl = 0; // broadband flashes lift the whole band at once
+        world.flashes.forEach(([ft, a]) => { const x = t - ft; if (x >= 0 && x < 4) fl += 10 ** (a / 10) * (x < .25 ? x / .25 : Math.exp(-(x - .25) / .8)) });
+        return fl ? n.map(v => v + fl) : n;
+    };
+    const snrAt = (n, c) => { const lo = Math.max(0, Math.round(c) - HALF), hi = Math.min(NB, Math.round(c) + HALF + 1); let s = 0; for (let b = lo; b < hi; b++) s += n[b]; return S_DB - 10 * Math.log10(s / (hi - lo)) };
+
+    useEffect(() => {
+        const down = e => { if (e.key === 'ArrowLeft' || e.key === 'a') heldRef.current = -1; else if (e.key === 'ArrowRight' || e.key === 'd') heldRef.current = 1 };
+        const up = e => { if ((e.key === 'ArrowLeft' || e.key === 'a') && heldRef.current === -1) heldRef.current = 0; if ((e.key === 'ArrowRight' || e.key === 'd') && heldRef.current === 1) heldRef.current = 0 };
+        window.addEventListener('keydown', down); window.addEventListener('keyup', up);
+        return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) };
+    }, []);
+
+    useEffect(() => {
+        if (phase !== 'run') return;
+        const buf = document.createElement('canvas'); buf.width = NB; buf.height = ROWS;
+        const bctx = buf.getContext('2d'); bctx.fillStyle = '#05080a'; bctx.fillRect(0, 0, NB, ROWS);
+        const row = bctx.createImageData(NB, 1);
+        const STOPS = [[0, 5, 8, 10], [.25, 14, 40, 36], [.5, 40, 110, 80], [.72, 201, 255, 77], [.86, 255, 209, 102], [1, 255, 89, 100]];
+        const colour = d => { const x = Math.max(0, Math.min(1, d / 30)); let i = 1; while (x > STOPS[i][0]) i++; const [a, b] = [STOPS[i - 1], STOPS[i]], k = (x - a[0]) / (b[0] - a[0]); return [1, 2, 3].map(j => a[j] + (b[j] - a[j]) * k) };
+        const fit = cv => { const dpr = devicePixelRatio || 1, w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h } const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); return [g, cv.clientWidth, cv.clientHeight] };
+        let raf, last = null, t = 0, prog = 0, disp = S_DB, rowAcc = 0;
+        const step = ts => {
+            const dt = last == null ? 0 : Math.min(.05, (ts - last) / 1000); last = ts; t += dt; // simulated time: a hidden tab pauses the flare too
+            if (heldRef.current) carrierRef.current = clampC(carrierRef.current + heldRef.current * 70 * dt);
+            const c = carrierRef.current;
+            spawn(t);
+            const n = noise(t);
+            disp += (snrAt(n, c) - disp) * (1 - Math.exp(-dt / .2)); // receiver averaging
+            if (disp >= THRESH) prog = Math.min(TOTAL, prog + dt);
+            const rx = n.map(v => 10 * Math.log10(v * (.55 + Math.random() * .9))); // noise only -- the carrier is the marked strip, so the trace inside it reads straight against the link limit
+
+            rowAcc += dt * ROW_RATE;
+            if (rowAcc >= 1) {
+                rowAcc %= 1;
+                bctx.drawImage(buf, 0, 0, NB, ROWS - 1, 0, 1, NB, ROWS - 1); // scroll history down, newest row on top
+                rx.forEach((d, b) => { const [r, g, bl] = colour(d); row.data.set([r, g, bl, 255], b * 4) });
+                bctx.putImageData(row, 0, 0);
+            }
+            const ok = disp >= THRESH;
+            if (fallRef.current) {
+                const [g, w, h] = fit(fallRef.current);
+                g.imageSmoothingEnabled = false; g.drawImage(buf, 0, 0, w, h);
+                const x0 = (c - HALF) / NB * w, x1 = (c + HALF + 1) / NB * w;
+                g.strokeStyle = ok ? 'rgba(201,255,77,.7)' : 'rgba(255,89,100,.8)'; g.lineWidth = 1; g.setLineDash([3, 4]);
+                g.beginPath(); g.moveTo(x0, 0); g.lineTo(x0, h); g.moveTo(x1, 0); g.lineTo(x1, h); g.stroke(); g.setLineDash([]);
+            }
+            if (specRef.current) {
+                const [g, w, h] = fit(specRef.current), y = d => h - 4 - (Math.max(-2, Math.min(34, d)) + 2) / 36 * (h - 8);
+                g.fillStyle = '#05080a'; g.fillRect(0, 0, w, h);
+                g.strokeStyle = '#1a2320'; g.beginPath(); [0, 10, 20, 30].forEach(d => { g.moveTo(0, y(d)); g.lineTo(w, y(d)) }); g.stroke();
+                g.fillStyle = ok ? 'rgba(201,255,77,.12)' : 'rgba(255,89,100,.18)'; g.fillRect((c - HALF) / NB * w, 0, (2 * HALF + 1) / NB * w, h);
+                g.strokeStyle = '#ffd166'; g.setLineDash([4, 4]); g.beginPath(); g.moveTo(0, y(LIMIT_DB)); g.lineTo(w, y(LIMIT_DB)); g.stroke(); g.setLineDash([]);
+                g.font = '9px "Courier New", monospace';
+                g.fillStyle = '#ffd166'; g.fillText('NOISE THRESHOLD', 4, y(LIMIT_DB) - 3);
+                g.fillStyle = ok ? '#c9ff4d' : '#ff5964'; g.textAlign = 'center'; g.fillText('YOUR SIGNAL', Math.max(32, Math.min(w - 32, (c + .5) / NB * w)), 10); g.textAlign = 'left';
+                g.strokeStyle = '#b9c7bf'; g.lineWidth = 1.2; g.beginPath(); rx.forEach((d, b) => { const x = (b + .5) / NB * w; b ? g.lineTo(x, y(d)) : g.moveTo(x, y(d)) }); g.stroke();
+            }
+            setView({ t, snr: disp, prog, c });
+            if (prog >= TOTAL || t >= DURATION) { setPhase('done'); return }
+            raf = requestAnimationFrame(step);
+        };
+        raf = requestAnimationFrame(step);
+        return () => cancelAnimationFrame(raf);
+    }, [phase]);
+
+    const saved = Math.min(sats.length, Math.floor(view.prog / PER_SAT + 1e-9));
+    useEffect(() => {
+        if (phase !== 'done' || window.parent === window) return;
+        const id = setTimeout(() => window.parent.postMessage({ type: 'flare-resolved', results: sats.map((satId, i) => ({ satId, fixed: i < saved })) }, '*'), saved === sats.length ? 1400 : 2200);
+        return () => clearTimeout(id);
+    }, [phase]);
+
+    const tune = e => { const box = e.currentTarget.getBoundingClientRect(); carrierRef.current = clampC((e.clientX - box.left) / box.width * NB) };
+    const drag = {
+        onPointerDown: e => { if (phase !== 'run') return; draggingRef.current = true; e.currentTarget.setPointerCapture?.(e.pointerId); tune(e) },
+        onPointerMove: e => { if (draggingRef.current && phase === 'run') tune(e) },
+        onPointerUp: () => { draggingRef.current = false }, onPointerCancel: () => { draggingRef.current = false },
+    };
+    const ok = view.snr >= THRESH, freq = F0 + (view.c + .5) / NB * (F1 - F0);
+    return <>
+        <Header title="SOLAR FLARE" sub={`RADIO BLACKOUT · Ku DOWNLINK · ${Math.max(0, Math.ceil(DURATION - view.t))}s REMAINING`} />
+        <p className="instructions">The solar flare cut contact with these satellites. Drag your signal (the shaded strip) or hold ← → to where the noise is below the yellow <span style={{ color: 'var(--yellow)' }}>NOISE THRESHOLD</span> line. The satellites reconnect one by one while you stay there.</p>
+        <div style={{ maxWidth: 720, cursor: phase === 'run' ? 'ew-resize' : 'default', touchAction: 'none' }} {...drag}>
+            <div style={{ fontSize: 10, letterSpacing: '.14em', color: '#7b8580', marginBottom: 4 }}>SPECTRUM</div>
+            <canvas ref={specRef} style={{ width: '100%', height: SPEC_H, display: 'block', border: '1px solid #34403a' }} />
+            <div style={{ fontSize: 10, letterSpacing: '.14em', color: '#7b8580', margin: '8px 0 4px' }}>WATERFALL · NEWEST AT TOP</div>
+            <canvas ref={fallRef} style={{ width: '100%', height: FALL_H, display: 'block', border: '1px solid #34403a' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#7b8580', marginTop: 4 }}>{[0, 1, 2, 3, 4].map(i => <span key={i}>{(F0 + i * (F1 - F0) / 4).toFixed(2)} GHz</span>)}</div>
+        </div>
+        <div className="readout" style={{ color: ok ? 'var(--green)' : 'var(--red)' }}>SNR {view.snr.toFixed(1)} dB · SIGNAL {freq.toFixed(3)} GHz · {ok ? 'RECONNECTING' : 'LINK DROPPED'}</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', maxWidth: 720 }}>
+            {sats.map((id, i) => { const p = Math.max(0, Math.min(1, view.prog / PER_SAT - i)); return <div key={id} style={{ flex: '1 1 0', minWidth: 80, position: 'relative', border: '1px solid ' + (p >= 1 ? 'var(--green)' : '#39453f'), padding: '4px 8px', fontSize: 11, color: p >= 1 ? '#070809' : phase === 'done' ? 'var(--red)' : '#9aa39c', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', inset: 0, width: `${p * 100}%`, background: p >= 1 ? 'var(--green)' : 'rgba(201,255,77,.25)' }} />
+                <div style={{ position: 'relative' }}>SAT {String(id).padStart(3, '0')}</div>
+                <div style={{ position: 'relative', fontSize: 9, letterSpacing: '.1em', marginTop: 2 }}>{p >= 1 ? 'ONLINE' : 'OFFLINE'}</div>
+            </div> })}
+        </div>
+        {phase === 'done' && <div className={saved === sats.length ? 'success' : 'failure'}>{saved === sats.length ? 'ALL SATELLITES RECONNECTED · LINK HELD' : `${saved}/${sats.length} SATELLITES RECONNECTED · ${sats.length - saved} LOST`}</div>}
+    </>;
+}
 function App() {
     const params = new URLSearchParams(location.search);
     const requested = params.get('type');
@@ -1071,7 +1246,7 @@ function App() {
         if (!timedOut) return;
         if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-failed' }, '*'), 2200); return () => clearTimeout(id) }
     }, [timedOut]);
-    const C = { thermal: Thermal, power: Power, solar: Solar, contact: Contact, wheel: ReactionWheel, process: Process, orbit: Orbit, sensor: Sensor, attitude: Attitude, startracker: StarTracker, impact: Impact, radiation: Radiation, bitflip: BitFlip, debris: Debris }[type];
+    const C = { thermal: Thermal, power: Power, solar: Solar, contact: Contact, wheel: ReactionWheel, process: Process, orbit: Orbit, startracker: StarTracker, bitflip: BitFlip, debris: Debris, flare: Flare }[type];
     return <Frame type={type} setType={setType} remaining={remaining} timedOut={timedOut}>
         {timedOut ? <div className="failure" style={{ margin: '60px 0', fontSize: 14, letterSpacing: '.03em' }}>SATELLITE COMMANDED TOO LATE · SATELLITE LOST</div> : <C />}
     </Frame>

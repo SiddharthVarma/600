@@ -41,4 +41,3 @@ Live in the main game (a satellite can spawn any of these):
 | orbit | Orbital Burn — drag-plot a transfer burn, then time a circularization burn |
 | startracker | Star Tracker Lock — rebuild a star pattern from a catalog reference |
 
-A few older, simpler minigames (`sensor`, `attitude`, `impact`, `radiation`) still exist in `react-app.jsx` but aren't wired into the live anomaly rotation.
