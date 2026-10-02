@@ -117,7 +117,9 @@ function Power() {
             }
             return true;
         };
-        for (let attempt = 0; attempt < 60; attempt++) {
+        // ~45% of random builds give some load two valid bus combinations; 60 tries let one through almost half the time.
+        // 2000 tries brings that to effectively zero and is still instant.
+        for (let attempt = 0; attempt < 2000; attempt++) {
             const cand = build();
             if (isUnique(cand)) return cand;
         }
@@ -180,7 +182,7 @@ function Power() {
             <text x="300" y="320" textAnchor="middle" fill="#849089" fontSize="10">SELECT BUS SOCKETS · THEN CLICK A LOAD TO COMMIT</text>
         </svg>
         <div className="readout">STAGED {stagedV}V · {staged.length} BUS{staged.length === 1 ? '' : 'ES'} SELECTED</div>
-        <button className="action" onClick={() => { setStaged([]); setError('') }}>CLEAR SELECTION</button>
+        <button className="action" onClick={() => { setStaged([]); setUsedBuses([]); setConnections({}); setPowered([]); setError('') }}>CLEAR SELECTION</button>
         <Result ok={ok}>{ok ? 'POWER BUS BALANCED · ALL LOADS NOMINAL' : error || 'Select bus sockets, then commit them to a load.'}</Result>
     </>;
 }
@@ -1226,21 +1228,36 @@ function App() {
     const [type, setType] = useState(games.some(g => g[0] === requested) ? requested : 'thermal');
     const [remaining, setRemaining] = useState(() => { const n = parseInt(params.get('deadline'), 10); return Number.isFinite(n) && n > 0 ? n : null });
     const [timedOut, setTimedOut] = useState(false);
+    // ?preload: the main screen loads this page hidden while its terminal log runs. Hold the game until it says start,
+    // and take the satellite's countdown as it is at that moment.
+    const [ready, setReady] = useState(() => !params.has('preload'));
     useEffect(() => {
-        if (remaining == null || timedOut) return;
+        if (ready) return;
+        const onStart = e => {
+            if (e.data?.type !== 'repair-start') return;
+            const n = parseInt(e.data.deadline, 10);
+            if (Number.isFinite(n) && n > 0) setRemaining(n);
+            setReady(true);
+        };
+        window.addEventListener('message', onStart);
+        if (window.parent !== window) window.parent.postMessage({ type: 'repair-loaded' }, '*');
+        return () => window.removeEventListener('message', onStart);
+    }, [ready]);
+    useEffect(() => {
+        if (remaining == null || timedOut || !ready) return;
         const id = setTimeout(() => {
             if (remaining <= 1) { setTimedOut(true); setRemaining(0) }
             else setRemaining(remaining - 1);
         }, 1000);
         return () => clearTimeout(id);
-    }, [remaining, timedOut]);
+    }, [remaining, timedOut, ready]);
     useEffect(() => {
         if (!timedOut) return;
         if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-failed' }, '*'), 2200); return () => clearTimeout(id) }
     }, [timedOut]);
     const C = { thermal: Thermal, power: Power, solar: Solar, contact: Contact, wheel: ReactionWheel, process: Process, orbit: Orbit, startracker: StarTracker, bitflip: BitFlip, debris: Debris, flare: Flare }[type];
     return <Frame type={type} setType={setType} remaining={remaining} timedOut={timedOut}>
-        {timedOut ? <div className="failure" style={{ margin: '60px 0', fontSize: 14, letterSpacing: '.03em' }}>SATELLITE COMMANDED TOO LATE · SATELLITE LOST</div> : <C />}
+        {!ready ? null : timedOut ? <div className="failure" style={{ margin: '60px 0', fontSize: 14, letterSpacing: '.03em' }}>SATELLITE COMMANDED TOO LATE · SATELLITE LOST</div> : <C />}
     </Frame>
 };
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
