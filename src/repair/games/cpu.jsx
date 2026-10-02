@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Header } from '../shared/ui.jsx';
-import { shuffle } from '../shared/util.js';
+import { shuffle, usePhone } from '../shared/util.js';
 
 const PROCESS_POOL = [
   'PACKET RETRY',
@@ -139,6 +139,7 @@ export function Process() {
   const selected = typedIds(cmd),
     load = Math.round(cpus.reduce((a, b) => a + b, 0) / cpus.length);
   const purgedRunaways = setup.rows.filter(r => r.kind === 'runaway' && purged.includes(r.id)).length;
+  const phone = usePhone(); // compact layout on phones: narrower columns, no status column, the command box on its own line
   const prompt = <span style={{ color: 'var(--green)' }}>ops@600:~/cluster$</span>;
   const tone = { muted: '#7b8580', warn: 'var(--yellow)', err: 'var(--red)', ok: 'var(--green)' };
   return (
@@ -149,7 +150,15 @@ export function Process() {
         is expected, so leave those running. Click lines or type IDs, then purge.
       </p>
       <div
-        style={{ maxWidth: 720, border: '1px solid #262d2b', background: '#070909', padding: '8px 12px', fontSize: 12, lineHeight: 1.6 }}
+        style={{
+          maxWidth: 720,
+          border: '1px solid #262d2b',
+          background: '#070909',
+          padding: phone ? '8px 10px' : '8px 12px',
+          fontSize: phone ? 11 : 12,
+          lineHeight: 1.6,
+          overflowWrap: phone ? 'anywhere' : undefined,
+        }}
       >
         <div style={{ color: '#7b8580' }}>{prompt} cat schedule.cfg</div>
         <div style={{ color: 'var(--yellow)', marginBottom: 4 }}>scheduled now: {setup.scheduled.join(', ')}</div>
@@ -164,10 +173,10 @@ export function Process() {
               onClick={() => toggle(r.id)}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '64px 60px 50px 1fr 64px',
+                gridTemplateColumns: phone ? '52px 30px 42px minmax(0, 1fr)' : '64px 60px 50px 1fr 64px',
                 alignItems: 'center',
-                gap: 10,
-                padding: '0 6px',
+                gap: phone ? 7 : 10,
+                padding: phone ? '4px 6px' : '0 6px',
                 margin: '0 -6px',
                 cursor: done || phase !== 'run' ? 'default' : 'pointer',
                 background: on ? 'rgba(201,255,77,.1)' : 'transparent',
@@ -186,14 +195,30 @@ export function Process() {
                 />
               </span>
               <span style={{ textAlign: 'right' }}>{Math.min(99.9, c).toFixed(1)}%</span>
-              <span style={{ color: done ? '#3b4441' : '#8fd9ff' }}>{r.proc}</span>
-              <span style={{ fontSize: 10, letterSpacing: '.1em', color: on ? 'var(--green)' : '#3b4441' }}>
-                {done ? 'PURGED' : on ? 'SELECTED' : ''}
+              <span
+                style={
+                  phone
+                    ? {
+                        color: done ? '#3b4441' : '#8fd9ff',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        textDecoration: done ? 'line-through' : 'none',
+                      }
+                    : { color: done ? '#3b4441' : '#8fd9ff' }
+                }
+              >
+                {r.proc}
               </span>
+              {!phone && (
+                <span style={{ fontSize: 10, letterSpacing: '.1em', color: on ? 'var(--green)' : '#3b4441' }}>
+                  {done ? 'PURGED' : on ? 'SELECTED' : ''}
+                </span>
+              )}
             </div>
           );
         })}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: phone ? 'wrap' : 'nowrap' }}>
           {prompt}
           <span>purge</span>
           <input
@@ -205,9 +230,24 @@ export function Process() {
             disabled={phase !== 'run'}
             placeholder="click lines or type IDs"
             spellCheck={false}
-            style={{ flex: 1, minWidth: 0, background: 'transparent', border: 0, outline: 0, color: '#f4f7ef', fontSize: 12, padding: 0 }}
+            // 16px on phones: iPhone Safari zooms the page into any text box smaller than that
+            style={{
+              flex: phone ? '1 1 140px' : 1,
+              minWidth: 0,
+              background: 'transparent',
+              border: 0,
+              outline: 0,
+              color: '#f4f7ef',
+              fontSize: phone ? 16 : 12,
+              padding: 0,
+            }}
           />
-          <button className="action" onClick={purge} disabled={phase !== 'run'} style={{ padding: '3px 10px', fontSize: 11 }}>
+          <button
+            className="action"
+            onClick={purge}
+            disabled={phase !== 'run'}
+            style={{ padding: phone ? '7px 14px' : '3px 10px', fontSize: 11 }}
+          >
             PURGE
           </button>
         </div>

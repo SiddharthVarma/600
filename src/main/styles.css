@@ -578,3 +578,114 @@ button.command:hover {
     padding-right: 24px;
   }
 }
+
+.alerts-more,
+.alert-short {
+  display: none;
+}
+
+/* ---- Phones (portrait) ----
+   Everything below applies only to narrow touch screens. Laptops (mouse or trackpad) never match, however narrow the
+   window or high the browser zoom, so the laptop layout is untouched. */
+@media (max-width: 600px) and (pointer: coarse) {
+  .topline {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    top: 18px;
+    left: 16px;
+    right: 16px;
+  }
+
+  .brand {
+    font-size: 20px;
+    letter-spacing: 0.18em;
+  }
+
+  .signal {
+    font-size: 10px;
+    gap: 7px;
+  }
+
+  .alerts {
+    top: 74px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    gap: 6px;
+  }
+
+  .alert {
+    padding: 8px 56px 8px 10px;
+    border-radius: 8px;
+  }
+
+  .alert-head,
+  .alert-body,
+  .alert-x,
+  .alerts:not(.expanded) .alert.folded {
+    display: none;
+  }
+
+  .alert-title {
+    margin-top: 0;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .alert-short {
+    display: block;
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .alerts-more.show {
+    display: block;
+    align-self: flex-start;
+    pointer-events: auto;
+    padding: 6px 12px;
+    border: 1px solid #2b3230;
+    border-radius: 999px;
+    background: rgba(14, 17, 16, 0.96);
+    color: var(--muted);
+    font: inherit;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    cursor: pointer;
+  }
+
+  /* iPhone Safari counts the area behind its toolbars in vh, which can push the bottom of the repair window under them;
+     dvh is the height actually visible. Browsers without dvh keep the vh line. */
+  .repair-frame {
+    height: min(860px, 97vh);
+    height: min(860px, 97dvh);
+  }
+
+  /* the side panel covers the alerts instead of the other way round */
+  .panel {
+    z-index: 16;
+  }
+
+  /* terminal files become thumb-sized tap targets (Apple's minimum is 44px) */
+  .term {
+    height: 300px;
+    font-size: 12px;
+  }
+
+  .term-file {
+    padding: 13px 0;
+  }
+
+  button,
+  .alert,
+  .term-file {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+}

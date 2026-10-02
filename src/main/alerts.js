@@ -19,6 +19,36 @@ const alertsEl = document.getElementById('alerts'),
 let alerts = [];
 export const satTag = s => `SAT ${String(s.id).padStart(3, '0')}`;
 const countdownText = s => (s.anomalyType === 'orbit' ? `Impact in ${s.countdown}s` : `Lost in ${s.countdown}s if unresolved`);
+// Phones show alerts as one-line pills: the title plus a short tag on the right (seconds left, or the event countdown).
+// Only two show at once (emergencies always show); the rest fold behind a "+N more" pill. On a laptop the tag and the
+// pill are hidden by CSS and the fold class has no effect, so the laptop layout is unchanged.
+function shortText(a) {
+  if (a.event) {
+    if (a.event.phase === 'running') return 'LIVE';
+    if (a.event.kind === 'kraken') return '';
+    return `${Math.floor(a.event.left / 60)}:${String(a.event.left % 60).padStart(2, '0')}`;
+  }
+  return a.sticky && a.sat ? `${a.sat.countdown}s` : '';
+}
+const moreEl = document.createElement('button');
+moreEl.className = 'alerts-more';
+moreEl.onclick = () => {
+  alertsEl.classList.toggle('expanded');
+  foldForPhones();
+};
+alertsEl.appendChild(moreEl);
+function foldForPhones() {
+  let shown = 0,
+    folded = 0;
+  alerts.forEach(a => {
+    const fold = !a.emergency && shown++ >= 2;
+    a.el.classList.toggle('folded', fold);
+    if (fold) folded++;
+  });
+  if (!folded) alertsEl.classList.remove('expanded');
+  moreEl.textContent = alertsEl.classList.contains('expanded') ? 'show less' : `+${folded} more`;
+  moreEl.classList.toggle('show', folded > 0);
+}
 export function pushAlert({ sat = null, event = null, title, body, crit = false, sticky = false, emergency = false }) {
   const el = document.createElement('div');
   el.className = 'alert' + (crit ? ' crit' : '') + (emergency ? ' emergency' : '');
@@ -27,10 +57,11 @@ export function pushAlert({ sat = null, event = null, title, body, crit = false,
     (sticky ? '' : '<button class="alert-x" aria-label="Dismiss">×</button>') +
     '<div class="alert-head"><span class="alert-icon">🛰️</span><span class="alert-app">SCID-UI ALERTS' +
     (emergency ? ' · EMERGENCY' : '') +
-    '</span><span class="alert-time">now</span></div><div class="alert-title"></div><div class="alert-body"></div>';
+    '</span><span class="alert-time">now</span></div><div class="alert-title"></div><div class="alert-body"></div><span class="alert-short"></span>';
   el.querySelector('.alert-title').textContent = title;
   el.querySelector('.alert-body').textContent = body;
-  const a = { sat, event, type: sat?.anomalyType, sticky, el, born: Date.now() };
+  const a = { sat, event, type: sat?.anomalyType, sticky, emergency, el, born: Date.now() };
+  el.querySelector('.alert-short').textContent = shortText(a);
   el.onclick = e => {
     if (e.target.closest('.alert-x')) dismissAlert(a);
     else if (a.event) openEventTicket(a.event);
@@ -40,6 +71,7 @@ export function pushAlert({ sat = null, event = null, title, body, crit = false,
   alerts.unshift(a);
   if (!sticky) a.timer = setTimeout(() => dismissAlert(a), 6000);
   while (alerts.length > MAX_ALERTS) dismissAlert([...alerts].reverse().find(x => !x.sticky) || alerts[alerts.length - 1]); // drop the oldest passing alert first
+  foldForPhones();
 }
 function dismissAlert(a) {
   if (!alerts.includes(a)) return;
@@ -47,6 +79,7 @@ function dismissAlert(a) {
   clearTimeout(a.timer);
   a.el.classList.add('out');
   setTimeout(() => a.el.remove(), 300);
+  foldForPhones();
 }
 export function clearAlerts() {
   alerts.slice().forEach(dismissAlert);
@@ -75,6 +108,7 @@ export function updateAlerts() {
       }
       a.el.querySelector('.alert-body').textContent = countdownText(a.sat);
     }
+    a.el.querySelector('.alert-short').textContent = shortText(a);
     const mins = Math.floor((Date.now() - a.born) / 60000);
     a.el.querySelector('.alert-time').textContent = mins ? `${mins}m ago` : 'now';
   });
