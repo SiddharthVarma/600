@@ -299,7 +299,7 @@ That worked, but every change touched a giant file. A single typo stopped everyt
 ## 19. Two iPhone Safari gotchas
 
 - **Auto-zoom on text boxes:** iOS Safari zooms the whole page when you tap an input whose font is smaller than 16px. The CPU Overload command box was 12px. **Fix:** 16px on phones only.
-- **`100vh` isn't the visible height:** on iOS Safari, `vh` includes the area behind the browser toolbars, so a window sized to 97vh can sit partly under the toolbar. **Fix:** dynamic viewport units (`97dvh`), with the `vh` line kept as a fallback for older browsers.
+- **`100vh` isn't the visible height:** on iOS Safari, `vh` includes the area behind the browser toolbars, so a window sized to 97vh can sit partly under the toolbar. **Fix:** dynamic viewport units (`97dvh`), with the `vh` line kept as a fallback for older browsers. That wasn't enough: the window was still *centred* in a fixed box that included the toolbar area, so on the phone its bottom stayed out of sight. **Final fix:** on phones the minigame window is pinned to the top and fills exactly the visible screen.
 
 **Takeaway:** mobile Safari has its own rules. Testing in a desktop browser's phone emulator won't show either problem, so check on a real device.
 
@@ -341,6 +341,36 @@ That worked, but every change touched a giant file. A single typo stopped everyt
 **Minor, not fixed:** the game accepts `postMessage` results from any window. Someone embedding the site could fake a win, but only in their own browser, since there's no server or shared state.
 
 **Takeaway:** check git history, not just current files, for secrets. Know exactly what your deploy publishes. A build output folder is a security boundary as well as a performance one.
+
+---
+
+## 22. A bug I couldn't reproduce: the side panel wouldn't scroll on an iPhone
+
+**Found while testing:** on a real iPhone (Safari), the satellite side panel wouldn't scroll, so the terminal at its bottom was unreachable. Every test on the Mac passed, including Chrome's phone emulation and WebKit (Safari's engine) run headless.
+
+**What didn't work, three educated guesses, each deployed and tested on the phone:**
+- Removing the scroll box nested inside the panel.
+- Sizing the panel with the visible-height unit (`dvh`).
+- Removing the slide-in `transform` (a known WebKit quirk).
+
+None of them fixed it.
+
+**What did work: getting data from the real device.** Safari Web Inspector, connected to the iPhone by cable, ran small diagnostics live on the phone:
+- **The setup was fine:** the panel was open, on top, set to scroll, and its content was 456px taller than the screen.
+- **The touch was fine:** every touch landed inside the panel, and nothing on the page cancelled it.
+- **Code could scroll it:** setting `panel.scrollTop = 200` from code moved it instantly.
+- **Each remaining suspect was ruled out with a one-line live test:** the page-level `overflow: hidden`, the animated canvas behind the panel, and scroll containment.
+
+So the browser received the swipe, nothing blocked it, the panel could scroll, and iOS still didn't turn the swipe into scrolling. That's a WebKit quirk outside the page's control.
+
+**Fix:** on phones only (narrow + touch screen), the panel scrolls itself, using the one thing proven to work on the device.
+- Touch handlers set `scrollTop` as the finger drags.
+- A flick keeps gliding, with friction.
+- A touch that moves less than 6px still counts as a tap, so buttons and terminal files keep working.
+
+Laptops never run this code, and the pixel audit (#18) confirmed they're unchanged. The same scroller (now in `src/shared/`) also scrolls the minigame windows on phones. It leaves alone any drag that starts on a game board, so dragging the antenna or the solar array still plays the game.
+
+**Takeaway:** when a bug only appears on one device, stop guessing after the first miss and **instrument the real device**. Then reduce it by elimination: what works, what doesn't, one variable at a time. If the root cause is in the platform, build a narrow, well-scoped workaround around what you've *proven* works.
 
 ---
 

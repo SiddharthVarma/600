@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Header } from '../shared/ui.jsx';
+import { usePhone } from '../shared/util.js';
 
 function genHammingWord() {
   // builds a genuine valid Hamming(7,4) codeword: 4 free data bits at
@@ -26,29 +27,32 @@ function hammingSyndrome(bits) {
 
 function HammingRow({ label, bits, syn, onToggle, disabled, reference, restored }) {
   const ok = restored != null ? restored : syn.pos === 0;
+  // on phones a row fits on one line: tighter spacing, and the red edge and ✕ marks stand in for ERROR DETECTED
+  const phone = usePhone();
   return (
     <div
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 14,
+        gap: phone ? 8 : 14,
         padding: '5px 0',
         borderLeft: '2px solid ' + (ok ? 'transparent' : 'var(--red)'),
         paddingLeft: 10,
         borderBottom: '1px solid #1c2422',
-        flexWrap: 'wrap',
+        flexWrap: phone ? 'nowrap' : 'wrap',
       }}
     >
-      <div style={{ width: 78, fontSize: 11, color: reference ? '#7b8580' : '#9aa39c' }}>{label}</div>
-      <div style={{ display: 'flex', gap: 4 }}>
+      <div style={{ width: phone ? 50 : 78, flexShrink: 0, fontSize: 11, color: reference ? '#7b8580' : '#9aa39c' }}>{label}</div>
+      <div style={{ display: 'flex', gap: phone ? 3 : 4 }}>
         {bits.map((b, i) => (
           <button
             key={i}
             onClick={() => onToggle(i)}
             disabled={disabled}
             style={{
-              width: 24,
-              height: 24,
+              width: phone ? 26 : 24,
+              height: phone ? 26 : 24,
+              padding: phone ? 0 : undefined,
               border: '1px solid #39453f',
               background: b ? '#1c2b16' : '#0d1211',
               color: b ? 'var(--green)' : '#5c6b64',
@@ -60,12 +64,12 @@ function HammingRow({ label, bits, syn, onToggle, disabled, reference, restored 
           </button>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 8, fontSize: 10 }}>
+      <div style={{ display: 'flex', gap: phone ? 5 : 8, fontSize: 10 }}>
         <span style={{ color: syn.c1 ? 'var(--red)' : 'var(--green)' }}>C1:{syn.c1 ? '✕' : '✓'}</span>
         <span style={{ color: syn.c2 ? 'var(--red)' : 'var(--green)' }}>C2:{syn.c2 ? '✕' : '✓'}</span>
         <span style={{ color: syn.c3 ? 'var(--red)' : 'var(--green)' }}>C3:{syn.c3 ? '✕' : '✓'}</span>
       </div>
-      <div style={{ fontSize: 10, color: ok ? 'var(--green)' : 'var(--red)', minWidth: 100 }}>{ok ? 'NO ERROR' : 'ERROR DETECTED'}</div>
+      {!phone && <div style={{ fontSize: 10, color: ok ? 'var(--green)' : 'var(--red)', minWidth: 100 }}>{ok ? 'NO ERROR' : 'ERROR DETECTED'}</div>}
     </div>
   );
 }

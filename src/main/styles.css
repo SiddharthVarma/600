@@ -660,11 +660,29 @@ button.command:hover {
     cursor: pointer;
   }
 
-  /* iPhone Safari counts the area behind its toolbars in vh, which can push the bottom of the repair window under them;
-     dvh is the height actually visible. Browsers without dvh keep the vh line. */
+  /* Minigame windows fill the visible screen on phones, pinned to the top. Centring them in a box that includes the area
+     behind Safari's toolbars pushed their bottom out of sight; dvh is the height actually visible (vh is the fallback). */
+  .repair-modal {
+    padding: 0;
+    place-items: start stretch;
+    bottom: auto;
+    height: 100%;
+    height: 100dvh;
+  }
+
   .repair-frame {
-    height: min(860px, 97vh);
-    height: min(860px, 97dvh);
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .repair-close {
+    top: 4px;
+    right: 6px;
+    padding: 6px 10px;
+    z-index: 1;
   }
 
   /* the side panel covers the alerts instead of the other way round */

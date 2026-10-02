@@ -11,7 +11,7 @@ import { scheduleGRB, triggerGRB } from './events/grb.js';
 import { closeRepair, launchers, startIfReady } from './launcher.js';
 import { panel, renderSat } from './panel.js';
 import { state } from './state.js';
-import { touchScroll } from './touchscroll.js';
+import { touchScroll } from '../shared/touchscroll.js';
 import { promptEl, term, termNote, termRunFile, UPLINK_STATIONS } from './terminal.js';
 
 document.getElementById('restartAll').onclick = () => {
