@@ -647,7 +647,7 @@
     document.getElementById('restartAll').onclick = () => {
       satellites.forEach(s => { s.anomaly = false; s.anomalyType = null; s.countdown = 0; s.lost = false; s.rejoining = false; s.rejoinProgress = 0; s.values = { RSSI: 82, TEMPERATURE: 71, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 }; });
       anomalyBag = []; lastAnomalyType = 'thermal'; selected = null; highlighted = []; clearAlerts();
-      activeEvent = null; pulses = []; setSunGlow(0);
+      activeEvent = null; pulses = []; setSunGlow(0); kraken.tentacles = []; kraken.sparks = []; satellites.forEach(s => { s.heldAt = null; s.driftFrom = null; });
       ['grbModal', 'debrisModal', 'flareModal'].forEach(id => document.getElementById(id).classList.remove('show'));
       ['grbFrame', 'debrisFrame', 'flareFrame'].forEach(id => { document.getElementById(id).src = ''; });
       document.getElementById('gameOver').classList.remove('show');
@@ -666,12 +666,12 @@
       ctx.clearRect(0, 0, W, H); const slow = 1, unit = Math.min(W, H), cx = W * .5, cy = H * .5;
       ctx.save(); ctx.translate(cx, cy); ctx.strokeStyle = 'rgba(255,255,255,.055)'; ctx.lineWidth = 1; for (let i = 0; i < 10; i++) { const rp = ringProgress(i, t); if (rp <= 0) continue; ctx.globalAlpha = rp; ctx.beginPath(); ctx.arc(0, 0, unit * (.15 + i * .038), 0, Math.PI * 2); ctx.stroke(); } ctx.globalAlpha = 1; ctx.restore();
       const earthR = Math.max(19, unit * .052); if (earthImg.complete && earthImg.naturalWidth) { ctx.imageSmoothingEnabled = false; ctx.drawImage(earthImg, cx - earthR, cy - earthR, earthR * 2, earthR * 2); ctx.imageSmoothingEnabled = true; } else { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(cx, cy, earthR, 0, Math.PI * 2); ctx.fill(); }
-      satellites.forEach(s => { if (s.lost) return; const ringAlpha = ringProgress(s.ring, t); if (ringAlpha <= 0) return; const earthRatio = earthR / (unit * s.r); let decay = s.anomaly && s.anomalyType === 'orbit' ? Math.max(earthRatio, s.countdown / ANOMALY_FAIL_WINDOW) : 1; const p = point(s, t * slow); let px = W * .5 + (p.x - W * .5) * decay, py = H * .5 + (p.y - H * .5) * decay; if (s.rejoining) { s.rejoinProgress = Math.min(1, s.rejoinProgress + .006); const eased = 1 - Math.pow(1 - s.rejoinProgress, 3); px = W * .5 + (p.x - W * .5) * eased; py = H * .5 + (p.y - H * .5) * eased; if (s.rejoinProgress >= 1) { s.rejoining = false; if (selected === s) { document.getElementById('log').textContent = 'TELEMETRY NOMINAL · ORBIT RESTORED'; document.getElementById('hint').textContent = 'satellite recovered · network nominal'; } } } s.sx = px; s.sy = py; const hot = s.anomaly; ctx.globalAlpha = (s.rejoining ? .8 : 1) * ringAlpha * (s.anomalyType === 'flare' ? flareFlicker(t) : 1); ctx.beginPath(); ctx.arc(px, py, hot ? 3.6 : 1.5, 0, Math.PI * 2); ctx.fillStyle = hot ? '#ff4d4d' : `rgba(255,255,255,${.38 + .35 * (.5 + .5 * Math.sin(s.phase + t * .0005))})`; ctx.fill(); if (hot) { ctx.beginPath(); ctx.arc(px, py, 11 + Math.sin(t * .003) * 2.5, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255,77,77,.3)'; ctx.stroke(); } ctx.globalAlpha = 1; }); drawEventFx(t); drawHighlight(t); requestAnimationFrame(draw);
+      satellites.forEach(s => { if (s.lost) return; const ringAlpha = ringProgress(s.ring, t); if (ringAlpha <= 0) return; const earthRatio = earthR / (unit * s.r); let decay = s.anomaly && s.anomalyType === 'orbit' ? Math.max(earthRatio, s.countdown / ANOMALY_FAIL_WINDOW) : 1; const p = point(s, t * slow); let px = W * .5 + (p.x - W * .5) * decay, py = H * .5 + (p.y - H * .5) * decay; if (s.rejoining) { s.rejoinProgress = Math.min(1, s.rejoinProgress + .006); const eased = 1 - Math.pow(1 - s.rejoinProgress, 3); px = W * .5 + (p.x - W * .5) * eased; py = H * .5 + (p.y - H * .5) * eased; if (s.rejoinProgress >= 1) { s.rejoining = false; if (selected === s) { document.getElementById('log').textContent = 'TELEMETRY NOMINAL · ORBIT RESTORED'; document.getElementById('hint').textContent = 'satellite recovered · network nominal'; } } } if (s.heldAt) { px = s.heldAt[0]; py = s.heldAt[1]; } else if (s.driftFrom) { const k = Math.min(1, (performance.now() - s.driftT0) / 1500), e = 1 - Math.pow(1 - k, 3); px = s.driftFrom[0] + (px - s.driftFrom[0]) * e; py = s.driftFrom[1] + (py - s.driftFrom[1]) * e; if (k >= 1) s.driftFrom = null; } s.sx = px; s.sy = py; const hot = s.anomaly; ctx.globalAlpha = (s.rejoining ? .8 : 1) * ringAlpha * (s.anomalyType === 'flare' ? flareFlicker(t) : 1); ctx.beginPath(); ctx.arc(px, py, hot ? 3.6 : 1.5, 0, Math.PI * 2); ctx.fillStyle = hot ? (s.anomalyType === 'kraken' ? '#b06ce0' : '#ff4d4d') : `rgba(255,255,255,${.38 + .35 * (.5 + .5 * Math.sin(s.phase + t * .0005))})`; ctx.fill(); if (hot) { ctx.beginPath(); ctx.arc(px, py, 11 + Math.sin(t * .003) * 2.5, 0, Math.PI * 2); ctx.strokeStyle = s.anomalyType === 'kraken' ? 'rgba(176,108,224,.5)' : 'rgba(255,77,77,.3)'; ctx.stroke(); } ctx.globalAlpha = 1; }); drawEventFx(t); drawKraken(t); drawHighlight(t); requestAnimationFrame(draw);
     } requestAnimationFrame(draw);
     const chartConfigs = { TEMPERATURE: { title: 'TEMPERATURE / HISTORY', threshold: .70 }, POWER: { title: 'POWER OUTPUT / HISTORY', threshold: .55 }, BATTERY: { title: 'BATTERY PACK / HISTORY', threshold: .35 }, RSSI: { title: 'RSSI / CONTACT HISTORY', threshold: .68 }, CPU: { title: 'CPU LOAD / HISTORY', threshold: .85 }, ALTITUDE: { title: 'ORBITAL ALTITUDE / HISTORY', threshold: .35 }, TORQUE: { title: 'TORQUE MARGIN / HISTORY', threshold: .40 }, POINTING: { title: 'ATTITUDE POINTING ERROR / HISTORY', threshold: .62 } };
-    function renderSat(s) { panel.classList.remove('fleet'); document.getElementById('panelEyebrow').textContent = 'Investigation / Orbital relay'; if (termSat !== s) termReset(s); document.getElementById('satName').textContent = `SATELLITE ${String(s.id).padStart(3, '0')}`; const label = s.anomalyType === 'orbit' ? 'ORBITAL DECAY' : s.anomalyType === 'solar' ? 'SOLAR ARRAY MISALIGNED' : s.anomalyType === 'startracker' ? 'STAR TRACKER LOST LOCK' : s.anomalyType === 'contact' ? 'MISSED CONTACT WINDOW' : s.anomalyType === 'wheel' ? 'REACTION WHEEL FAULT' : s.anomalyType === 'power' ? 'POWER INSTABILITY' : s.anomalyType === 'process' ? 'CPU OVERLOAD' : s.anomalyType === 'flare' ? 'RADIO BLACKOUT' : s.anomalyType === 'debris' ? 'DEBRIS ON COLLISION COURSE' : s.anomalyType === 'bitflip' ? 'MEMORY CORRUPTED' : s.anomaly ? 'DEGRADED' : 'NOMINAL'; document.getElementById('status').textContent = `STATUS: ${label}`; document.getElementById('status').className = 'status ' + (s.anomaly ? 'degraded' : 'ok'); const el = document.getElementById('telemetry'); el.innerHTML = ''; Object.entries(s.values).forEach(([k, v]) => { const row = document.createElement('div'); row.className = 'metric ' + ((s.anomaly && ((s.anomalyType === 'thermal' && k === 'TEMPERATURE') || (s.anomalyType === 'orbit' && k === 'POWER') || (s.anomalyType === 'solar' && k === 'BATTERY') || (s.anomalyType === 'wheel' && k === 'TORQUE') || (s.anomalyType === 'contact' && k === 'RSSI'))) ? 'hot' : ''); row.innerHTML = `<div class="metric-head"><span class="metric-name">${k}</span><span class="metric-value">${k === 'RSSI' ? '-' + v + ' dBm' : k === 'TEMPERATURE' ? v + '°C' : v + '%'}</span></div><div class="bar"><i style="width:${Math.min(v, 100)}%"></i></div>`; row.onclick = () => { drawChart(k, v, s.anomalyType) }; el.appendChild(row) }); const defaultKey = s.anomalyType === 'thermal' ? 'TEMPERATURE' : s.anomalyType === 'power' ? 'POWER' : s.anomalyType === 'solar' ? 'BATTERY' : s.anomalyType === 'wheel' ? 'TORQUE' : s.anomalyType === 'startracker' ? 'POINTING' : s.anomalyType === 'contact' ? 'RSSI' : s.anomalyType === 'process' ? 'CPU' : s.anomalyType === 'orbit' ? 'ALTITUDE' : 'TEMPERATURE'; drawChart(defaultKey, (defaultKey === 'ALTITUDE' || defaultKey === 'POINTING') ? 100 : s.values[defaultKey], s.anomalyType); if (s.anomaly && s.countdown > 0) document.getElementById('log').textContent = s.anomalyType === 'orbit' ? `ORBIT DECAY · IMPACT IN ${s.countdown}s` : `SATELLITE LOST IN ${s.countdown}s IF UNRESOLVED`; }
+    function renderSat(s) { panel.classList.remove('fleet'); document.getElementById('panelEyebrow').textContent = 'Investigation / Orbital relay'; if (termSat !== s) termReset(s); document.getElementById('satName').textContent = `SATELLITE ${String(s.id).padStart(3, '0')}`; const label = s.anomalyType === 'orbit' ? 'ORBITAL DECAY' : s.anomalyType === 'solar' ? 'SOLAR ARRAY MISALIGNED' : s.anomalyType === 'startracker' ? 'STAR TRACKER LOST LOCK' : s.anomalyType === 'contact' ? 'MISSED CONTACT WINDOW' : s.anomalyType === 'wheel' ? 'REACTION WHEEL FAULT' : s.anomalyType === 'power' ? 'POWER INSTABILITY' : s.anomalyType === 'process' ? 'CPU OVERLOAD' : s.anomalyType === 'flare' ? 'RADIO BLACKOUT' : s.anomalyType === 'debris' ? 'DEBRIS ON COLLISION COURSE' : s.anomalyType === 'bitflip' ? 'MEMORY CORRUPTED' : s.anomalyType === 'kraken' ? '????????' : s.anomaly ? 'DEGRADED' : 'NOMINAL'; document.getElementById('status').textContent = `STATUS: ${label}`; document.getElementById('status').className = 'status ' + (s.anomaly ? 'degraded' : 'ok'); const el = document.getElementById('telemetry'); el.innerHTML = ''; Object.entries(s.values).forEach(([k, v]) => { const row = document.createElement('div'); row.className = 'metric ' + ((s.anomaly && ((s.anomalyType === 'thermal' && k === 'TEMPERATURE') || (s.anomalyType === 'orbit' && k === 'POWER') || (s.anomalyType === 'solar' && k === 'BATTERY') || (s.anomalyType === 'wheel' && k === 'TORQUE') || (s.anomalyType === 'contact' && k === 'RSSI'))) ? 'hot' : ''); row.innerHTML = `<div class="metric-head"><span class="metric-name">${k}</span><span class="metric-value">${k === 'RSSI' ? '-' + v + ' dBm' : k === 'TEMPERATURE' ? v + '°C' : v + '%'}</span></div><div class="bar"><i style="width:${Math.min(v, 100)}%"></i></div>`; row.onclick = () => { drawChart(k, v, s.anomalyType) }; el.appendChild(row) }); const defaultKey = s.anomalyType === 'thermal' ? 'TEMPERATURE' : s.anomalyType === 'power' ? 'POWER' : s.anomalyType === 'solar' ? 'BATTERY' : s.anomalyType === 'wheel' ? 'TORQUE' : s.anomalyType === 'startracker' ? 'POINTING' : s.anomalyType === 'contact' ? 'RSSI' : s.anomalyType === 'process' ? 'CPU' : s.anomalyType === 'orbit' ? 'ALTITUDE' : 'TEMPERATURE'; drawChart(defaultKey, (defaultKey === 'ALTITUDE' || defaultKey === 'POINTING') ? 100 : s.values[defaultKey], s.anomalyType); if (s.anomaly && s.countdown > 0) document.getElementById('log').textContent = s.anomalyType === 'orbit' ? `ORBIT DECAY · IMPACT IN ${s.countdown}s` : `SATELLITE LOST IN ${s.countdown}s IF UNRESOLVED`; }
     function drawChart(key, val, type) { const cfg = chartConfigs[key] || { title: `${key} / HISTORY`, threshold: null }; document.getElementById('chartTitle').textContent = cfg.title; const w = chart.clientWidth, h = 90; cctx.clearRect(0, 0, w, h); cctx.strokeStyle = '#252c29'; cctx.lineWidth = 1; cctx.beginPath(); for (let y = 15; y < h; y += 25) { cctx.moveTo(0, y); cctx.lineTo(w, y) } cctx.stroke(); if (cfg.threshold) { const ty = h - 15 - cfg.threshold * (h - 25); cctx.strokeStyle = '#ff4d4d'; cctx.setLineDash([4, 4]); cctx.beginPath(); cctx.moveTo(0, ty); cctx.lineTo(w, ty); cctx.stroke(); cctx.setLineDash([]); } const points = []; for (let i = 0; i < 40; i++) { let n = Math.min(1, Math.max(0, (val || 0) / 100)); if (type === 'orbit') n = Math.max(.12, 1 - i * .022); if (type === 'power') n = .58 + Math.sin(i * 1.1) * .16 + (i > 27 ? .1 : 0); if (type === 'wheel') n = .36 + Math.sin(i * 1.4) * .06 - (i > 18 ? (i - 18) * .012 : 0); if (type === 'process') n = .42 + (i > 25 ? (i - 25) * .025 : Math.sin(i) * .03); if (type === 'thermal') n = .48 + (i > 20 ? (i - 20) * .018 : Math.sin(i * .4) * .025); if (type === 'startracker') n = .12 + i * .0195 + Math.sin(i * .6) * .025; if (type === 'solar') n = Math.max(.06, .7 - i * .0145 + Math.sin(i * .5) * .02); points.push({ x: i * w / 39, y: h - 15 - n * (h - 25), n }); } const normalColor = key === 'TEMPERATURE' ? '#c9f75f' : key === 'POWER' ? '#ffd166' : key === 'CPU' ? '#58a6ff' : key === 'TORQUE' ? '#c58cff' : '#c9f75f'; const lowIsBad = key === 'ALTITUDE' || key === 'TORQUE' || key === 'BATTERY'; for (let i = 1; i < points.length; i++) { const a = points[i - 1], b = points[i], danger = cfg.threshold && (lowIsBad ? ((a.n + b.n) / 2 < cfg.threshold) : ((a.n + b.n) / 2 > cfg.threshold)); cctx.strokeStyle = danger ? '#ff4d4d' : normalColor; cctx.lineWidth = 1.7; cctx.beginPath(); cctx.moveTo(a.x, a.y); cctx.lineTo(b.x, b.y); cctx.stroke(); } points.forEach(p => { const danger = cfg.threshold && (lowIsBad ? p.n < cfg.threshold : p.n > cfg.threshold); if (danger) { cctx.fillStyle = '#ff4d4d'; cctx.beginPath(); cctx.arc(p.x, p.y, 2.3, 0, Math.PI * 2); cctx.fill(); } }); }
-    canvas.addEventListener('click', e => { if (eventActive()) return; const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top, unit = Math.min(W, H), earthR = Math.max(19, unit * .052); let best = null, dist = Infinity; satellites.forEach(s => { if (s.lost || ringProgress(s.ring, performance.now()) <= 0) return; const base = point(s, performance.now()), earthRatio = earthR / (unit * s.r), decay = s.anomaly && s.anomalyType === 'orbit' ? Math.max(earthRatio, s.countdown / ANOMALY_FAIL_WINDOW) : 1, px = W * .5 + (base.x - W * .5) * decay, py = H * .5 + (base.y - H * .5) * decay, hit = s.anomaly ? 95 : 70, d = Math.hypot(px - x, py - y); if (d < hit && d < dist) { dist = d; best = s } }); if (best) { selected = best; highlighted = []; paused = 0; renderSat(best); panel.classList.add('open'); document.getElementById('hint').style.opacity = 0; } });
+    canvas.addEventListener('click', e => { if (eventActive()) return; const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top; if (krakenClick(x, y)) return; const unit = Math.min(W, H), earthR = Math.max(19, unit * .052); let best = null, dist = Infinity; satellites.forEach(s => { if (s.lost || ringProgress(s.ring, performance.now()) <= 0) return; const base = point(s, performance.now()), earthRatio = earthR / (unit * s.r), decay = s.anomaly && s.anomalyType === 'orbit' ? Math.max(earthRatio, s.countdown / ANOMALY_FAIL_WINDOW) : 1, px = W * .5 + (base.x - W * .5) * decay, py = H * .5 + (base.y - H * .5) * decay, hit = s.anomaly ? 95 : 70, d = Math.hypot(px - x, py - y); if (d < hit && d < dist) { dist = d; best = s } }); if (best) { selected = best; highlighted = []; paused = 0; renderSat(best); panel.classList.add('open'); document.getElementById('hint').style.opacity = 0; } });
     document.getElementById('close').onclick = () => { panel.classList.remove('open'); selected = null; paused = 0; document.getElementById('hint').style.opacity = 1 };
     // Command terminal in the investigation panel: each repair is a procedure script. Clicking a file types and runs it;
     // the right script for the fault hands over to the repair lab, any other is rejected.
@@ -719,11 +719,15 @@
       await sleep(200); if (run !== termRun) return;
       if (!await termType(HOME_PROMPT, 'cd emergency', run)) return;
       await sleep(120); if (run !== termRun) return;
+      if (ev && ev.kind === 'kraken') {
+        if (!await termType(promptHTML(FLEET), 'grep -ril cosmic_horror .', run)) return;
+        termLine('no procedure found for: cosmic_horror', 'term-warn');
+      }
       termLsFleet();
     }
     function termLsFleet() {
       termLine(promptHTML(FLEET) + 'ls');
-      termLine(Object.values(EVENTS).map(e => `<span class="term-file" data-file="${e.script}">${e.script}</span>`).join(''), 'term-files');
+      termLine(Object.values(EVENTS).filter(e => e.script).map(e => `<span class="term-file" data-file="${e.script}">${e.script}</span>`).join(''), 'term-files');
       termPrompt(FLEET);
     }
     function termNote(text, cls, target = selected) { // a line from outside the terminal (repair finished, aborted, satellite lost), kept above the prompt
@@ -844,7 +848,7 @@
       highlighted.forEach(s => s.sx != null && drawCrosshair(s, t));
     }
     function drawCrosshair(s, t) {
-      const x = s.sx, y = s.sy, r = 16 + Math.sin(t * .006) * 1.5, k = 6, age = Math.max(0, t - highlightAt), rgb = s.anomaly ? '255,77,77' : '230,231,228'; // red while faulty, white once recovered
+      const x = s.sx, y = s.sy, r = 16 + Math.sin(t * .006) * 1.5, k = 6, age = Math.max(0, t - highlightAt), rgb = s.anomalyType === 'kraken' ? '176,108,224' : s.anomaly ? '255,77,77' : '230,231,228'; // red while faulty, white once recovered
       ctx.strokeStyle = `rgb(${rgb})`; ctx.lineWidth = 1.5; ctx.beginPath(); // corner-bracket target around the satellite
       [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([dx, dy]) => { ctx.moveTo(x + dx * r, y + dy * (r - k)); ctx.lineTo(x + dx * r, y + dy * r); ctx.lineTo(x + dx * (r - k), y + dy * r); });
       ctx.stroke(); ctx.lineWidth = 1;
@@ -852,7 +856,7 @@
     }
     const MAX_CONCURRENT_ANOMALIES = 2, ANOMALY_FAIL_WINDOW = 60;
     // event satellites don't count toward the limit, so everyday faults keep coming while an event ticket waits
-    function trySpawnAnomaly() { if (eventActive()) return; const activeCount = satellites.filter(s => s.anomaly && !EVENT_TYPES.includes(s.anomalyType)).length; if (activeCount < MAX_CONCURRENT_ANOMALIES) { const available = satellites.filter(s => !s.lost && !s.anomaly && !s.rejoining), s = available[Math.floor(Math.random() * available.length)]; if (s) { s.anomaly = true; s.anomalyType = nextAnomalyType(); lastAnomalyType = s.anomalyType; s.countdown = ANOMALY_FAIL_WINDOW; if (s.anomalyType === 'thermal') { s.values.TEMPERATURE = 78; s.values.POWER = 82 } if (s.anomalyType === 'contact') s.values.RSSI = 52; if (s.anomalyType === 'power') s.values.POWER = 32; if (s.anomalyType === 'solar') s.values.BATTERY = 31; if (s.anomalyType === 'wheel') s.values.TORQUE = 34; if (s.anomalyType === 'process') s.values.CPU = 98; document.getElementById('hint').innerHTML = 'anomaly detected · locate the <span style="color:var(--danger)">red</span> signal'; pushAnomalyAlert(s); } } }
+    function trySpawnAnomaly() { if (eventActive() || krakenLive()) return; const activeCount = satellites.filter(s => s.anomaly && !EVENT_TYPES.includes(s.anomalyType)).length; if (activeCount < MAX_CONCURRENT_ANOMALIES) { const available = satellites.filter(s => !s.lost && !s.anomaly && !s.rejoining), s = available[Math.floor(Math.random() * available.length)]; if (s) { s.anomaly = true; s.anomalyType = nextAnomalyType(); lastAnomalyType = s.anomalyType; s.countdown = ANOMALY_FAIL_WINDOW; if (s.anomalyType === 'thermal') { s.values.TEMPERATURE = 78; s.values.POWER = 82 } if (s.anomalyType === 'contact') s.values.RSSI = 52; if (s.anomalyType === 'power') s.values.POWER = 32; if (s.anomalyType === 'solar') s.values.BATTERY = 31; if (s.anomalyType === 'wheel') s.values.TORQUE = 34; if (s.anomalyType === 'process') s.values.CPU = 98; document.getElementById('hint').innerHTML = 'anomaly detected · locate the <span style="color:var(--danger)">red</span> signal'; pushAnomalyAlert(s); } } }
     function scheduleAnomaly() { setTimeout(() => { trySpawnAnomaly(); scheduleAnomaly(); }, 4000 + Math.random() * 6000); }
     setTimeout(() => { trySpawnAnomaly(); scheduleAnomaly(); }, 10000);
 
@@ -863,13 +867,15 @@
     const EVENTS = {
       debris: { window: 55, script: 'debris_avoidance.py', verb: 'maneuver', game: 'debris', modal: 'debrisModal', frame: 'debrisFrame', name: 'DEBRIS FIELD', title: 'NORAD · DEBRIS ON COLLISION COURSE' },
       flare: { window: 50, script: 'flare_reconnect.py', verb: 'reconnect', game: 'flare', modal: 'flareModal', frame: 'flareFrame', name: 'SOLAR FLARE', title: 'PARKER SOLAR PROBE · SOLAR FLARE DETECTED' },
+      kraken: { window: 30, script: null, name: 'UNIDENTIFIED CONTACT', title: 'SETI · UNIDENTIFIED.... CREATURE???' }, // played on the main screen, no procedure
       grb: { window: 60, script: 'grb_scrub.py', verb: 'scrub', game: 'bitflip', modal: 'grbModal', frame: 'grbFrame', name: 'GAMMA-RAY BURST', title: 'FERMI · GAMMA-RAY BURST DETECTED' },
     };
-    const EVENT_TYPES = ['debris', 'flare', 'bitflip'], NOMINAL_VALUES = () => ({ RSSI: 82, TEMPERATURE: 56, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 });
+    const EVENT_TYPES = ['debris', 'flare', 'bitflip', 'kraken'], NOMINAL_VALUES = () => ({ RSSI: 82, TEMPERATURE: 56, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 });
     const planeTag = ev => String(ev.sats[0].ring + 1).padStart(2, '0');
     function eventTicketBody(ev) {
       if (ev.phase === 'running') return 'Response in progress.';
       const m = `${Math.floor(ev.left / 60)}:${String(ev.left % 60).padStart(2, '0')}`;
+      if (ev.kind === 'kraken') return 'It needs to feed...';
       return ev.kind === 'debris' ? `Impact in ${m} · plane ${planeTag(ev)} · ${ev.sats.length} satellites`
         : ev.kind === 'flare' ? `Radio blackout in ${m} · ${ev.sats.length} satellites`
           : `${ev.sats.length} satellites corrupted · fault spreads in ${m}`; // a GRB arrives at light speed: the damage is already done
@@ -897,7 +903,7 @@
       if (!panel.classList.contains('fleet')) return;
       const st = document.getElementById('status');
       st.className = 'status ' + (activeEvent ? 'degraded' : 'ok');
-      st.textContent = activeEvent ? `STATUS: ${eventTicketBody(activeEvent).replace(/\.$/, '').toUpperCase()}` : 'STATUS: NO ACTIVE EMERGENCY';
+      st.textContent = !activeEvent ? 'STATUS: NO ACTIVE EMERGENCY' : activeEvent.kind === 'kraken' ? 'STATUS: ?????' : `STATUS: ${eventTicketBody(activeEvent).replace(/\.$/, '').toUpperCase()}`;
     }
     function emergencyLog(file, ev, accepted) {
       const verb = Object.values(EVENTS).find(e => e.script === file).verb;
@@ -942,9 +948,11 @@
     function resolveEvent(saved) { // saved: ids of the satellites that came through
       const ev = activeEvent;
       if (!ev) return;
-      ev.sats.forEach(s => { s.anomaly = false; s.anomalyType = null; s.countdown = 0; if (saved.has(s.id)) s.values = NOMINAL_VALUES(); else s.lost = true; });
+      if (ev.kind === 'kraken') { const now = performance.now(); kraken.tentacles.forEach(tn => { tn.carrying = !!tn.prey.heldAt && !saved.has(tn.prey.id); setTentacleState(tn, 'retreat', now); }); ev.sats.forEach(s => { if (saved.has(s.id)) releaseSatellite(s, now); }); }
+      ev.sats.forEach(s => { if (s.heldAt && !saved.has(s.id)) return; s.anomaly = false; s.anomalyType = null; s.countdown = 0; if (saved.has(s.id)) s.values = NOMINAL_VALUES(); else s.lost = true; });
       const n = ev.sats.length, k = ev.sats.filter(s => saved.has(s.id)).length, all = k === n;
-      const [log, hint] = ev.kind === 'debris' ? [all ? 'DEBRIS FIELD CLEARED · FORMATION INTACT' : `DEBRIS NOT OUT-MANEUVERED · ${n - k} SATELLITES LOST`, all ? 'evasive maneuvers successful · network nominal' : 'orbital plane segment lost · debris field expanding']
+      const [log, hint] = ev.kind === 'kraken' ? [all ? 'THE CREATURE HAS RETREATED... FOR NOW. · ALL SATELLITES HELD' : `THE CREATURE HAS RETREATED... FOR NOW. · ${n - k} SATELLITE${n - k === 1 ? '' : 'S'} TAKEN`, all ? 'contact lost · it seemed annoyed' : 'contact lost · satellites taken']
+        : ev.kind === 'debris' ? [all ? 'DEBRIS FIELD CLEARED · FORMATION INTACT' : `DEBRIS NOT OUT-MANEUVERED · ${n - k} SATELLITES LOST`, all ? 'evasive maneuvers successful · network nominal' : 'orbital plane segment lost · debris field expanding']
         : ev.kind === 'flare' ? [`SOLAR FLARE PASSED · ${k}/${n} SATELLITES RECONNECTED`, all ? 'link held · network nominal' : 'radio blackout · satellites lost']
           : [`GAMMA RAY BURST RESOLVED · ${k}/${n} SATELLITES RECOVERED`, all ? 'all registers restored · network nominal' : 'gamma ray burst resolved · satellites lost'];
       updateNetwork();
@@ -963,7 +971,7 @@
       if (!ev || ev.phase !== 'pending') return;
       ev.left--; ev.tickAt = performance.now();
       if (ev.kind === 'flare') setSunGlow(.4 + .6 * (1 - ev.left / EVENTS.flare.window));
-      if (ev.left <= 0) resolveEvent(new Set());
+      if (ev.left <= 0) resolveEvent(new Set(ev.kind === 'kraken' ? ev.sats.filter(s => !s.lost && !s.heldAt).map(s => s.id) : [])); // tentacles: whoever is still here was held
     }
 
     // effects in the sky
@@ -1038,8 +1046,150 @@
       setSunGlow(.4);
     }
     setTimeout(scheduleFlare, 60000);
+
+    // Tentacle event: no window and no procedure. Tentacles reach in from the screen edges for real satellites. Click a
+    // tentacle to zap it back (it returns angrier and takes more hits); if one grabs a satellite, click the satellite fast
+    // to fire its thrusters and break free before it's dragged off-screen. Drawn as chunky pixel art in a low-res buffer.
+    const KPIX = 4, KRAKEN_PREY = 5;
+    const K_OUTLINE = [24, 10, 34], K_DARK = [74, 32, 110], K_BODY = [118, 58, 168], K_LIGHT = [168, 104, 214], K_SUCKER = [236, 184, 214], K_SUCKER_IN = [150, 78, 140];
+    const kraken = { tentacles: [], sparks: [], nextSpawn: 0, last: 0, canvas: document.createElement('canvas') };
+    let KW = 0, KH = 0, kimg = null, kdata = null;
+    function kBuffer() {
+      const w = Math.ceil(W / KPIX), h = Math.ceil(H / KPIX);
+      if (w !== KW || h !== KH || !kimg) { KW = w; KH = h; kraken.canvas.width = w; kraken.canvas.height = h; kimg = kraken.canvas.getContext('2d').createImageData(w, h); kdata = kimg.data; }
+      kdata.fill(0);
+    }
+    function kpx(x, y, c) { x = Math.round(x); y = Math.round(y); if (x < 0 || y < 0 || x >= KW || y >= KH) return; const i = (y * KW + x) * 4; kdata[i] = c[0]; kdata[i + 1] = c[1]; kdata[i + 2] = c[2]; kdata[i + 3] = 255; }
+    function kdisc(cx, cy, r, c) { const R = Math.ceil(r) + 1; for (let y = -R; y <= R; y++) for (let x = -R; x <= R; x++) if (x * x + y * y <= r * r + r * .6) kpx(cx + x, cy + y, c); }
+    // The arm is a chain whose shape is a wave travelling down it plus a curl toward the tip; the chain is then rotated and
+    // stretched so the tip lands on the target at reach = 1.
+    function tentacleChain(base, target, t, reach, wig, curl) {
+      const N = 36, pts = [[0, 0]];
+      let a = 0, x = 0, y = 0;
+      for (let i = 0; i < N; i++) { const s = i / (N - 1); a += Math.sin(t * 2.4 - s * 7) * .06 * wig * (.25 + s) + curl * s * s * .32; x += Math.cos(a); y += Math.sin(a); pts.push([x, y]); }
+      const end = pts[N], rot = Math.atan2(target[1] - base[1], target[0] - base[0]) - Math.atan2(end[1], end[0]);
+      const k = Math.max(3, Math.hypot(target[0] - base[0], target[1] - base[1]) * reach) / Math.hypot(end[0], end[1]);
+      return pts.map(([u, v]) => [base[0] + (u * Math.cos(rot) - v * Math.sin(rot)) * k, base[1] + (u * Math.sin(rot) + v * Math.cos(rot)) * k]);
+    }
+    function drawTentacle(pts) {
+      const dense = []; // resample so neighbouring discs always overlap, even near the thin tip
+      for (let i = 0; i < pts.length - 1; i++) {
+        const [x0, y0] = pts[i], [x1, y1] = pts[i + 1], steps = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / .7)), l = Math.hypot(x1 - x0, y1 - y0) || 1;
+        for (let j = 0; j < steps; j++) { const f = j / steps, s = (i + f) / (pts.length - 1); dense.push({ x: x0 + (x1 - x0) * f, y: y0 + (y1 - y0) * f, nx: -(y1 - y0) / l, ny: (x1 - x0) / l, r: .9 + 5.6 * Math.pow(1 - s, 1.15) }); }
+      }
+      dense.forEach(p => kdisc(p.x, p.y, p.r + 1, K_OUTLINE));
+      dense.forEach(p => kdisc(p.x, p.y, p.r, K_DARK));
+      dense.forEach(p => kdisc(p.x + p.nx * p.r * .22, p.y + p.ny * p.r * .22, p.r * .72, K_BODY));
+      dense.forEach(p => p.r > 1.6 && kdisc(p.x + p.nx * p.r * .5, p.y + p.ny * p.r * .5, p.r * .26, K_LIGHT));
+      let last = -9; // suckers along the underside
+      dense.forEach((p, i) => {
+        if (p.r < 1.8 || i - last < Math.max(5, p.r * 2.4)) return;
+        last = i;
+        const sx = p.x - p.nx * p.r * .55, sy = p.y - p.ny * p.r * .55;
+        kdisc(sx, sy, Math.max(.7, p.r * .3), K_SUCKER); kpx(sx, sy, K_SUCKER_IN);
+      });
+      return dense;
+    }
+    function kSpark(at, n, c) { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, v = 40 + Math.random() * 90; kraken.sparks.push({ x: at[0], y: at[1], vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: .3 + Math.random() * .25, c }); } }
+
+    function spawnTentacle(now) {
+      const ev = activeEvent, hunted = kraken.tentacles.filter(tn => tn.state !== 'retreat').map(tn => tn.prey);
+      const free = ev.sats.filter(s => !s.lost && !hunted.includes(s));
+      if (!free.length) return;
+      // keep tentacles apart: skip prey within 55° of a satellite another tentacle is already after
+      const ang = sat => { const o = point(sat, now); return Math.atan2(o.y - H / 2, o.x - W / 2); };
+      const apart = free.filter(sat => hunted.every(h => Math.abs(((ang(sat) - ang(h)) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI) > 55 * Math.PI / 180));
+      if (!apart.length) return;
+      const prey = apart[Math.floor(Math.random() * apart.length)];
+      kraken.tentacles.push({ prey, reach: 0, hp: 1, maxHp: 1, speed: .13, state: 'reach', stateT: now, wig: 1, curl: .25, tug: 0, pts: [], tip: null, phase: Math.random() * 10 });
+    }
+    function setTentacleState(tn, state, now) { tn.state = state; tn.stateT = now; }
+    function angrier(tn, now) { tn.maxHp = Math.min(3, tn.maxHp + 1); tn.hp = tn.maxHp; tn.speed *= 1.15; tn.tug = 0; setTentacleState(tn, 'recoil', now); }
+    function zapTentacle(tn, now) {
+      kSpark(tn.tip, 14, [255, 236, 160]);
+      if (--tn.hp <= 0) angrier(tn, now); else tn.reach = Math.max(0, tn.reach - .08);
+    }
+    function tugSatellite(tn, now) { // each click fires the trapped satellite's thrusters
+      kSpark(tn.prey.heldAt, 5, [201, 255, 77]);
+      tn.tug += .14;
+      if (tn.tug >= 1) { releaseSatellite(tn.prey, now); pulse(tn.prey, '201,255,77'); angrier(tn, now); }
+    }
+    function releaseSatellite(s, now) { if (s.heldAt) { s.driftFrom = s.heldAt; s.driftT0 = now; } s.heldAt = null; }
+    function takeSatellite(tn, now) {
+      const s = tn.prey;
+      s.heldAt = null; s.lost = true; s.anomaly = false; s.anomalyType = null;
+      updateNetwork();
+      pushAlert({ sat: s, title: `${satTag(s)} · TAKEN`, body: 'Dragged out of orbit.', crit: true });
+      setTentacleState(tn, 'retreat', now);
+      if (activeEvent && activeEvent.kind === 'kraken' && activeEvent.sats.every(x => x.lost)) resolveEvent(new Set());
+    }
+    function updateTentacle(tn, now, dt) {
+      const age = (now - tn.stateT) / 1000;
+      if (tn.state === 'reach') { tn.reach = Math.min(1, tn.reach + tn.speed * dt); if (tn.reach >= 1) setTentacleState(tn, 'grab', now); }
+      else if (tn.state === 'grab') { if (age > .45) setTentacleState(tn, 'drag', now); }
+      else if (tn.state === 'drag') { tn.reach -= .07 * dt; tn.tug = Math.max(0, tn.tug - .1 * dt); if (tn.reach <= -.08) takeSatellite(tn, now); }
+      else if (tn.state === 'recoil') { tn.reach += (.12 - tn.reach) * Math.min(1, dt * 10); if (age > .7) setTentacleState(tn, 'reach', now); }
+      else if (tn.state === 'retreat') tn.reach -= dt * .35;
+      const holding = tn.state === 'grab' || tn.state === 'drag';
+      tn.wig += ((tn.state === 'recoil' ? 3.2 : holding ? 1.15 : 1) - tn.wig) * Math.min(1, dt * 6);
+      tn.curl += ((holding || tn.carrying ? 1.35 : .25) - tn.curl) * Math.min(1, dt * 4);
+    }
+    const krakenLive = () => !!activeEvent && activeEvent.kind === 'kraken'; // while it lasts, everyday anomalies stop: none spawn and their timers pause
+    function krakenClick(x, y) { // during the attack every click on the rings belongs to the fight
+      if (!krakenLive()) return false;
+      const now = performance.now(), live = kraken.tentacles.filter(tn => tn.state !== 'retreat');
+      const held = live.find(tn => tn.prey.heldAt && Math.hypot(tn.prey.heldAt[0] - x, tn.prey.heldAt[1] - y) < 40);
+      if (held) { tugSatellite(held, now); return true; }
+      const hit = live.find(tn => tn.pts.some(([px, py, r]) => Math.hypot(px - x, py - y) < r + 16));
+      if (hit) { if (hit.prey.heldAt) tugSatellite(hit, now); else zapTentacle(hit, now); }
+      return true; // during the attack the rings are for fighting: a miss never opens a satellite's panel
+    }
+    function drawKraken(t) {
+      const live = activeEvent && activeEvent.kind === 'kraken';
+      if (!live && !kraken.tentacles.length && !kraken.sparks.length) return;
+      const dt = Math.min(.05, (t - (kraken.last || t)) / 1000); kraken.last = t;
+      if (live && t >= kraken.nextSpawn) { if (kraken.tentacles.filter(tn => tn.state !== 'retreat').length < 3) spawnTentacle(t); kraken.nextSpawn = t + 3000 + Math.random() * 2500; }
+      kBuffer();
+      kraken.tentacles.forEach(tn => {
+        updateTentacle(tn, t, dt);
+        if (tn.state !== 'retreat') { // a retreating arm pulls back along its last line
+          const o = point(tn.prey, t), dx = o.x - W / 2 || 1e-6, dy = o.y - H / 2 || 1e-6, k = Math.min((W / 2 + 14) / Math.abs(dx), (H / 2 + 14) / Math.abs(dy));
+          tn.target = [o.x, o.y]; tn.base = [W / 2 + dx * k, H / 2 + dy * k]; // enters from the screen edge in line with its satellite
+        }
+        // full length at all times: slide the whole arm in from beyond the edge rather than stretching it
+        const [bx, by] = tn.base, [tx, ty] = tn.target, f = Math.max(-.2, tn.reach);
+        const tipAt = [bx + (tx - bx) * f, by + (ty - by) * f], rootAt = [tipAt[0] - (tx - bx), tipAt[1] - (ty - by)];
+        const pts = tentacleChain([rootAt[0] / KPIX, rootAt[1] / KPIX], [tipAt[0] / KPIX, tipAt[1] / KPIX], t / 1000 + tn.phase, 1, tn.wig, tn.curl);
+        const dense = drawTentacle(pts), tip = pts[pts.length - 1];
+        tn.pts = dense.filter((_, i) => i % 3 === 0).map(p => [p.x * KPIX, p.y * KPIX, p.r * KPIX]);
+        tn.tip = [tip[0] * KPIX, tip[1] * KPIX];
+        if ((tn.state === 'grab' || tn.state === 'drag' || tn.carrying) && !tn.prey.lost) tn.prey.heldAt = tn.tip;
+        if (tn.carrying && tn.reach <= -.08) { tn.carrying = false; takeSatellite(tn, t); }
+      });
+      kraken.tentacles = kraken.tentacles.filter(tn => tn.state !== 'retreat' || tn.reach > -.18);
+      kraken.sparks = kraken.sparks.filter(p => (p.life -= dt) > 0);
+      kraken.sparks.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; kpx(p.x / KPIX, p.y / KPIX, p.c); });
+      kraken.canvas.getContext('2d').putImageData(kimg, 0, 0);
+      ctx.imageSmoothingEnabled = false; ctx.drawImage(kraken.canvas, 0, 0, KW * KPIX, KH * KPIX); ctx.imageSmoothingEnabled = true;
+      kraken.tentacles.forEach(tn => { // the trapped satellite stays visible inside the curl
+        const at = tn.prey.heldAt; if (!at) return;
+        ctx.beginPath(); ctx.arc(at[0], at[1], 3.6, 0, Math.PI * 2); ctx.fillStyle = '#b06ce0'; ctx.fill();
+        ctx.beginPath(); ctx.arc(at[0], at[1], 9 + (1 - tn.tug) * 4, 0, Math.PI * 2); ctx.strokeStyle = `rgba(201,255,77,${.25 + tn.tug * .6})`; ctx.stroke(); // fills in as you break free
+      });
+    }
+    function scheduleKraken() { setTimeout(() => { triggerKraken(); scheduleKraken(); }, 600000 + Math.random() * 300000); } // rare, so it stays a surprise
+    function triggerKraken() {
+      if (activeEvent) return;
+      // prey only from rings 7 and 9: they orbit the same way, so tentacles chasing them don't sweep into each other
+      const pool = satellites.filter(s => !s.lost && !s.anomaly && !s.rejoining && (s.ring === 7 || s.ring === 9)), picked = [];
+      if (pool.length < KRAKEN_PREY) return;
+      while (picked.length < KRAKEN_PREY) picked.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+      startEvent('kraken', picked);
+      kraken.nextSpawn = performance.now() + 1200;
+    }
+    setTimeout(scheduleKraken, 360000);
     setInterval(() => {
-      const ticking = satellites.filter(s => s.anomaly && s.countdown > 0);
+      const ticking = krakenLive() ? [] : satellites.filter(s => s.anomaly && s.countdown > 0);
       ticking.forEach(s => {
         s.countdown--;
         if (s.countdown === 0) {
