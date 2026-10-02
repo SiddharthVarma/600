@@ -2,7 +2,7 @@ const { useState, useEffect, useRef } = React;
 const shuffle = a => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[x[i], x[j]] = [x[j], x[i]] } return x };
 const allSubsets = n => { const res = []; for (let m = 1; m < (1 << n); m++) { const s = []; for (let b = 0; b < n; b++)if (m & (1 << b)) s.push(b); res.push(s) } return res };
 const PROCESS_POOL = ['PACKET RETRY', 'TELEMETRY CACHE', 'IMAGE PIPELINE', 'LOG AGGREGATOR', 'PAYLOAD INDEXER', 'MEMORY SCRUBBER', 'ATTITUDE SOLVER', 'MOTION SCHEDULE', 'STAR TRACKER FEED', 'DOWNLINK BUFFER', 'EPHEMERIS CALCULATOR', 'FAULT MONITOR'];
-const games = [['thermal', 'THERMAL ROUTING', 'Valve sequencing'], ['power', 'POWER BUS', 'Route power by the numbers'], ['solar', 'SOLAR ALIGNMENT', 'Point at the sun'], ['contact', 'MISSED CONTACT', 'Search the pass for the signal'], ['wheel', 'REACTION WHEEL FAULT', 'Balance the torque'], ['process', 'PROCESS FAULT', 'Contain the leak in time'], ['orbit', 'ORBITAL BURN', 'Plot a transfer burn'], ['startracker', 'STAR TRACKER LOCK', 'Rebuild the star field'], ['bitflip', 'HAMMING CODE FAULT', 'GRB event · correct the bit flips'], ['debris', 'DEBRIS FIELD', 'Collision cascade · dodge the wreckage'], ['flare', 'SOLAR FLARE', 'Radio blackout · hold the downlink']];
+const games = [['thermal', 'THERMAL ROUTING', 'Valve sequencing'], ['power', 'POWER BUS', 'Route power by the numbers'], ['solar', 'SOLAR ALIGNMENT', 'Point at the sun'], ['contact', 'MISSED CONTACT', 'Search the pass for the signal'], ['wheel', 'REACTION WHEEL FAULT', 'Balance the torque'], ['process', 'CPU OVERLOAD', 'Purge the runaway processes'], ['orbit', 'ORBITAL BURN', 'Plot a transfer burn'], ['startracker', 'STAR TRACKER LOCK', 'Rebuild the star field'], ['bitflip', 'HAMMING CODE FAULT', 'GRB event · correct the bit flips'], ['debris', 'DEBRIS FIELD', 'Collision cascade · dodge the wreckage'], ['flare', 'SOLAR FLARE', 'Radio blackout · hold the downlink']];
 function Frame({ type, setType, children, remaining, timedOut }) { const params = new URLSearchParams(location.search); const embedded = Boolean(params.get('type')); const multi = Boolean(params.get('sats')); const satId = params.get('sat'); const satLabel = multi ? 'MULTIPLE SATELLITES · EMERGENCY OVERRIDE' : satId ? `SAT ${String(satId).padStart(3, '0')} · MANUAL OVERRIDE` : 'SAT 421 · MANUAL OVERRIDE'; return <div className="app"><header className="top"><span className="brand">SIX HUNDRED / REPAIR LAB</span><span className="eyebrow">{satLabel}{remaining != null && !timedOut && <span style={{ color: remaining <= 10 ? 'var(--red)' : undefined, marginLeft: 10 }}>· REPAIR WINDOW {remaining}s</span>}</span></header><div className={'layout ' + (embedded ? 'embedded' : '')} style={embedded ? { display: 'block', marginTop: 0 } : {}}>{!embedded && <nav className="menu">{games.map(([id, name]) => <button key={id} className={type === id ? 'active' : ''} onClick={() => setType(id)}>{name}</button>)}</nav>}<main className="board" style={embedded ? { minHeight: '100%', border: 0 } : {}}>{children}</main></div></div> }
 function Header({ title, sub }) { return <><div className="eyebrow">Critical subsystem interaction</div><h1>{title}</h1><div className="signal">{sub}</div></> }
 function Result({ ok, children }) { const [sent, setSent] = useState(false); const finish = () => { if (!sent && window.parent !== window) { setSent(true); setTimeout(() => window.parent.postMessage({ type: 'repair-complete' }, '*'), 1200) } }; return children && <div className={ok ? 'success' : 'failure'}>{sent ? 'SUCCESSFUL EXECUTION' : children}{ok && !sent && <div className="actions"><button className="action" onClick={finish}>EXECUTE</button></div>}</div> }
@@ -492,80 +492,45 @@ function ReactionWheel() {
     </>;
 }
 function Process() {
-    const BASE = 30, RATE = 70 / 180, WRONG_PENALTY = 28;
+    const N = 10, RUNAWAY = 3, LEGIT = 2, CLIMB = .25; // CLIMB: CPU % per second an unpurged runaway gains
+    const pad = id => String(id).padStart(3, '0');
     const [setup] = useState(() => {
-        const six = shuffle(PROCESS_POOL).slice(0, 6);
-        const leakArr = shuffle(six).slice(0, 3);
-        const leakSet = new Set(leakArr);
-        const nonLeak = six.filter(p => !leakSet.has(p));
-        const decoy = shuffle(nonLeak)[0];
-        const seeds = {};
-        six.forEach(p => seeds[p] = Math.random() * Math.PI * 2);
-        return { six, leakSet, decoy, seeds };
+        const procs = shuffle(PROCESS_POOL).map(p => p.toLowerCase().replace(/ /g, '_'));
+        const scheduled = procs.slice(0, 2), unscheduled = procs.slice(2);
+        const own = parseInt(new URLSearchParams(location.search).get('sat'), 10);
+        const ids = new Set(Number.isFinite(own) ? [own] : []);
+        while (ids.size < N) ids.add(1 + Math.floor(Math.random() * 600));
+        // the satellite this repair was opened from comes first, so it is always one of the runaways
+        const rows = [...ids].map((id, i) => {
+            const kind = i < RUNAWAY ? 'runaway' : i < RUNAWAY + LEGIT ? 'legit' : 'normal';
+            return {
+                id, kind,
+                proc: kind === 'legit' ? scheduled[i % 2] : unscheduled[Math.floor(Math.random() * unscheduled.length)],
+                cpu0: kind === 'runaway' ? 86 + Math.random() * 5 : kind === 'legit' ? 88 + Math.random() * 8 : 20 + Math.random() * 45,
+                seed: Math.random() * Math.PI * 2,
+            };
+        }).sort((a, b) => a.id - b.id);
+        return { rows, scheduled };
     });
+    const [cpus, setCpus] = useState(() => setup.rows.map(r => r.cpu0));
+    const purgedRef = useRef(new Set());
+    const [purged, setPurged] = useState([]);
+    const [cmd, setCmd] = useState('');
+    const [out, setOut] = useState([]);
     const [phase, setPhase] = useState('run'); // run | won | lost
-    const [stopped, setStopped] = useState([]);
-    const stoppedRef = useRef(stopped);
-    useEffect(() => { stoppedRef.current = stopped }, [stopped]);
-    const [displayCPU, setDisplayCPU] = useState(BASE);
-    const [series, setSeries] = useState(() => { const o = {}; setup.six.forEach(p => o[p] = []); return o });
-    const [rate, setRateInfo] = useState({ text: 'READING', stable: true });
+    const [failMsg, setFailMsg] = useState('');
 
     useEffect(() => {
         if (phase !== 'run') return;
-        let raf, t0 = null, lastSampleT = -1, localSeries = {};
-        setup.six.forEach(p => localSeries[p] = []);
-        let curCPU = BASE;
+        let raf, last = null, t = 0;
         const step = ts => {
-            if (t0 == null) t0 = ts;
-            const elapsed = (ts - t0) / 1000;
-            let target = BASE;
-            const vals = {};
-            setup.six.forEach(p => {
-                const seed = setup.seeds[p];
-                let v;
-                if (setup.leakSet.has(p)) {
-                    v = 16 + elapsed * 1.05 + Math.sin(elapsed * 1.3 + seed) * 2.2 + Math.sin(elapsed * .7 + seed * 1.7) * 1.3;
-                    if (!stoppedRef.current.includes(p)) target += Math.max(0, elapsed * RATE);
-                } else if (p === setup.decoy) {
-                    v = elapsed < 9 ? 16 + elapsed * 4.9 : 60 + Math.sin(elapsed * 1.1 + seed) * 3;
-                    if (stoppedRef.current.includes(p)) target += WRONG_PENALTY;
-                } else {
-                    v = 18 + Math.sin(elapsed * .9 + seed) * 4;
-                    if (stoppedRef.current.includes(p)) target += WRONG_PENALTY;
-                }
-                vals[p] = Math.max(2, Math.min(99, v));
-            });
-            const cappedTarget = Math.min(140, target);
-            curCPU += (cappedTarget - curCPU) * .06;
-            const dispCPU = Math.max(0, Math.min(100, curCPU));
-            setDisplayCPU(dispCPU);
-            if (elapsed - lastSampleT >= .35) {
-                lastSampleT = elapsed;
-                setup.six.forEach(p => { localSeries[p] = [...localSeries[p], vals[p]].slice(-36) });
-                setSeries({ ...localSeries });
-                // exact rate the target is climbing at, from the simulation's own known parameters — no
-                // curve-fitting, so it can't misread a transient as improvement the way a windowed
-                // regression over noisy history can.
-                const activeLeaks = [...setup.leakSet].filter(p => !stoppedRef.current.includes(p)).length;
-                const leakRate = activeLeaks * RATE;
-                const K = .06 * 60; // per-second decay constant matching the .06-per-frame (~60fps) approach to target
-                if (leakRate <= .05) {
-                    if (cappedTarget <= 100) { setRateInfo({ text: dispCPU < 55 ? 'STABLE' : 'ELEVATED · NO MARGIN', stable: dispCPU < 55 }) }
-                    else {
-                        // fixed target above 100: exact closed-form time for an exponential approach to cross 100
-                        const secs = Math.max(0, -Math.log(Math.max(1e-6, (cappedTarget - 100) / Math.max(1e-6, cappedTarget - dispCPU))) / K);
-                        setRateInfo({ text: secs > 599 ? '>10:00' : `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`, stable: false });
-                    }
-                } else {
-                    const secs = Math.max(0, (100 - dispCPU) / leakRate);
-                    setRateInfo({ text: secs > 599 ? '>10:00' : `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`, stable: false });
-                }
-            }
-            const allLeaksStopped = [...setup.leakSet].every(p => stoppedRef.current.includes(p));
-            const onlyLeaksStopped = stoppedRef.current.length === setup.leakSet.size;
-            if (allLeaksStopped && onlyLeaksStopped && dispCPU < 50 && elapsed > 1) { setPhase('won'); return }
-            if (curCPU >= 100) { setPhase('lost'); return }
+            const dt = last == null ? 0 : Math.min(.05, (ts - last) / 1000); last = ts; t += dt; // simulated time: a hidden tab pauses it
+            const next = setup.rows.map(r => purgedRef.current.has(r.id) ? 3 + Math.sin(t * 2 + r.seed)
+                : r.kind === 'runaway' ? r.cpu0 + CLIMB * t + Math.sin(t * 1.7 + r.seed) * .6
+                    : r.cpu0 + Math.sin(t * 1.1 + r.seed) * 2.5);
+            setCpus(next);
+            const saturated = setup.rows.find((r, i) => r.kind === 'runaway' && !purgedRef.current.has(r.id) && next[i] >= 100);
+            if (saturated) { setFailMsg(`SAT ${pad(saturated.id)} · CPU SATURATED · WATCHDOG RESET`); setPhase('lost'); return }
             raf = requestAnimationFrame(step);
         };
         raf = requestAnimationFrame(step);
@@ -573,42 +538,69 @@ function Process() {
     }, [phase]);
 
     useEffect(() => {
-        if (phase !== 'won') return;
-        if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-complete' }, '*'), 1200); return () => clearTimeout(id) }
-    }, [phase]);
-    useEffect(() => {
-        if (phase !== 'lost') return;
-        if (window.parent !== window) { const id = setTimeout(() => window.parent.postMessage({ type: 'repair-failed' }, '*'), 1200); return () => clearTimeout(id) }
+        if (phase === 'run' || window.parent === window) return;
+        const id = setTimeout(() => window.parent.postMessage({ type: phase === 'won' ? 'repair-complete' : 'repair-failed' }, '*'), phase === 'won' ? 1200 : 2200);
+        return () => clearTimeout(id);
     }, [phase]);
 
-    const toggle = p => { if (phase !== 'run') return; setStopped(s => s.includes(p) ? s.filter(x => x !== p) : [...s, p]) };
-    const leaksStoppedCount = [...setup.leakSet].filter(p => stopped.includes(p)).length;
-    const spark = p => { const arr = series[p] || []; if (arr.length < 2) return null; const w = 80, h = 32; const pts = arr.map((v, i) => [+(i / (arr.length - 1 || 1) * w).toFixed(1), +(h - 3 - Math.min(100, v) / 100 * (h - 6)).toFixed(1)]); return { pts, line: pts.map(pt => pt.join(',')).join(' '), area: `0,${h} ${pts.map(pt => pt.join(',')).join(' ')} ${w},${h}` } };
+    const typedIds = c => [...new Set(c.split(/[\s,]+/).map(x => parseInt(x, 10)).filter(Number.isFinite))];
+    const toggle = id => {
+        if (phase !== 'run' || purgedRef.current.has(id)) return;
+        setCmd(c => { const list = typedIds(c); return (list.includes(id) ? list.filter(x => x !== id) : [...list, id]).join(' ') });
+    };
+    const purge = () => {
+        if (phase !== 'run') return;
+        const wanted = typedIds(cmd);
+        if (!wanted.length) { setOut([['usage: purge <sat id> …', 'muted']]); return }
+        const lines = [], found = wanted.map(id => setup.rows.find(r => r.id === id)).filter(Boolean);
+        wanted.filter(id => !found.some(r => r.id === id)).forEach(id => lines.push([`purge: SAT ${pad(id)}: not in this cluster`, 'warn']));
+        const wrong = found.find(r => r.kind !== 'runaway');
+        setCmd('');
+        if (wrong) {
+            lines.push([`SAT ${pad(wrong.id)} · ${wrong.proc} killed · ${wrong.kind === 'legit' ? 'scheduled task lost' : 'healthy service killed'}`, 'err']);
+            setOut(lines.slice(-2));
+            setFailMsg(`SAT ${pad(wrong.id)} · ${wrong.kind === 'legit' ? 'SCHEDULED TASK KILLED' : 'HEALTHY SERVICE KILLED'}`);
+            setPhase('lost');
+            return;
+        }
+        const fresh = found.filter(r => !purgedRef.current.has(r.id));
+        fresh.forEach(r => purgedRef.current.add(r.id));
+        if (fresh.length) lines.push([`purged ${fresh.map(r => `SAT ${pad(r.id)}`).join(', ')} · runaway processes killed`, 'ok']);
+        setPurged([...purgedRef.current]);
+        setOut(lines.slice(-2));
+        if (setup.rows.every(r => r.kind !== 'runaway' || purgedRef.current.has(r.id))) setPhase('won');
+    };
 
+    const selected = typedIds(cmd), load = Math.round(cpus.reduce((a, b) => a + b, 0) / cpus.length);
+    const purgedRunaways = setup.rows.filter(r => r.kind === 'runaway' && purged.includes(r.id)).length;
+    const prompt = <span style={{ color: 'var(--green)' }}>ops@600:~/cluster$</span>;
+    const tone = { muted: '#7b8580', warn: 'var(--yellow)', err: 'var(--red)', ok: 'var(--green)' };
     return <>
-        <Header title="MEMORY LEAK" sub={`CPU ${Math.round(displayCPU)}% · ${leaksStoppedCount}/3 LEAKS ISOLATED`} />
-        <p className="instructions">Three of six processes are leaking memory. A real leak climbs continuously; a decoy spikes then flattens. Isolate the three leaks before CPU hits 100%.</p>
-        <div className="pixel-grid">
-            {setup.six.map(p => {
-                const off = stopped.includes(p), actual = setup.leakSet.has(p);
-                const sp = spark(p), last = sp && sp.pts[sp.pts.length - 1];
-                return <button className={'node ' + (off ? (actual ? 'done' : 'fail') : '')} onClick={() => toggle(p)} key={p} disabled={phase !== 'run'}>
-                    {p}
-                    <svg viewBox="0 0 80 32" width="100%" height="32" style={{ display: 'block', margin: '8px 0 4px' }}>
-                        <line x1="0" y1="9" x2="80" y2="9" stroke="#1c2422" strokeWidth="1" />
-                        <line x1="0" y1="20" x2="80" y2="20" stroke="#1c2422" strokeWidth="1" />
-                        {sp && !off && <polygon points={sp.area} fill="#8fd9ff" opacity=".14" />}
-                        {sp && <polyline points={sp.line} fill="none" stroke={off ? '#0c1210' : '#8fd9ff'} strokeWidth="1.7" strokeLinejoin="round" />}
-                        {sp && !off && last && <circle cx={last[0]} cy={last[1]} r="2" fill="#8fd9ff" style={{ filter: 'drop-shadow(0 0 3px rgba(143,217,255,.8))' }} />}
-                    </svg>
-                    <small>{off ? (actual ? 'ISOLATED' : 'SERVICE OFFLINE') : 'MONITORING'}</small>
-                </button>;
+        <Header title="CPU OVERLOAD" sub={`CLUSTER LOAD ${load}% · ${purgedRunaways}/${RUNAWAY} RUNAWAYS PURGED`} />
+        <p className="instructions">Runaway processes are pinning CPU on satellites in this cluster. Purge them — but high CPU from a scheduled task is normal, so leave those alone. Click lines or type IDs, then purge.</p>
+        <div style={{ maxWidth: 720, border: '1px solid #262d2b', background: '#070909', padding: '8px 12px', fontSize: 12, lineHeight: 1.6 }}>
+            <div style={{ color: '#7b8580' }}>{prompt} cat schedule.cfg</div>
+            <div style={{ color: 'var(--yellow)', marginBottom: 4 }}>scheduled now: {setup.scheduled.join(', ')}</div>
+            <div style={{ color: '#7b8580' }}>{prompt} tail -f cpu_watchdog.log</div>
+            {setup.rows.map((r, i) => {
+                const done = purged.includes(r.id), on = selected.includes(r.id), c = cpus[i];
+                return <div key={r.id} onClick={() => toggle(r.id)} style={{ display: 'grid', gridTemplateColumns: '64px 60px 50px 1fr 64px', alignItems: 'center', gap: 10, padding: '0 6px', margin: '0 -6px', cursor: done || phase !== 'run' ? 'default' : 'pointer', background: on ? 'rgba(201,255,77,.1)' : 'transparent', color: done ? '#3b4441' : '#c6cdc8' }}>
+                    <span>SAT {pad(r.id)}</span>
+                    <span style={{ height: 5, background: '#1a211f' }}><i style={{ display: 'block', height: '100%', width: `${Math.min(100, c)}%`, background: done ? '#2a3230' : c > 85 ? 'var(--red)' : c > 60 ? 'var(--yellow)' : 'var(--green)' }} /></span>
+                    <span style={{ textAlign: 'right' }}>{Math.min(99.9, c).toFixed(1)}%</span>
+                    <span style={{ color: done ? '#3b4441' : '#8fd9ff' }}>{r.proc}</span>
+                    <span style={{ fontSize: 10, letterSpacing: '.1em', color: on ? 'var(--green)' : '#3b4441' }}>{done ? 'PURGED' : on ? 'SELECTED' : ''}</span>
+                </div>;
             })}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                {prompt}<span>purge</span>
+                <input value={cmd} onChange={e => setCmd(e.target.value.replace(/[^\d\s,]/g, ''))} onKeyDown={e => { if (e.key === 'Enter') purge() }} disabled={phase !== 'run'} placeholder="click lines or type IDs" spellCheck={false} style={{ flex: 1, minWidth: 0, background: 'transparent', border: 0, outline: 0, color: '#f4f7ef', fontSize: 12, padding: 0 }} />
+                <button className="action" onClick={purge} disabled={phase !== 'run'} style={{ padding: '3px 10px', fontSize: 11 }}>PURGE</button>
+            </div>
+            {out.map(([text, kind], i) => <div key={i} style={{ color: tone[kind] }}>{text}</div>)}
         </div>
-        <div className="bar"><i style={{ width: `${displayCPU}%`, background: displayCPU > 80 ? 'var(--red)' : displayCPU > 55 ? 'var(--yellow)' : 'var(--green)' }} /></div>
-        <div className="readout" style={{ color: displayCPU > 80 ? 'var(--red)' : displayCPU > 55 ? 'var(--yellow)' : 'var(--green)' }}>CPU {Math.round(displayCPU)}% · TIME TO CRITICAL {rate.stable ? 'STABLE' : rate.text}</div>
-        {phase === 'won' && <div className="success">LEAKS CONTAINED · CPU BELOW SAFE THRESHOLD</div>}
-        {phase === 'lost' && <div className="failure">SATELLITE LOST · CPU OVERRUN</div>}
+        {phase === 'won' && <div className="success">RUNAWAY PROCESSES PURGED · CLUSTER LOAD NOMINAL</div>}
+        {phase === 'lost' && <div className="failure">{failMsg}</div>}
     </>;
 }
 function Orbit() {

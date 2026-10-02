@@ -98,25 +98,113 @@
       transition: opacity .5s;
     }
 
-    .impact {
+    .alerts {
       position: fixed;
-      left: 50%;
-      top: 72px;
-      transform: translateX(-50%);
-      color: var(--danger);
-      font-size: 11px;
-      letter-spacing: .2em;
-      text-transform: uppercase;
-      text-align: center;
-      line-height: 1.9;
-      opacity: 0;
-      transition: opacity .25s;
+      top: 78px;
+      left: 24px;
+      width: min(330px, calc(100vw - 48px));
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 15;
       pointer-events: none;
-      text-shadow: 0 0 14px rgba(255, 77, 77, .45);
     }
 
-    .impact.show {
+    .alert {
+      position: relative;
+      pointer-events: auto;
+      cursor: pointer;
+      background: rgba(14, 17, 16, .96);
+      border: 1px solid #2b3230;
+      border-radius: 10px;
+      padding: 10px 12px 11px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .55);
+      animation: alert-in .45s cubic-bezier(.22, .8, .2, 1);
+    }
+
+    .alert:hover {
+      border-color: #3c4542;
+    }
+
+    .alert.out {
+      animation: alert-out .3s forwards;
+    }
+
+    .alert-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 9px;
+      letter-spacing: .16em;
+    }
+
+    .alert-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      background: #1c2321;
+      display: grid;
+      place-items: center;
+      font-size: 10px;
+    }
+
+    .alert-app {
+      flex: 1;
+    }
+
+    .alert-title {
+      margin-top: 8px;
+      font-size: 12px;
+      letter-spacing: .06em;
+    }
+
+    .alert.crit .alert-title {
+      color: var(--danger);
+    }
+
+    .alert-body {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .alert-x {
+      position: absolute;
+      top: -7px;
+      left: -7px;
+      width: 18px;
+      height: 18px;
+      border: 0;
+      border-radius: 50%;
+      background: #2b3230;
+      color: var(--ink);
+      font: inherit;
+      font-size: 11px;
+      line-height: 18px;
+      padding: 0;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity .15s;
+    }
+
+    .alert:hover .alert-x {
       opacity: 1;
+    }
+
+    @keyframes alert-in {
+      from {
+        transform: translateX(calc(-100% - 40px));
+        opacity: 0;
+      }
+    }
+
+    @keyframes alert-out {
+      to {
+        transform: translateX(calc(-100% - 40px));
+        opacity: 0;
+      }
     }
 
     .panel {
@@ -287,6 +375,75 @@
       border-color: var(--accent);
     }
 
+    .term {
+      height: 196px;
+      overflow-y: auto;
+      padding: 10px 12px;
+      border: 1px solid #262d2b;
+      background: #070909;
+      color: #b9c0bb;
+      font-size: 11px;
+      line-height: 1.65;
+    }
+
+    .term-line {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .term-prompt {
+      color: var(--accent);
+    }
+
+    .term-files {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 12px;
+    }
+
+    .term-file {
+      color: #8fd9ff;
+      cursor: pointer;
+      justify-self: start;
+    }
+
+    .term-file:hover {
+      color: var(--ink);
+      text-decoration: underline;
+    }
+
+    .term-muted {
+      color: var(--muted);
+    }
+
+    .term-warn {
+      color: var(--warn);
+    }
+
+    .term-ok {
+      color: var(--accent);
+    }
+
+    .term-err {
+      color: var(--danger);
+    }
+
+    .term-cursor {
+      display: inline-block;
+      width: 7px;
+      height: 12px;
+      margin-left: 1px;
+      vertical-align: -2px;
+      background: var(--accent);
+      animation: term-blink 1s steps(1) infinite;
+    }
+
+    @keyframes term-blink {
+      50% {
+        opacity: 0;
+      }
+    }
+
     .log {
       min-height: 40px;
       margin-top: 18px;
@@ -411,7 +568,6 @@
   <main id="stage"><canvas id="constellation" aria-label="A constellation of 600 satellites"></canvas></main>
   <div class="topline"><span class="brand">SIX HUNDRED</span><span class="signal"><i class="pulse"></i><span
         id="network">CONSTELLATION NOMINAL · 600/600</span></span></div>
-  <div class="impact" id="impact">IMPACT IN 60s</div>
   <div class="hint" id="hint">select a satellite to investigate</div>
   <aside class="panel" id="panel">
     <button class="close" id="close" aria-label="Close">×</button>
@@ -428,15 +584,10 @@
     </div>
     <div class="rule"></div>
     <div class="eyebrow" style="margin-bottom:12px">Command uplink</div>
-    <div class="commands"><button class="command" data-command="POWER CYCLE">POWER CYCLE</button><button class="command"
-        data-command="ALIGN SOLAR ARRAY">ALIGN SOLAR ARRAY</button><button class="command"
-        data-command="RECALIBRATE STAR TRACKER">RECALIBRATE STAR TRACKER</button><button class="command"
-        data-command="BLIND AQUISITION">BLIND AQUISITION</button><button class="command" data-command="RECONFIGURE WHEELS">RECONFIGURE
-        WHEELS</button><button class="command" data-command="THERMAL CONTROL">THERMAL CONTROL</button><button
-        class="command" data-command="ACTIVATE BOOSTER">ACTIVATE BOOSTER</button><button class="command"
-        data-command="RESTART PROCESS">RESTART PROCESS</button></div>
+    <div class="term" id="term" aria-label="Command terminal"></div>
     <div class="log" id="log">something is wrong</div>
   </aside>
+  <div class="alerts" id="alerts" aria-live="polite"></div>
   <div class="repair-modal" id="repairModal"><button class="repair-close" id="repairClose"
       aria-label="Close repair">×</button><iframe class="repair-frame" id="repairFrame"
       title="Manual spacecraft repair"></iframe></div>
@@ -487,7 +638,7 @@
     function updateNetwork() { const active = satellites.filter(s => !s.lost).length; const network = document.getElementById('network'); network.textContent = `CONSTELLATION ${active === 600 ? 'NOMINAL' : 'DEGRADED'} · ${active}/600`; if (active === 0) document.getElementById('gameOver').classList.add('show'); }
     document.getElementById('restartAll').onclick = () => {
       satellites.forEach(s => { s.anomaly = false; s.anomalyType = null; s.countdown = 0; s.lost = false; s.rejoining = false; s.rejoinProgress = 0; s.values = { RSSI: 82, TEMPERATURE: 71, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 }; });
-      anomalyBag = []; lastAnomalyType = 'thermal'; selected = null;
+      anomalyBag = []; lastAnomalyType = 'thermal'; selected = null; highlighted = null; clearAlerts();
       grbActive = false; window.__grbSats = null;
       document.getElementById('grbModal').classList.remove('show'); document.getElementById('grbFrame').src = '';
       document.getElementById('grbWarning').classList.remove('show');
@@ -513,18 +664,69 @@
       ctx.clearRect(0, 0, W, H); const slow = 1, unit = Math.min(W, H), cx = W * .5, cy = H * .5;
       ctx.save(); ctx.translate(cx, cy); ctx.strokeStyle = 'rgba(255,255,255,.055)'; ctx.lineWidth = 1; for (let i = 0; i < 10; i++) { const rp = ringProgress(i, t); if (rp <= 0) continue; ctx.globalAlpha = rp; ctx.beginPath(); ctx.arc(0, 0, unit * (.15 + i * .038), 0, Math.PI * 2); ctx.stroke(); } ctx.globalAlpha = 1; ctx.restore();
       const earthR = Math.max(19, unit * .052); if (earthImg.complete && earthImg.naturalWidth) { ctx.imageSmoothingEnabled = false; ctx.drawImage(earthImg, cx - earthR, cy - earthR, earthR * 2, earthR * 2); ctx.imageSmoothingEnabled = true; } else { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(cx, cy, earthR, 0, Math.PI * 2); ctx.fill(); }
-      satellites.forEach(s => { if (s.lost) return; const ringAlpha = ringProgress(s.ring, t); if (ringAlpha <= 0) return; const earthRatio = earthR / (unit * s.r); let decay = s.anomaly && s.anomalyType === 'orbit' ? Math.max(earthRatio, s.countdown / ANOMALY_FAIL_WINDOW) : 1; const p = point(s, t * slow); let px = W * .5 + (p.x - W * .5) * decay, py = H * .5 + (p.y - H * .5) * decay; if (s.rejoining) { s.rejoinProgress = Math.min(1, s.rejoinProgress + .006); const eased = 1 - Math.pow(1 - s.rejoinProgress, 3); px = W * .5 + (p.x - W * .5) * eased; py = H * .5 + (p.y - H * .5) * eased; if (s.rejoinProgress >= 1) { s.rejoining = false; if (selected === s) { document.getElementById('log').textContent = 'TELEMETRY NOMINAL · ORBIT RESTORED'; document.getElementById('hint').textContent = 'satellite recovered · network nominal'; } } } const hot = s.anomaly; ctx.globalAlpha = (s.rejoining ? .8 : 1) * ringAlpha; ctx.beginPath(); ctx.arc(px, py, hot ? 3.6 : 1.5, 0, Math.PI * 2); ctx.fillStyle = hot ? '#ff4d4d' : `rgba(255,255,255,${.38 + .35 * (.5 + .5 * Math.sin(s.phase + t * .0005))})`; ctx.fill(); if (hot) { ctx.beginPath(); ctx.arc(px, py, 11 + Math.sin(t * .003) * 2.5, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255,77,77,.3)'; ctx.stroke(); } ctx.globalAlpha = 1; }); requestAnimationFrame(draw);
+      satellites.forEach(s => { if (s.lost) return; const ringAlpha = ringProgress(s.ring, t); if (ringAlpha <= 0) return; const earthRatio = earthR / (unit * s.r); let decay = s.anomaly && s.anomalyType === 'orbit' ? Math.max(earthRatio, s.countdown / ANOMALY_FAIL_WINDOW) : 1; const p = point(s, t * slow); let px = W * .5 + (p.x - W * .5) * decay, py = H * .5 + (p.y - H * .5) * decay; if (s.rejoining) { s.rejoinProgress = Math.min(1, s.rejoinProgress + .006); const eased = 1 - Math.pow(1 - s.rejoinProgress, 3); px = W * .5 + (p.x - W * .5) * eased; py = H * .5 + (p.y - H * .5) * eased; if (s.rejoinProgress >= 1) { s.rejoining = false; if (selected === s) { document.getElementById('log').textContent = 'TELEMETRY NOMINAL · ORBIT RESTORED'; document.getElementById('hint').textContent = 'satellite recovered · network nominal'; } } } s.sx = px; s.sy = py; const hot = s.anomaly; ctx.globalAlpha = (s.rejoining ? .8 : 1) * ringAlpha; ctx.beginPath(); ctx.arc(px, py, hot ? 3.6 : 1.5, 0, Math.PI * 2); ctx.fillStyle = hot ? '#ff4d4d' : `rgba(255,255,255,${.38 + .35 * (.5 + .5 * Math.sin(s.phase + t * .0005))})`; ctx.fill(); if (hot) { ctx.beginPath(); ctx.arc(px, py, 11 + Math.sin(t * .003) * 2.5, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255,77,77,.3)'; ctx.stroke(); } ctx.globalAlpha = 1; }); drawHighlight(t); requestAnimationFrame(draw);
     } requestAnimationFrame(draw);
     const chartConfigs = { TEMPERATURE: { title: 'TEMPERATURE / HISTORY', threshold: .70 }, POWER: { title: 'POWER OUTPUT / HISTORY', threshold: .55 }, BATTERY: { title: 'BATTERY PACK / HISTORY', threshold: .35 }, RSSI: { title: 'RSSI / CONTACT HISTORY', threshold: .68 }, CPU: { title: 'CPU LOAD / HISTORY', threshold: .85 }, ALTITUDE: { title: 'ORBITAL ALTITUDE / HISTORY', threshold: .35 }, TORQUE: { title: 'TORQUE MARGIN / HISTORY', threshold: .40 }, POINTING: { title: 'ATTITUDE POINTING ERROR / HISTORY', threshold: .62 } };
-    function renderSat(s) { document.getElementById('satName').textContent = `SATELLITE ${String(s.id).padStart(3, '0')}`; document.getElementById('orbit').textContent = `PLANE / ${String(s.ring + 1).padStart(2, '0')}`; const label = s.anomalyType === 'orbit' ? 'ORBITAL DECAY' : s.anomalyType === 'solar' ? 'SOLAR ARRAY MISALIGNED' : s.anomalyType === 'startracker' ? 'STAR TRACKER LOST LOCK' : s.anomalyType === 'contact' ? 'MISSED CONTACT WINDOW' : s.anomalyType === 'wheel' ? 'REACTION WHEEL FAULT' : s.anomalyType === 'power' ? 'POWER INSTABILITY' : s.anomalyType === 'process' ? 'PROCESS FAULT' : s.anomaly ? 'DEGRADED' : 'NOMINAL'; document.getElementById('status').textContent = `STATUS: ${label}`; document.getElementById('status').className = 'status ' + (s.anomaly ? 'degraded' : 'ok'); const el = document.getElementById('telemetry'); el.innerHTML = ''; Object.entries(s.values).forEach(([k, v]) => { const row = document.createElement('div'); row.className = 'metric ' + ((s.anomaly && ((s.anomalyType === 'thermal' && k === 'TEMPERATURE') || (s.anomalyType === 'orbit' && k === 'POWER') || (s.anomalyType === 'solar' && k === 'BATTERY') || (s.anomalyType === 'wheel' && k === 'TORQUE') || (s.anomalyType === 'contact' && k === 'RSSI'))) ? 'hot' : ''); row.innerHTML = `<div class="metric-head"><span class="metric-name">${k}</span><span class="metric-value">${k === 'RSSI' ? '-' + v + ' dBm' : k === 'TEMPERATURE' ? v + '°C' : v + '%'}</span></div><div class="bar"><i style="width:${Math.min(v, 100)}%"></i></div>`; row.onclick = () => { drawChart(k, v, s.anomalyType) }; el.appendChild(row) }); const defaultKey = s.anomalyType === 'thermal' ? 'TEMPERATURE' : s.anomalyType === 'power' ? 'POWER' : s.anomalyType === 'solar' ? 'BATTERY' : s.anomalyType === 'wheel' ? 'TORQUE' : s.anomalyType === 'startracker' ? 'POINTING' : s.anomalyType === 'contact' ? 'RSSI' : s.anomalyType === 'process' ? 'CPU' : s.anomalyType === 'orbit' ? 'ALTITUDE' : 'TEMPERATURE'; drawChart(defaultKey, (defaultKey === 'ALTITUDE' || defaultKey === 'POINTING') ? 100 : s.values[defaultKey], s.anomalyType); if (s.anomaly && s.countdown > 0) document.getElementById('log').textContent = s.anomalyType === 'orbit' ? `ORBIT DECAY · IMPACT IN ${s.countdown}s` : `SATELLITE LOST IN ${s.countdown}s IF UNRESOLVED`; }
+    function renderSat(s) { if (termSat !== s) termReset(s); document.getElementById('satName').textContent = `SATELLITE ${String(s.id).padStart(3, '0')}`; document.getElementById('orbit').textContent = `PLANE / ${String(s.ring + 1).padStart(2, '0')}`; const label = s.anomalyType === 'orbit' ? 'ORBITAL DECAY' : s.anomalyType === 'solar' ? 'SOLAR ARRAY MISALIGNED' : s.anomalyType === 'startracker' ? 'STAR TRACKER LOST LOCK' : s.anomalyType === 'contact' ? 'MISSED CONTACT WINDOW' : s.anomalyType === 'wheel' ? 'REACTION WHEEL FAULT' : s.anomalyType === 'power' ? 'POWER INSTABILITY' : s.anomalyType === 'process' ? 'CPU OVERLOAD' : s.anomaly ? 'DEGRADED' : 'NOMINAL'; document.getElementById('status').textContent = `STATUS: ${label}`; document.getElementById('status').className = 'status ' + (s.anomaly ? 'degraded' : 'ok'); const el = document.getElementById('telemetry'); el.innerHTML = ''; Object.entries(s.values).forEach(([k, v]) => { const row = document.createElement('div'); row.className = 'metric ' + ((s.anomaly && ((s.anomalyType === 'thermal' && k === 'TEMPERATURE') || (s.anomalyType === 'orbit' && k === 'POWER') || (s.anomalyType === 'solar' && k === 'BATTERY') || (s.anomalyType === 'wheel' && k === 'TORQUE') || (s.anomalyType === 'contact' && k === 'RSSI'))) ? 'hot' : ''); row.innerHTML = `<div class="metric-head"><span class="metric-name">${k}</span><span class="metric-value">${k === 'RSSI' ? '-' + v + ' dBm' : k === 'TEMPERATURE' ? v + '°C' : v + '%'}</span></div><div class="bar"><i style="width:${Math.min(v, 100)}%"></i></div>`; row.onclick = () => { drawChart(k, v, s.anomalyType) }; el.appendChild(row) }); const defaultKey = s.anomalyType === 'thermal' ? 'TEMPERATURE' : s.anomalyType === 'power' ? 'POWER' : s.anomalyType === 'solar' ? 'BATTERY' : s.anomalyType === 'wheel' ? 'TORQUE' : s.anomalyType === 'startracker' ? 'POINTING' : s.anomalyType === 'contact' ? 'RSSI' : s.anomalyType === 'process' ? 'CPU' : s.anomalyType === 'orbit' ? 'ALTITUDE' : 'TEMPERATURE'; drawChart(defaultKey, (defaultKey === 'ALTITUDE' || defaultKey === 'POINTING') ? 100 : s.values[defaultKey], s.anomalyType); if (s.anomaly && s.countdown > 0) document.getElementById('log').textContent = s.anomalyType === 'orbit' ? `ORBIT DECAY · IMPACT IN ${s.countdown}s` : `SATELLITE LOST IN ${s.countdown}s IF UNRESOLVED`; }
     function drawChart(key, val, type) { const cfg = chartConfigs[key] || { title: `${key} / HISTORY`, threshold: null }; document.getElementById('chartTitle').textContent = cfg.title; const w = chart.clientWidth, h = 90; cctx.clearRect(0, 0, w, h); cctx.strokeStyle = '#252c29'; cctx.lineWidth = 1; cctx.beginPath(); for (let y = 15; y < h; y += 25) { cctx.moveTo(0, y); cctx.lineTo(w, y) } cctx.stroke(); if (cfg.threshold) { const ty = h - 15 - cfg.threshold * (h - 25); cctx.strokeStyle = '#ff4d4d'; cctx.setLineDash([4, 4]); cctx.beginPath(); cctx.moveTo(0, ty); cctx.lineTo(w, ty); cctx.stroke(); cctx.setLineDash([]); } const points = []; for (let i = 0; i < 40; i++) { let n = Math.min(1, Math.max(0, (val || 0) / 100)); if (type === 'orbit') n = Math.max(.12, 1 - i * .022); if (type === 'power') n = .58 + Math.sin(i * 1.1) * .16 + (i > 27 ? .1 : 0); if (type === 'wheel') n = .36 + Math.sin(i * 1.4) * .06 - (i > 18 ? (i - 18) * .012 : 0); if (type === 'process') n = .42 + (i > 25 ? (i - 25) * .025 : Math.sin(i) * .03); if (type === 'thermal') n = .48 + (i > 20 ? (i - 20) * .018 : Math.sin(i * .4) * .025); if (type === 'startracker') n = .12 + i * .0195 + Math.sin(i * .6) * .025; if (type === 'solar') n = Math.max(.06, .7 - i * .0145 + Math.sin(i * .5) * .02); points.push({ x: i * w / 39, y: h - 15 - n * (h - 25), n }); } const normalColor = key === 'TEMPERATURE' ? '#c9f75f' : key === 'POWER' ? '#ffd166' : key === 'CPU' ? '#58a6ff' : key === 'TORQUE' ? '#c58cff' : '#c9f75f'; const lowIsBad = key === 'ALTITUDE' || key === 'TORQUE' || key === 'BATTERY'; for (let i = 1; i < points.length; i++) { const a = points[i - 1], b = points[i], danger = cfg.threshold && (lowIsBad ? ((a.n + b.n) / 2 < cfg.threshold) : ((a.n + b.n) / 2 > cfg.threshold)); cctx.strokeStyle = danger ? '#ff4d4d' : normalColor; cctx.lineWidth = 1.7; cctx.beginPath(); cctx.moveTo(a.x, a.y); cctx.lineTo(b.x, b.y); cctx.stroke(); } points.forEach(p => { const danger = cfg.threshold && (lowIsBad ? p.n < cfg.threshold : p.n > cfg.threshold); if (danger) { cctx.fillStyle = '#ff4d4d'; cctx.beginPath(); cctx.arc(p.x, p.y, 2.3, 0, Math.PI * 2); cctx.fill(); } }); }
-    canvas.addEventListener('click', e => { if (eventActive()) return; const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top, unit = Math.min(W, H), earthR = Math.max(19, unit * .052); let best = null, dist = Infinity; satellites.forEach(s => { if (s.lost || ringProgress(s.ring, performance.now()) <= 0) return; const base = point(s, performance.now()), earthRatio = earthR / (unit * s.r), decay = s.anomaly && s.anomalyType === 'orbit' ? Math.max(earthRatio, s.countdown / ANOMALY_FAIL_WINDOW) : 1, px = W * .5 + (base.x - W * .5) * decay, py = H * .5 + (base.y - H * .5) * decay, hit = s.anomaly ? 95 : 70, d = Math.hypot(px - x, py - y); if (d < hit && d < dist) { dist = d; best = s } }); if (best) { selected = best; paused = 0; renderSat(best); panel.classList.add('open'); document.getElementById('hint').style.opacity = 0; } });
+    canvas.addEventListener('click', e => { if (eventActive()) return; const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top, unit = Math.min(W, H), earthR = Math.max(19, unit * .052); let best = null, dist = Infinity; satellites.forEach(s => { if (s.lost || ringProgress(s.ring, performance.now()) <= 0) return; const base = point(s, performance.now()), earthRatio = earthR / (unit * s.r), decay = s.anomaly && s.anomalyType === 'orbit' ? Math.max(earthRatio, s.countdown / ANOMALY_FAIL_WINDOW) : 1, px = W * .5 + (base.x - W * .5) * decay, py = H * .5 + (base.y - H * .5) * decay, hit = s.anomaly ? 95 : 70, d = Math.hypot(px - x, py - y); if (d < hit && d < dist) { dist = d; best = s } }); if (best) { selected = best; highlighted = null; paused = 0; renderSat(best); panel.classList.add('open'); document.getElementById('hint').style.opacity = 0; } });
     document.getElementById('close').onclick = () => { panel.classList.remove('open'); selected = null; paused = 0; document.getElementById('hint').style.opacity = 1 };
-    const repairTypes = { 'THERMAL CONTROL': 'thermal', 'POWER CYCLE': 'power', 'ALIGN SOLAR ARRAY': 'solar', 'RECALIBRATE STAR TRACKER': 'startracker', 'BLIND AQUISITION': 'contact', 'RECONFIGURE WHEELS': 'wheel', 'RESTART PROCESS': 'process', 'ACTIVATE BOOSTER': 'orbit' };
+    // Command terminal in the investigation panel: each repair is a procedure script. Clicking a file types and runs it;
+    // the right script for the fault hands over to the repair lab, any other is rejected.
+    const SCRIPTS = { 'align_array.py': 'solar', 'blind_acq.py': 'contact', 'burn_plan.py': 'orbit', 'cpu_purge.py': 'process', 'power_cycle.py': 'power', 'thermal_reroute.py': 'thermal', 'tracker_recal.py': 'startracker', 'wheel_reconfig.py': 'wheel' };
+    const FAULT_SUBSYSTEM = { thermal: 'TCS', power: 'EPS', solar: 'EPS', wheel: 'ADCS', startracker: 'ADCS', contact: 'COMMS', orbit: 'GNC', process: 'OBC' };
+    const FAULT_TELEMETRY = { thermal: 'core 78°C · coolant loop flow low', power: 'bus 32% · regulation unstable', solar: 'battery 31% and falling · array off-sun', wheel: 'RW3 0 rpm · torque margin 34%', startracker: 'star tracker lost lock · attitude error rising', contact: 'last ground contact missed · RSSI -52 dBm', orbit: 'altitude decaying · below station-keeping box', process: 'CPU 98% · cluster overloaded' };
+    const NOMINAL_TELEMETRY = { EPS: 'bus nominal', TCS: 'temperatures nominal', COMMS: 'link nominal', ADCS: 'attitude nominal', OBC: 'load nominal', GNC: 'orbit nominal' };
+    const term = document.getElementById('term'), sleep = ms => new Promise(r => setTimeout(r, ms));
+    let termSat = null, termRun = 0, promptEl = null; // termRun bumps to cancel a running script when the panel switches satellite
+    const promptHTML = s => `<span class="term-prompt">ops@600:~/sat-${String(s.id).padStart(3, '0')}$</span> `;
+    function termLine(html, cls = '') { const d = document.createElement('div'); d.className = 'term-line ' + cls; d.innerHTML = html; term.appendChild(d); term.scrollTop = term.scrollHeight; return d; }
+    function termPrompt(s) { promptEl = termLine(promptHTML(s) + '<span class="term-typed"></span><span class="term-cursor"></span>'); }
+    function termLs(s) {
+      termLine(promptHTML(s) + 'ls');
+      termLine(Object.keys(SCRIPTS).concat('telemetry.log').map(f => `<span class="term-file" data-file="${f}">${f}</span>`).join(''), 'term-files');
+      termPrompt(s);
+    }
+    function termReset(s) { termRun++; term.innerHTML = ''; termSat = s; termLs(s); }
+    function termNote(text, cls) { // a line from outside the terminal (repair finished, satellite lost), kept above the prompt
+      if (!termSat || termSat !== selected) return;
+      const hadPrompt = !!promptEl; if (promptEl) promptEl.remove();
+      termLine(text, cls); if (hadPrompt) termPrompt(termSat);
+    }
+    function telemetryTail(s) {
+      const t = k => new Date(Date.now() - k * 4000).toTimeString().slice(0, 8), fault = s.anomaly && FAULT_TELEMETRY[s.anomalyType];
+      const quiet = Object.keys(NOMINAL_TELEMETRY).filter(k => !fault || k !== FAULT_SUBSYSTEM[s.anomalyType]).slice(0, 3);
+      quiet.forEach((k, i) => termLine(`${t(3 - i)}  ${k.padEnd(5)} ${NOMINAL_TELEMETRY[k]}`, 'term-muted'));
+      if (fault) termLine(`${t(0)}  ${FAULT_SUBSYSTEM[s.anomalyType].padEnd(5)} ${fault}`, 'term-warn');
+      else termLine(`${t(0)}  all subsystems nominal`, 'term-ok');
+    }
+    async function termRunFile(file) {
+      const s = selected;
+      if (!s || !promptEl || eventActive()) return; // no prompt means a script is still running
+      const run = ++termRun, line = promptEl, cmd = file.endsWith('.py') ? `python3 ${file}` : `tail ${file}`;
+      promptEl = null;
+      for (const ch of cmd) { line.querySelector('.term-typed').textContent += ch; await sleep(16); if (run !== termRun) return; }
+      line.querySelector('.term-cursor').remove();
+      if (!file.endsWith('.py')) { telemetryTail(s); termPrompt(s); return; }
+      await sleep(250); if (run !== termRun) return;
+      termLine(`uplinking procedure to SAT ${String(s.id).padStart(3, '0')}…`, 'term-muted');
+      await sleep(550); if (run !== termRun) return;
+      const type = SCRIPTS[file];
+      if (s.anomaly && s.anomalyType === type) {
+        termLine('ACK received · handing control to operator', 'term-ok');
+        await sleep(450); if (run !== termRun) return;
+        termPrompt(s);
+        if (!eventActive()) openRepair(type);
+      } else {
+        termLine('COMMAND REJECTED · precondition failed', 'term-err');
+        document.getElementById('hint').textContent = 'command logged · anomaly persists';
+        termLs(s);
+      }
+    }
+    term.addEventListener('click', e => { const f = e.target.closest('.term-file'); if (f) termRunFile(f.dataset.file); });
     function openRepair(type) { const deadline = selected ? selected.countdown : ''; const satId = selected ? selected.id : ''; document.getElementById('repairFrame').src = `react.html?type=${type}&deadline=${deadline}&sat=${satId}`; document.getElementById('repairModal').classList.add('show'); }
     function fadeCloseModal(modalId, frameId) { const modal = document.getElementById(modalId); modal.classList.remove('show'); setTimeout(() => { document.getElementById(frameId).src = ''; }, 260); }
     function closeRepair() { fadeCloseModal('repairModal', 'repairFrame'); }
-    document.querySelectorAll('[data-command]').forEach(b => b.onclick = () => { if (eventActive()) return; const command = b.dataset.command; if (selected && selected.anomalyType && repairTypes[command] === selected.anomalyType) { openRepair(repairTypes[command]); return; } document.getElementById('log').textContent = 'COMMAND VERIFICATION FAILED'; document.getElementById('hint').textContent = 'command logged · anomaly persists'; });
     document.getElementById('repairClose').onclick = closeRepair;
     window.addEventListener('message', e => {
       if (e.data?.type === 'grb-resolved') {
@@ -579,10 +781,54 @@
         return;
       }
       if (!selected) return;
-      if (e.data?.type === 'repair-complete') { const wasOrbit = selected.anomalyType === 'orbit'; selected.anomaly = false; selected.anomalyType = null; selected.countdown = 0; selected.lost = false; selected.rejoining = wasOrbit; selected.rejoinProgress = wasOrbit ? 0 : 1; selected.values = { RSSI: 82, TEMPERATURE: 56, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 }; document.getElementById('log').textContent = wasOrbit ? 'SUCCESSFUL EXECUTION · REJOINING ORBIT' : 'SUCCESSFUL EXECUTION · TELEMETRY NOMINAL'; document.getElementById('hint').textContent = wasOrbit ? 'satellite recovered · rejoining orbital plane' : 'satellite recovered · network nominal'; closeRepair(); renderSat(selected); } else if (e.data?.type === 'repair-failed') { selected.anomaly = false; selected.anomalyType = null; selected.countdown = 0; selected.lost = true; selected.rejoining = false; updateNetwork(); document.getElementById('log').textContent = 'SATELLITE COMMANDED TOO LATE · SATELLITE LOST'; document.getElementById('hint').textContent = 'satellite lost · signal unavailable'; closeRepair(); }
+      if (e.data?.type === 'repair-complete') { const wasOrbit = selected.anomalyType === 'orbit'; selected.anomaly = false; selected.anomalyType = null; selected.countdown = 0; selected.lost = false; selected.rejoining = wasOrbit; selected.rejoinProgress = wasOrbit ? 0 : 1; selected.values = { RSSI: 82, TEMPERATURE: 56, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 }; document.getElementById('log').textContent = wasOrbit ? 'SUCCESSFUL EXECUTION · REJOINING ORBIT' : 'SUCCESSFUL EXECUTION · TELEMETRY NOMINAL'; document.getElementById('hint').textContent = wasOrbit ? 'satellite recovered · rejoining orbital plane' : 'satellite recovered · network nominal'; pushAlert({ sat: selected, title: `${satTag(selected)} · RECOVERED`, body: wasOrbit ? 'Rejoining orbit.' : 'Telemetry nominal.' }); updateAlerts(); termNote('procedure complete · telemetry nominal', 'term-ok'); closeRepair(); renderSat(selected); } else if (e.data?.type === 'repair-failed') { selected.anomaly = false; selected.anomalyType = null; selected.countdown = 0; selected.lost = true; selected.rejoining = false; updateNetwork(); document.getElementById('log').textContent = 'SATELLITE COMMANDED TOO LATE · SATELLITE LOST'; document.getElementById('hint').textContent = 'satellite lost · signal unavailable'; pushAlert({ sat: selected, title: `${satTag(selected)} · SIGNAL LOST`, body: 'Commanded too late.', crit: true }); updateAlerts(); termNote('link lost · satellite unrecoverable', 'term-err'); closeRepair(); }
     });
+    // SCID-UI alerts: an anomaly alert stays until the anomaly is resolved or the satellite is lost; the rest fade on their own.
+    // Clicking an alert highlights that satellite on the rings so the player can find it and click it.
+    const ALERT_LABELS = { thermal: 'THERMAL FAULT', power: 'POWER INSTABILITY', solar: 'SOLAR ARRAY MISALIGNED', wheel: 'REACTION WHEEL FAULT', process: 'CPU OVERLOAD', orbit: 'ORBITAL DECAY', startracker: 'STAR TRACKER LOST LOCK', contact: 'MISSED CONTACT WINDOW' };
+    const alertsEl = document.getElementById('alerts'), MAX_ALERTS = 4;
+    let alerts = [], highlighted = null, highlightAt = 0;
+    const satTag = s => `SAT ${String(s.id).padStart(3, '0')}`;
+    const countdownText = s => s.anomalyType === 'orbit' ? `Impact in ${s.countdown}s` : `Lost in ${s.countdown}s if unresolved`;
+    function pushAlert({ sat, title, body, crit = false, sticky = false }) {
+      const el = document.createElement('div');
+      el.className = 'alert' + (crit ? ' crit' : '');
+      // a problem ticket can't be dismissed: it leaves only when the satellite is fixed or lost
+      el.innerHTML = (sticky ? '' : '<button class="alert-x" aria-label="Dismiss">×</button>') + '<div class="alert-head"><span class="alert-icon">🛰️</span><span class="alert-app">SCID-UI ALERTS</span><span class="alert-time">now</span></div><div class="alert-title"></div><div class="alert-body"></div>';
+      el.querySelector('.alert-title').textContent = title;
+      el.querySelector('.alert-body').textContent = body;
+      const a = { sat, type: sat.anomalyType, sticky, el, born: Date.now() };
+      el.onclick = e => { if (e.target.closest('.alert-x')) dismissAlert(a); else highlightSat(a.sat); };
+      alertsEl.prepend(el); alerts.unshift(a);
+      if (!sticky) a.timer = setTimeout(() => dismissAlert(a), 6000);
+      while (alerts.length > MAX_ALERTS) dismissAlert([...alerts].reverse().find(x => !x.sticky) || alerts[alerts.length - 1]); // drop the oldest passing alert first
+    }
+    function dismissAlert(a) { if (!alerts.includes(a)) return; alerts = alerts.filter(x => x !== a); clearTimeout(a.timer); a.el.classList.add('out'); setTimeout(() => a.el.remove(), 300); }
+    function clearAlerts() { alerts.slice().forEach(dismissAlert); }
+    function pushAnomalyAlert(s) { pushAlert({ sat: s, title: `${satTag(s)} · ${ALERT_LABELS[s.anomalyType] || 'ANOMALY'}`, body: countdownText(s), crit: true, sticky: true }); }
+    function updateAlerts() {
+      alerts.slice().forEach(a => {
+        if (a.sticky) {
+          if (!a.sat.anomaly || a.sat.anomalyType !== a.type || a.sat.countdown <= 0) { dismissAlert(a); return; }
+          a.el.querySelector('.alert-body').textContent = countdownText(a.sat);
+        }
+        const mins = Math.floor((Date.now() - a.born) / 60000);
+        a.el.querySelector('.alert-time').textContent = mins ? `${mins}m ago` : 'now';
+      });
+    }
+    function highlightSat(s) { if (eventActive() || s.lost) return; highlighted = s; highlightAt = performance.now(); } // a lost satellite is gone from the rings, so there's nothing to point at
+    function drawHighlight(t) {
+      const s = highlighted;
+      if (!s) return;
+      if (s.lost || s.sx == null) { highlighted = null; return; }
+      const x = s.sx, y = s.sy, r = 16 + Math.sin(t * .006) * 1.5, k = 6, age = Math.max(0, t - highlightAt), rgb = s.anomaly ? '255,77,77' : '230,231,228'; // red while faulty, white once recovered
+      ctx.strokeStyle = `rgb(${rgb})`; ctx.lineWidth = 1.5; ctx.beginPath(); // corner-bracket target around the satellite
+      [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([dx, dy]) => { ctx.moveTo(x + dx * r, y + dy * (r - k)); ctx.lineTo(x + dx * r, y + dy * r); ctx.lineTo(x + dx * (r - k), y + dy * r); });
+      ctx.stroke(); ctx.lineWidth = 1;
+      if (age < 900) { ctx.beginPath(); ctx.arc(x, y, 14 + age * .07, 0, Math.PI * 2); ctx.strokeStyle = `rgba(${rgb},${1 - age / 900})`; ctx.stroke(); } // one ripple to draw the eye
+    }
     const MAX_CONCURRENT_ANOMALIES = 2, ANOMALY_FAIL_WINDOW = 60;
-    function trySpawnAnomaly() { const activeCount = satellites.filter(s => s.anomaly).length; if (activeCount < MAX_CONCURRENT_ANOMALIES) { const available = satellites.filter(s => !s.lost && !s.anomaly && !s.rejoining), s = available[Math.floor(Math.random() * available.length)]; if (s) { s.anomaly = true; s.anomalyType = nextAnomalyType(); lastAnomalyType = s.anomalyType; s.countdown = ANOMALY_FAIL_WINDOW; if (s.anomalyType === 'thermal') { s.values.TEMPERATURE = 78; s.values.POWER = 82 } if (s.anomalyType === 'contact') s.values.RSSI = 52; if (s.anomalyType === 'power') s.values.POWER = 32; if (s.anomalyType === 'solar') s.values.BATTERY = 31; if (s.anomalyType === 'wheel') s.values.TORQUE = 34; if (s.anomalyType === 'process') s.values.CPU = 98; document.getElementById('hint').innerHTML = 'anomaly detected · locate the <span style="color:var(--danger)">red</span> signal'; } } }
+    function trySpawnAnomaly() { const activeCount = satellites.filter(s => s.anomaly).length; if (activeCount < MAX_CONCURRENT_ANOMALIES) { const available = satellites.filter(s => !s.lost && !s.anomaly && !s.rejoining), s = available[Math.floor(Math.random() * available.length)]; if (s) { s.anomaly = true; s.anomalyType = nextAnomalyType(); lastAnomalyType = s.anomalyType; s.countdown = ANOMALY_FAIL_WINDOW; if (s.anomalyType === 'thermal') { s.values.TEMPERATURE = 78; s.values.POWER = 82 } if (s.anomalyType === 'contact') s.values.RSSI = 52; if (s.anomalyType === 'power') s.values.POWER = 32; if (s.anomalyType === 'solar') s.values.BATTERY = 31; if (s.anomalyType === 'wheel') s.values.TORQUE = 34; if (s.anomalyType === 'process') s.values.CPU = 98; document.getElementById('hint').innerHTML = 'anomaly detected · locate the <span style="color:var(--danger)">red</span> signal'; pushAnomalyAlert(s); } } }
     function scheduleAnomaly() { setTimeout(() => { trySpawnAnomaly(); scheduleAnomaly(); }, 4000 + Math.random() * 6000); }
     setTimeout(() => { trySpawnAnomaly(); scheduleAnomaly(); }, 10000);
 
@@ -673,7 +919,6 @@
     setTimeout(scheduleFlare, 60000);
     setInterval(() => {
       const ticking = satellites.filter(s => s.anomaly && s.countdown > 0);
-      const impact = document.getElementById('impact');
       ticking.forEach(s => {
         s.countdown--;
         if (s.countdown === 0) {
@@ -682,13 +927,12 @@
           updateNetwork();
           document.getElementById('hint').textContent = 'satellite lost · signal unavailable';
           if (selected === s) document.getElementById('log').textContent = wasOrbit ? 'SIGNAL LOST · SATELLITE BELOW RECOVERY ALTITUDE' : 'SIGNAL LOST · SATELLITE UNRECOVERABLE';
+          pushAlert({ sat: s, title: `${satTag(s)} · SIGNAL LOST`, body: wasOrbit ? 'Satellite below recovery altitude.' : 'Satellite unrecoverable.', crit: true });
         } else if (selected === s) {
           document.getElementById('log').textContent = s.anomalyType === 'orbit' ? `ORBIT DECAY · IMPACT IN ${s.countdown}s` : `SATELLITE LOST IN ${s.countdown}s IF UNRESOLVED`;
         }
       });
-      const urgent = satellites.filter(s => s.anomaly && s.countdown > 0).sort((a, b) => a.countdown - b.countdown);
-      if (urgent.length) { impact.innerHTML = urgent.map(s => s.anomalyType === 'orbit' ? `IMPACT IN ${s.countdown}s` : `SAT ${String(s.id).padStart(3, '0')} LOST IN ${s.countdown}s`).join('<br>'); impact.classList.add('show'); }
-      else impact.classList.remove('show');
+      updateAlerts();
     }, 1000);
   </script>
 </body>
