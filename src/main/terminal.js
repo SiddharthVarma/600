@@ -67,12 +67,17 @@ async function termType(prefix, cmd, run) {
   return true;
 }
 const fsw = s => `4.${8 + (s.id % 7)}.${s.id % 13}`; // each satellite always reports the same flight software version
+// Phones only (same test as the phone CSS): the terminal grows inside the scrolling panel instead of scrolling itself.
+const PHONE = matchMedia('(max-width: 600px) and (pointer: coarse)');
 export function termLine(html, cls = '') {
   const d = document.createElement('div');
   d.className = 'term-line ' + cls;
   d.innerHTML = html;
+  const panelEl = term.closest('.panel'),
+    pinned = panelEl.scrollTop > 0 && panelEl.scrollHeight - panelEl.scrollTop - panelEl.clientHeight < 80; // only once the player has scrolled down to it
   term.appendChild(d);
   term.scrollTop = term.scrollHeight;
+  if (PHONE.matches && pinned) panelEl.scrollTop = panelEl.scrollHeight; // already at the bottom: keep following new lines
   return d;
 }
 export function termPrompt(s) {

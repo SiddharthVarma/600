@@ -668,13 +668,22 @@ button.command:hover {
   }
 
   /* the side panel covers the alerts instead of the other way round */
+  /* On phones the panel scrolls as one page: it is as tall as the visible screen (iPhone Safari counts the area behind its
+     toolbar in 100%), keeps its scrolling to itself, and leaves room for the home bar. */
   .panel {
     z-index: 16;
+    height: 100%;
+    height: 100dvh;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(32px + env(safe-area-inset-bottom));
   }
 
   /* terminal files become thumb-sized tap targets (Apple's minimum is 44px) */
+  /* no scroll box inside the scrolling panel: iOS won't pass a swipe from an inner scroller up to the panel */
   .term {
-    height: 300px;
+    height: auto;
+    overflow: visible;
     font-size: 12px;
   }
 

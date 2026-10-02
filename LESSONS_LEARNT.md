@@ -278,6 +278,72 @@ That worked, but every change touched a giant file. A single typo stopped everyt
 
 ---
 
+## 18. Making it work on phones without changing the laptop at all
+
+**The goal:** fix the phone layout, which had alerts covering the screen, 18px tap targets and an unreadable title, with a hard rule that the laptop experience must not change by a single pixel.
+
+**How:**
+- Phone styles live in a CSS media query. Phone-specific React layout uses `matchMedia` through a small `usePhone()` hook.
+- **The leak found in review:** a width-only query (`max-width: 600px`) also matches laptops whose browser window is narrowed, split-screened or zoomed in (250% zoom on a 1440px laptop leaves about 576px). Those users would have got the phone layout.
+- **The fix:** `(max-width: 600px) and (pointer: coarse)`. "Coarse pointer" means a finger, so mice and trackpads never match, whatever the window size or zoom.
+
+**How it was proven:**
+- 57 laptop screenshots (4 window sizes, all 11 minigames) were taken from the old and new production builds and compared pixel by pixel. They were identical.
+- The 51-check behaviour test was also run against both builds.
+- To make screenshots comparable at all (see #20), randomness was seeded, the clock was paused and stepped by hand, and CSS animations were turned off.
+
+**Takeaway:** responsive design is about capabilities, not just screen width. And "I didn't break desktop" is a claim you can prove with deterministic before/after screenshot diffs.
+
+---
+
+## 19. Two iPhone Safari gotchas
+
+- **Auto-zoom on text boxes:** iOS Safari zooms the whole page when you tap an input whose font is smaller than 16px. The CPU Overload command box was 12px. **Fix:** 16px on phones only.
+- **`100vh` isn't the visible height:** on iOS Safari, `vh` includes the area behind the browser toolbars, so a window sized to 97vh can sit partly under the toolbar. **Fix:** dynamic viewport units (`97dvh`), with the `vh` line kept as a fallback for older browsers.
+
+**Takeaway:** mobile Safari has its own rules. Testing in a desktop browser's phone emulator won't show either problem, so check on a real device.
+
+---
+
+## 20. Making automated tests trustworthy (flaky tests)
+
+**Found while testing:** comparisons between two builds kept showing "differences" that weren't real.
+
+**Causes, all in the tests rather than the game:**
+- The dev server reloaded the page mid-test because a file had just been saved.
+- CSS animations and the canvas run on real time even under a fake test clock.
+- A check read "the top alert" while random everyday alerts kept arriving.
+- A countdown read "1:00" or "0:59" depending on when its once-a-second tick landed.
+
+**Fixes:**
+- Test against production builds, not the dev server.
+- Seed the random number generator, and pause the clock so it only moves when the test says so.
+- Turn animations off for screenshots.
+- Look for the expected alert rather than assuming its position.
+- Normalise values that depend on timing.
+- Run the *baseline* twice: if the same build differs from itself, the test is flaky, not the change.
+
+**Takeaway:** a test that sometimes fails on unchanged code is worse than no test. Control the sources of nondeterminism (time, randomness, animation, ordering) before trusting a diff.
+
+---
+
+## 21. Security check: secrets, cost exposure, and what was public
+
+**The check:**
+- Scanned every file **and the full git history** for API keys, tokens, passwords and private keys. Found none.
+- The game makes no network calls.
+- The site is purely static on Cloudflare Pages: no server functions, and free unlimited static bandwidth. A traffic spike can't cost money.
+- CI has a $0 spending limit by default.
+- `npm audit` on shipped dependencies: 0 vulnerabilities.
+
+**What was actually exposed:** before the Vite build (#17), Cloudflare published the **whole repository folder**, so the README, this file, `scripts/` and the CI config were all publicly downloadable from the site. Nothing secret, but more than intended. With a build step, only the built `dist/` folder is deployed.
+
+**Minor, not fixed:** the game accepts `postMessage` results from any window. Someone embedding the site could fake a win, but only in their own browser, since there's no server or shared state.
+
+**Takeaway:** check git history, not just current files, for secrets. Know exactly what your deploy publishes. A build output folder is a security boundary as well as a performance one.
+
+---
+
 ## Checked and fine
 
 - **Events can no longer freeze the game:** this used to be a known issue (an event window that failed to load had no way out). Every event window now has a × that aborts back to the ticket (#15), and a ticket that runs out resolves the event, so an event always ends.
