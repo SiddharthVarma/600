@@ -214,6 +214,34 @@ Each entry ends with a one-line takeaway for explaining it in an interview.
 
 ---
 
+## 15. No way back out of an event minigame
+
+**Found while testing:** once a solar flare's minigame opened, there was no way to back out of it and return later.
+
+**Root cause:** event windows were built as one-way trips: open the minigame, wait for its result. The event only had two states, "waiting" and "running", and nothing could move it from running back to waiting.
+
+**Fix:** event windows got a × that **aborts** the attempt. The event goes back to waiting, its countdown resumes, the CRITICAL ticket shows the countdown again, and clicking it allows a fresh try. The terminal prints "procedure aborted", for satellite repairs too. Event minigames also now load hidden behind the emergency log, using the same load → reveal → start handshake as satellite repairs (#3), so they appear instantly.
+
+**Why it works:** "abort" is now an explicit transition back to the earlier state, so leaving a window can't strand the event. Sharing one launcher between satellite repairs and events means both get the same loading behaviour and the same exit.
+
+**Takeaway:** every modal needs an exit, and every exit needs a defined state to return to. Draw the state machine and check that each state has a way out.
+
+---
+
+## 16. A new emergency opened on the previous emergency's terminal
+
+**Found while testing:** clicking the NORAD debris ticket showed the terminal with no scripts to click. It was still showing the log from the gamma-ray burst handled earlier.
+
+**Root cause:** the terminal started a fresh session only when it switched from a satellite to the ops computer. Going from one emergency to another counted as "already on the ops computer", so the old session stayed, and its file list had scrolled out of view above the long log.
+
+**Fix:** the terminal remembers which emergency its session belongs to. A different emergency gets a fresh session. The same emergency (after an abort) keeps its history but lists the scripts again, so they're always on screen.
+
+**Why it works:** the session is tied to the thing it's for (this event), not just the kind of thing (any event).
+
+**Takeaway:** when caching or reusing state, key it on the specific item it belongs to, not on a category it shares with other items.
+
+---
+
 ## Checked and fine
 
 - **Case-sensitive asset paths:** macOS ignores upper/lower case in file names, but Cloudflare's Linux servers don't. Every asset reference was checked against the exact file name on disk, and all of them are committed to git.

@@ -579,7 +579,7 @@ function Process() {
     const tone = { muted: '#7b8580', warn: 'var(--yellow)', err: 'var(--red)', ok: 'var(--green)' };
     return <>
         <Header title="CPU OVERLOAD" sub={`CLUSTER LOAD ${load}% · ${purgedRunaways}/${RUNAWAY} RUNAWAYS PURGED`} />
-        <p className="instructions">Runaway processes are pinning CPU on satellites in this cluster. Purge them — but high CPU from a scheduled task is normal, so leave those alone. Click lines or type IDs, then purge.</p>
+        <p className="instructions">Some satellites in this cluster have runaway processes maxing out their CPU. Purge them — but heavy load from a task in schedule.cfg is expected, so leave those running. Click lines or type IDs, then purge.</p>
         <div style={{ maxWidth: 720, border: '1px solid #262d2b', background: '#070909', padding: '8px 12px', fontSize: 12, lineHeight: 1.6 }}>
             <div style={{ color: '#7b8580' }}>{prompt} cat schedule.cfg</div>
             <div style={{ color: 'var(--yellow)', marginBottom: 4 }}>scheduled now: {setup.scheduled.join(', ')}</div>
