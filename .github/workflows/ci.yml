@@ -2,7 +2,7 @@ name: CI Checks
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, dev, refactor]
   pull_request:
     branches: [main, dev]
 
@@ -14,26 +14,15 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
 
-      - name: Check react-app.jsx syntax (JSX-aware)
-        run: npx --yes esbuild react-app.jsx --outfile=/dev/null
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Check index.html inline script syntax
-        run: |
-          python3 - <<'PY'
-          import re, subprocess, sys
-          html = open('index.html', encoding='utf-8').read()
-          m = re.search(r'<script>(.*?)</script>', html, re.S)
-          if not m:
-              print('no inline <script> block found in index.html')
-              sys.exit(1)
-          proc = subprocess.run(['node', '--check'], input=m.group(1), capture_output=True, text=True)
-          if proc.returncode != 0:
-              print(proc.stderr)
-              sys.exit(1)
-          print('index.html inline script: OK')
-          PY
+      # The production build compiles every module, so a syntax error or a missing export fails here
+      - name: Build
+        run: npm run build
 
       - name: Check asset references exist
         run: python3 scripts/check_assets.py

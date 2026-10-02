@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Verify every image asset referenced in index.html / react-app.jsx actually
-exists on disk. Run from the repo root (or anywhere -- paths are resolved
+"""Verify every image asset referenced in the source (src/) actually exists in
+public/, which is copied to the site as-is. Run from the repo root (or anywhere -- paths are resolved
 relative to this script's parent directory).
 
 Handles two patterns found in this codebase:
@@ -19,7 +19,8 @@ import sys
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-FILES = ['index.html', 'react-app.jsx']
+PUBLIC = ROOT / 'public'
+FILES = sorted(str(p.relative_to(ROOT)) for p in (ROOT / 'src').rglob('*') if p.suffix in ('.js', '.jsx'))
 IMG_EXT = r'(?:png|webp|jpe?g|gif|svg)'
 
 img_literal_re = re.compile(r"""['"`]([\w./-]+\.""" + IMG_EXT + r""")['"`]""")
@@ -40,12 +41,12 @@ for fname in FILES:
         if '/' in path:
             # full/relative literal path -- check directly
             checked.add(path)
-            if not (ROOT / path).exists():
+            if not (PUBLIC / path).exists():
                 missing.append((fname, path))
         else:
             # bare filename -- try repo root and every declared folder prefix
             candidates = [path] + [p + path for p in prefixes]
-            if any((ROOT / c).exists() for c in candidates):
+            if any((PUBLIC / c).exists() for c in candidates):
                 checked.update(candidates)
             else:
                 key = (fname, path)

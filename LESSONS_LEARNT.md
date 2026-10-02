@@ -43,7 +43,7 @@ Each entry ends with a one-line takeaway for explaining it in an interview.
 
 **Why it works:** the slow part (download and compile) overlaps with something the player is already watching. The handshake means no repair time ticks away while the game is hidden. Measured with a simulated 4-second CDN delay, 2 of the 4 seconds were hidden. On a normal connection the game appears 0.1 s after the window opens.
 
-**Next step:** compile the JSX once at deploy time with esbuild and use React's production build. Babel's 3.1 MB download goes away entirely.
+**Follow-up:** the JSX is now compiled once at deploy time and React ships as its production build, so Babel's 3.1 MB download is gone entirely (see #17).
 
 **Takeaway:** hide unavoidable latency behind work the user is already watching, but never let hidden work spend the user's time. Measure before and after.
 
@@ -242,13 +242,49 @@ Each entry ends with a one-line takeaway for explaining it in an interview.
 
 ---
 
+## 17. Splitting two 1,200-line files into modules, with a build step
+
+**The starting point:** the whole game lived in two files.
+- `index.html` held about 1,200 lines: the page, all the CSS, and the main script with dozens of one-line functions and ~20 shared variables.
+- `react-app.jsx` held all 13 minigames.
+
+That worked, but every change touched a giant file. A single typo stopped everything: a misplaced `//` comment broke the main script twice in one week. On top of that, every minigame compiled itself in the browser with Babel downloaded from a CDN (#3), and cache busting meant bumping `?v=` by hand (#1).
+
+**What was done:**
+- **Vite** builds the site. Cloudflare Pages runs `npm run build` on every push and serves the `dist/` folder.
+- **The minigames** became one file per game under `src/repair/`, plus shared pieces (frame, header, helpers, game catalog). A script cut the file at each top-level function and worked out each file's imports from what it actually uses.
+- **The main page** became modules under `src/main/`, one per feature: constellation, side panel, terminal, minigame launcher, alerts, anomalies, and an `events/` folder.
+  - Splitting it by hand risked breaking references, so a script used a real JavaScript parser (acorn) to assign each top-level statement to a module and to generate imports and exports.
+  - It also reported every place one module would write another module's variable. ES module imports are read-only, so those writes have to change.
+- **Shared state:**
+  - The three values several modules both read and change (the open satellite and the crosshair targets) moved into one small `state.js`.
+  - The relaunch button now calls each module's own reset function instead of reaching into its variables.
+- **Console hooks:** module code doesn't put anything on `window`, so the console commands used for testing (`triggerFlare()`, `activeEvent`, …) are exposed deliberately, in one clearly marked block.
+- **Tooling:**
+  - Prettier reformatted the one-liners into readable code.
+  - ESLint confirmed there were zero undefined names across all modules.
+  - CI now runs the real production build, so a syntax error or a missing export fails before deploy.
+
+**How behaviour was proven unchanged:** one regression script ran 51 checks against the old version (an untouched checkout of the previous branch) and the new build side by side. It covered repairs through the terminal, alerts and crosshairs, all three celestial events, the creature, relaunch, every minigame rendering, and a bot solving CPU Overload. Result: **51 checks, 0 differences**, and no errors in either.
+
+**What it bought:**
+- Each minigame now opens in about 0.03 s, down from 0.3–1 s, and from up to 10 s when the CDN was slow.
+- About 4.3 MB of CDN downloads per minigame became one 200 KB bundle (66 KB compressed).
+- There is no dependency on an outside CDN at runtime.
+- Cache busting is automatic, because built files get content hashes in their names.
+- `index.html` went from 1,213 lines to 64.
+
+**Takeaway:** refactor a working prototype with tools, not by hand. A parser-driven split doesn't miss a reference. A linter proves nothing is undefined. And the same behavioural tests run against old and new builds prove nothing changed. That last part is what makes a big refactor safe to ship.
+
+---
+
 ## Checked and fine
 
+- **Events can no longer freeze the game:** this used to be a known issue (an event window that failed to load had no way out). Every event window now has a × that aborts back to the ticket (#15), and a ticket that runs out resolves the event, so an event always ends.
 - **Case-sensitive asset paths:** macOS ignores upper/lower case in file names, but Cloudflare's Linux servers don't. Every asset reference was checked against the exact file name on disk, and all of them are committed to git.
-- **Babel 8:** `react.html` doesn't pin Babel's version, so a future major release would load automatically. Babel 8 was tested against all the minigames, and they compile and run fine. Pinning versions is still on the to-do list.
+- **Babel 8:** before the build step, `react.html` loaded an unpinned Babel from a CDN, so a future major release would have loaded automatically. Babel 8 was tested against all the minigames and they compiled fine. Since #17 there is no Babel or CDN at runtime, and React's version is pinned in `package.json`.
 
 ## Known issues, not fixed yet
 
-- **An event can freeze the game.** If an event's minigame fails to load or crashes, the event never ends: there's no close button, and clicks stay blocked. Proposed fix: a backup timer that ends the event after its length plus about 20 seconds.
 - **Debris can be won by switching tabs,** because it uses wall-clock time (see #5).
 - **Thermal and Power don't fit the repair window on small laptop screens,** so EXECUTE can be out of reach.
