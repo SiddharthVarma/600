@@ -679,6 +679,22 @@ button.command:hover {
     padding-bottom: calc(32px + env(safe-area-inset-bottom));
   }
 
+  /* iOS Safari often won't let a finger scroll an element that slides in with a CSS transform, so on phones the panel
+     simply appears instead of sliding in (laptops keep the slide) */
+  .panel,
+  .panel.open {
+    transform: none;
+    transition: none;
+  }
+
+  .panel {
+    visibility: hidden;
+  }
+
+  .panel.open {
+    visibility: visible;
+  }
+
   /* terminal files become thumb-sized tap targets (Apple's minimum is 44px) */
   /* no scroll box inside the scrolling panel: iOS won't pass a swipe from an inner scroller up to the panel */
   .term {
