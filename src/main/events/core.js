@@ -24,7 +24,7 @@ export let activeEvent = null,
   eventIncoming = false;
 export const eventActive = () => !!activeEvent && activeEvent.phase === 'running'; // a pending event's ticket doesn't lock anything
 // no new celestial event while one is live or on its way (a flare builds up for a few seconds before it has a ticket)
-export const eventBusy = () => !!activeEvent || eventIncoming;
+export const eventBusy = () => !!activeEvent || eventIncoming || state.intro;
 export function setEventIncoming(v) {
   eventIncoming = v;
 }

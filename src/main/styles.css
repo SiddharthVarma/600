@@ -570,6 +570,73 @@ button.command:hover {
   display: none;
 }
 
+/* SUDO, the onboard computer that walks a first-time player through their first fault */
+.sudo {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 26;
+  width: min(320px, calc(100vw - 24px));
+  padding: 10px 12px 12px;
+  border: 1px solid rgba(201, 255, 77, 0.5);
+  border-radius: 10px;
+  background: rgba(10, 13, 12, 0.97);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.6),
+    0 0 18px rgba(201, 255, 77, 0.1);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.55;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.3s,
+    left 0.45s cubic-bezier(0.22, 0.8, 0.2, 1),
+    top 0.45s cubic-bezier(0.22, 0.8, 0.2, 1);
+}
+
+.sudo.on {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sudo-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  color: var(--accent);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+}
+
+.sudo-skip {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+}
+
+.sudo-text {
+  min-height: 3em;
+}
+
+/* what SUDO is talking about */
+.sudo-spot {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  animation: sudo-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes sudo-pulse {
+  50% {
+    outline-color: rgba(201, 255, 77, 0.15);
+  }
+}
+
 /* the camera dive into a science request, over everything until it has opened */
 .dive {
   position: fixed;

@@ -1,5 +1,6 @@
 import { satellites } from './constellation.js';
 import { dive, diving } from './dive.js';
+import { state } from './state.js';
 import { fadeCloseModal, launcher, preload, reveal } from './launcher.js';
 import { touchScroll } from '../shared/touchscroll.js';
 
@@ -34,7 +35,8 @@ const hostSat = () => {
   const up = satellites.filter(s => !s.lost);
   return up[Math.floor(Math.random() * up.length)];
 };
-export function pushScience(kind) {
+export function pushScience(kind, force = false) {
+  if (state.intro && !force) return;
   // a new kind of request each time, while there's room
   const free = Object.keys(REQUESTS).filter(k => !waiting.some(r => r.kind === k));
   kind = REQUESTS[kind] ? kind : free[Math.floor(Math.random() * free.length)];

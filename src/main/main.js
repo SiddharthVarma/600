@@ -9,6 +9,7 @@ import { scheduleDebris, triggerDebris } from './events/debris.js';
 import { scheduleFlare, triggerFlare } from './events/flare.js';
 import { scheduleGRB, triggerGRB } from './events/grb.js';
 import { closeRepair, launchers, startIfReady } from './launcher.js';
+import { maybeStartIntro, replayIntro } from './intro.js';
 import { panel, renderSat } from './panel.js';
 import { closeScience, pushScience, resetScience, scheduleScience, scienceMessage } from './science.js';
 import { state } from './state.js';
@@ -150,10 +151,12 @@ window.addEventListener('message', e => {
     closeRepair();
   }
 });
+// a first-time player gets SUDO's walkthrough; random faults start a few seconds in either way (they wait while it runs)
+maybeStartIntro();
 setTimeout(() => {
   trySpawnAnomaly();
   scheduleAnomaly();
-}, 10000);
+}, 4000);
 document.querySelectorAll('[data-abort]').forEach(b => {
   b.onclick = abortEvent;
 });
@@ -174,7 +177,7 @@ firstEvent(triggerKraken, scheduleKraken, 240, 360);
 // the first science request comes within a minute or so; more follow every couple of minutes
 firstEvent(pushScience, scheduleScience, 30, 50);
 setInterval(() => {
-  const ticking = krakenLive() ? [] : satellites.filter(s => s.anomaly && s.countdown > 0);
+  const ticking = krakenLive() ? [] : satellites.filter(s => s.anomaly && s.countdown > 0 && !s.frozen); // frozen: the intro's first fault waits for the player
   ticking.forEach(s => {
     s.countdown--;
     if (s.countdown === 0) {
@@ -214,6 +217,7 @@ Object.assign(window, {
   trySpawnAnomaly,
   pushAnomalyAlert,
   pushScience,
+  replayIntro,
   renderSat,
   eventActive,
   point,
