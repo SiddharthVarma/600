@@ -1,6 +1,7 @@
 import { pushAlert, updateAlerts } from '../alerts.js';
 import { H, W, ctx, updateNetwork } from '../constellation.js';
 import { kraken, releaseSatellite, setTentacleState } from './creature.js';
+import { sunOut } from './sun.js';
 import { cancelPreload, closeRepair, fadeCloseModal, launcher, preload, reveal } from '../launcher.js';
 import { panel } from '../panel.js';
 import { state } from '../state.js';
@@ -256,6 +257,7 @@ export function resolveEvent(saved) {
   }
   activeEvent = null;
   setSunGlow(0);
+  sunOut();
   state.highlighted = state.highlighted.filter(s => !ev.sats.includes(s));
   updateAlerts();
   pushAlert({ title: log, body: hint.charAt(0).toUpperCase() + hint.slice(1) + '.', crit: !all });
@@ -323,6 +325,7 @@ export function resetEvents() {
   activeEvent = null;
   pulses = [];
   setSunGlow(0);
+  sunOut();
   ['grbModal', 'debrisModal', 'flareModal'].forEach(id => document.getElementById(id).classList.remove('show'));
   ['grbFrame', 'debrisFrame', 'flareFrame'].forEach(id => {
     document.getElementById(id).src = '';

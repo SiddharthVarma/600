@@ -503,21 +503,6 @@ button.command:hover {
   justify-self: start;
 }
 
-.flare-flash {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-  pointer-events: none;
-  opacity: 0;
-  background: linear-gradient(270deg, rgba(255, 248, 230, 0.6), rgba(255, 248, 230, 0) 70%);
-  transition: opacity 1.6s ease-out;
-}
-
-.flare-flash.on {
-  opacity: 1;
-  transition: opacity 0.15s ease-in;
-}
-
 .repair-frame {
   width: min(1100px, 97vw);
   height: min(860px, 97vh);
