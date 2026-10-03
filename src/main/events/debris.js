@@ -1,5 +1,5 @@
 import { satellites } from '../constellation.js';
-import { activeEvent, startEvent } from './core.js';
+import { eventBusy, startEvent } from './core.js';
 
 const DEBRIS_RING_SIZE = 60,
   DEBRIS_CLUSTER = 10;
@@ -22,7 +22,7 @@ export function scheduleDebris() {
   );
 }
 export function triggerDebris() {
-  if (activeEvent) return;
+  if (eventBusy()) return;
   const group = pickDebrisCluster();
   if (group) startEvent('debris', group);
 }

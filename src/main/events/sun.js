@@ -26,7 +26,17 @@ const LOOPS = [
   { a: Math.PI + 0.24, w: 0.13, h: 16, ph: 4 },
 ];
 const STREAK_BINS = 720;
-export const sun = { presence: 0, target: 0, last: 0, erupt: null, eruptOnArrival: false, sparks: [], flash: 0, canvas: document.createElement('canvas') };
+export const sun = {
+  presence: 0,
+  target: 0,
+  last: 0,
+  erupt: null,
+  eruptOnArrival: false,
+  hooks: null, // from sunIn: told when the eruption bursts, where its shock front is each frame, and when it's over
+  sparks: [],
+  flash: 0,
+  canvas: document.createElement('canvas'),
+};
 let SW = 0,
   SH = 0,
   simg = null,
@@ -160,7 +170,8 @@ function drawSurface(t) {
 }
 function startEruption(t) {
   // from the part of the limb facing the Earth (screen centre), so the blast heads for the constellation
-  sun.erupt = { t0: t, a: Math.atan2(SH / 2 - CY, SW / 2 - CX) + (Math.random() - 0.5) * 0.12, burst: false };
+  sun.erupt = { t0: t, a: Math.atan2(SH / 2 - CY, SW / 2 - CX) + (Math.random() - 0.5) * 0.12, burst: false, hooks: sun.hooks };
+  sun.hooks = null;
 }
 function drawEruption(t) {
   const ev = sun.erupt;
@@ -193,6 +204,13 @@ function drawEruption(t) {
   // the shock front: a bright arc racing outward toward the satellites, thinning as it spreads
   const rad = (e - 1.1) * 150 * speed,
     fade = Math.max(0, 1 - rad / (SW * 1.1));
+  // where the front is, in screen pixels: a circle of radius r around the burst, spanning ±span around direction a
+  const front = { x: ev.bx * SPIX, y: ev.by * SPIX, r: rad * SPIX, a: ev.a, span: 0.55 };
+  if (ev.hooks && !ev.aimed) {
+    ev.aimed = true;
+    ev.hooks.burst(front);
+  }
+  if (ev.hooks) ev.hooks.front(front);
   for (let k = -60; k <= 60; k++) {
     const aa = ev.a + (k / 60) * 0.55,
       edge = 1 - Math.abs(k) / 60,
@@ -206,7 +224,10 @@ function drawEruption(t) {
     if (edge > 0.4) spx(x - Math.cos(aa) * 2, y - Math.sin(aa) * 2, PAL[2], Math.round(90 * fade));
   }
   sun.flash = e < 1.6 ? 1 - (e - 1.1) / 0.5 : 0;
-  if (e > 6) sun.erupt = null;
+  if (e > 6) {
+    sun.erupt = null;
+    if (ev.hooks) ev.hooks.done();
+  }
 }
 function drawSparks(dt) {
   // the plume: sparks cool from white to red as they fly, with a dim trail
@@ -225,13 +246,17 @@ function drawSparks(dt) {
   });
 }
 
-export function sunIn() {
+export function sunIn(hooks = null) {
   sun.target = 1;
   sun.eruptOnArrival = true;
+  sun.hooks = hooks;
 }
 export function sunOut() {
   sun.target = 0;
   sun.eruptOnArrival = false;
+  // an eruption already under way still plays out, but no longer reports to anyone
+  sun.hooks = null;
+  if (sun.erupt) sun.erupt.hooks = null;
 }
 // drawn first, behind the rings, so satellites stay visible (and clickable) over the plasma
 export function drawSun(now) {

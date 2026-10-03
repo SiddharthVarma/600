@@ -123,8 +123,8 @@ export function draw(t) {
     }
     s.sx = px;
     s.sy = py;
-    const hot = s.anomaly;
-    ctx.globalAlpha = (s.rejoining ? 0.8 : 1) * ringAlpha * (s.anomalyType === 'flare' ? flareFlicker(t) : 1);
+    const hot = s.anomaly && !s.flarePending; // a flare satellite turns red when the shock front reaches it
+    ctx.globalAlpha = (s.rejoining ? 0.8 : 1) * ringAlpha * (hot && s.anomalyType === 'flare' ? flareFlicker(t) : 1);
     ctx.beginPath();
     ctx.arc(px, py, hot ? 3.6 : 1.5, 0, Math.PI * 2);
     ctx.fillStyle = hot

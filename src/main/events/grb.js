@@ -1,5 +1,5 @@
 import { satellites } from '../constellation.js';
-import { activeEvent, pulse, startEvent } from './core.js';
+import { eventBusy, pulse, startEvent } from './core.js';
 
 export function scheduleGRB() {
   setTimeout(
@@ -11,7 +11,7 @@ export function scheduleGRB() {
   );
 }
 export function triggerGRB() {
-  if (activeEvent) return;
+  if (eventBusy()) return;
   const pool = satellites.filter(s => !s.lost && !s.anomaly && !s.rejoining),
     picked = [];
   if (pool.length < 5) return;
