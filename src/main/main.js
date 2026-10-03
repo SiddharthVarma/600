@@ -22,6 +22,7 @@ document.getElementById('restartAll').onclick = () => {
     s.lost = false;
     s.rejoining = false;
     s.rejoinProgress = 0;
+    s.flarePending = false;
     s.values = { RSSI: 82, TEMPERATURE: 71, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 };
   });
   resetAnomalies();

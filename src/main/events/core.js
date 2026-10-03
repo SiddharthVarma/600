@@ -20,8 +20,14 @@ import {
 } from '../terminal.js';
 
 export let activeEvent = null,
-  pulses = [];
+  pulses = [],
+  eventIncoming = false;
 export const eventActive = () => !!activeEvent && activeEvent.phase === 'running'; // a pending event's ticket doesn't lock anything
+// no new celestial event while one is live or on its way (a flare builds up for a few seconds before it has a ticket)
+export const eventBusy = () => !!activeEvent || eventIncoming;
+export function setEventIncoming(v) {
+  eventIncoming = v;
+}
 
 // Celestial events. An event marks its satellites, plays its effect in the sky and posts a CRITICAL ticket with a
 // countdown. The player answers when ready: the ticket opens the ops computer in emergency/, the matching script
@@ -216,6 +222,7 @@ export function resolveEvent(saved) {
     });
   }
   ev.sats.forEach(s => {
+    s.flarePending = false;
     if (s.heldAt && !saved.has(s.id)) return;
     s.anomaly = false;
     s.anomalyType = null;
@@ -323,6 +330,7 @@ export function drawEventFx(t) {
 // Relaunch: no event, no effects, every event window closed.
 export function resetEvents() {
   activeEvent = null;
+  eventIncoming = false;
   pulses = [];
   setSunGlow(0);
   sunOut();
