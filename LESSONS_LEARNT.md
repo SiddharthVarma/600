@@ -1,7 +1,8 @@
 # Lessons learnt
 
-Problems found while play-testing Six Hundred, what caused them, how they were fixed, and why the fix works.
-Each entry ends with a one-line takeaway for explaining it in an interview.
+Problems found while play-testing Six Hundred, what caused them, how they were fixed, and why the fix works, plus the
+engineering practices and tools used to build it safely. Each entry ends with a one-line takeaway for explaining it in an
+interview.
 
 ---
 
@@ -371,6 +372,34 @@ So the browser received the swipe, nothing blocked it, the panel could scroll, a
 Laptops never run this code, and the pixel audit (#18) confirmed they're unchanged. The same scroller (now in `src/shared/`) also scrolls the minigame windows on phones. It leaves alone any drag that starts on a game board, so dragging the antenna or the solar array still plays the game.
 
 **Takeaway:** when a bug only appears on one device, stop guessing after the first miss and **instrument the real device**. Then reduce it by elimination: what works, what doesn't, one variable at a time. If the root cause is in the platform, build a narrow, well-scoped workaround around what you've *proven* works.
+
+---
+
+## 23. Practice: how every change is tested (regression suite, pixel audit, feature checks)
+
+The game has no unit tests. It's a canvas, iframes and timers, and most bugs live in how those interact. So changes are tested from the outside, the way a player uses the game, using three Playwright scripts that drive a real headless browser. They're run locally for now, not yet in the repo or CI.
+
+**1. Behaviour regression (`regress.py`, 51 checks).**
+- The script plays the game like a player:
+  - boot, and the console test hooks;
+  - click a satellite and run the procedure in the terminal; the minigame opens and the fix is reported;
+  - every celestial event: right ticket, crosshairs on the right satellites, wrong script rejected, right script accepted, abort and reopen, result and satellite count;
+  - the creature: tentacles out, zap, grab, take, retreat;
+  - relaunch resets everything;
+  - all 11 minigames render, and a bot solves CPU Overload;
+  - no JavaScript errors anywhere.
+- **The trick is that it runs twice,** against a build of the last commit and against the new build, and compares the two records line by line. Nothing needs hand-written expected values: the old version *is* the expected value. Any line that differs is either an intended change or a regression.
+- Values that are random by design (which satellite, exact timings) are reduced to what matters, e.g. "7 satellites pulsed" rather than which 7.
+
+**2. Pixel audit (`pixel_audit.py`, 57 screenshots).** The main screen at 4 window sizes and every minigame at 3, from old and new builds, compared pixel by pixel. It made "the laptop didn't change at all" (#18) provable instead of a feeling. To be repeatable it seeds randomness, pauses the clock, and turns off animations (#20).
+
+**3. Feature checks, when old vs new is *supposed* to differ.** Comparing against the old build can't test something new, like the pixel-art sun. So a new feature gets its own checks of the behaviour that matters: the sun is absent before a flare, *creeps* in (its edge measured moving 20 → 60 → 84 → 100 px, never jumping), erupts toward the Earth, survives an abort, creeps out after a win or a loss, and never appears for other events.
+
+**Triaging a failure, two real examples:**
+- **The test was wrong, not the game.** Two sun checks failed because they measured a 12px strip at the screen edge, which the sun crosses in one frame, so a smooth creep looked like a jump. The check was rewritten to measure where the sun's edge is. The code was never changed to satisfy the test.
+- **The difference was noise.** One regression line differed (alerts on screen just after relaunch), and it was the *old* build that had the extra alert. Re-running only that step 8 times on each build gave identical results: a random everyday alert had landed in the window. Classified as noise, not a regression.
+
+**Takeaway:** test the product the way it's used, compare against the last known-good version so the old build is the expected result, and when a check fails, first ask whether it measured the right thing, then whether the difference is real.
 
 ---
 
