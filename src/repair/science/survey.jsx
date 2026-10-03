@@ -4,6 +4,8 @@ import { BH, BW, ZOOM_TIME, drawZoom, makeSurvey } from './scenes.js';
 
 // Earth-observation request (penguins, whales, wildfires): the camera dives in, the player taps what they're asked to
 // find, and downlinks the survey. No timer; a wrong survey costs nothing.
+// the view never grows taller than the window leaves room for: header and instructions above, buttons and result below
+const FIT = `min(${BW * 4}px, calc((100vh - 340px) * ${BW / BH}))`;
 const SCALE = 4,
   MATCH = 7; // a mark within this many scene pixels of a target counts as finding it
 // after the main screen's dive the window opens inside the clouds, so its own zoom skips the Earth
@@ -146,7 +148,7 @@ export function Survey({ kind }) {
         onPointerDown={tap}
         style={{
           width: '100%',
-          maxWidth: BW * SCALE,
+          maxWidth: FIT,
           display: 'block',
           imageRendering: 'pixelated',
           border: '1px solid #34403a',

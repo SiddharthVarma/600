@@ -1,6 +1,9 @@
 import { satellites } from './constellation.js';
 import { dive, diving } from './dive.js';
 import { fadeCloseModal, launcher, preload, reveal } from './launcher.js';
+import { touchScroll } from '../shared/touchscroll.js';
+
+const PHONE = matchMedia('(max-width: 600px) and (pointer: coarse)');
 
 // Science requests: universities' hosted-payload proposals that arrive now and then. They wait, folded into one card in
 // the bottom left, until the player opens them; each opens its own window (a survey or a tracking job) and is done once
@@ -89,6 +92,11 @@ function card(cls, title, body) {
   c.querySelector('.alert-body').textContent = body;
   return c;
 }
+function ticket(r, arrived) {
+  const c = card('science-ticket' + (arrived ? ' arrived' : ''), 'HOSTED PAYLOAD PROPOSAL ACCEPTED', `${r.what} · ${r.uni}`);
+  c.onclick = () => openRequest(r);
+  return c;
+}
 function render(arrived = false) {
   el.replaceChildren();
   if (note) {
@@ -97,25 +105,44 @@ function render(arrived = false) {
     n.textContent = note;
     el.append(n);
   }
-  if (!waiting.length) return;
-  // opened up: one ticket per request, newest at the top
-  if (expanded)
-    [...waiting].reverse().forEach(r => {
-      const c = card('science-ticket', 'HOSTED PAYLOAD PROPOSAL ACCEPTED', `${r.what} · ${r.uni}`);
-      c.onclick = () => openRequest(r);
-      el.append(c);
-    });
-  // folded: one card standing for all of them
   const n = waiting.length,
-    summary = card(
-      'science-summary' + (arrived ? ' arrived' : ''),
-      n === 1 ? '1 SCIENCE REQUEST' : `${n} SCIENCE REQUESTS`,
-      expanded ? 'Hide requests' : 'Hosted payload proposals accepted · tap to view',
-    );
-  summary.querySelector('.alert-time').textContent = expanded ? '' : `${n} new`;
-  summary.onclick = () => {
-    expanded = !expanded;
+    newest = waiting[n - 1];
+  if (!n) return;
+  if (n === 1) {
+    // a single request is just its ticket: tap it to go
+    expanded = false;
+    el.append(ticket(newest, arrived));
+    return;
+  }
+  if (expanded) {
+    // fanned out: one ticket per request, newest at the top, then a pill to fold them back up
+    const list = document.createElement('div');
+    list.className = 'science-list';
+    [...waiting].reverse().forEach(r => list.append(ticket(r)));
+    if (PHONE.matches) touchScroll(list);
+    const less = document.createElement('button');
+    less.className = 'science-less';
+    less.textContent = 'show less';
+    less.onclick = () => {
+      expanded = false;
+      render();
+    };
+    el.append(list, less);
+    return;
+  }
+  // folded: a stack showing the newest request, with the count in a badge and the others peeking out underneath
+  const stack = card(
+    'science-stack' + (n === 2 ? ' two' : '') + (arrived ? ' arrived' : ''),
+    'SCIENCE REQUESTS',
+    `${newest.what} · ${newest.uni} · +${n - 1} more`,
+  );
+  const badge = document.createElement('span');
+  badge.className = 'science-badge';
+  badge.textContent = n;
+  stack.append(badge);
+  stack.onclick = () => {
+    expanded = true;
     render();
   };
-  el.append(summary);
+  el.append(stack);
 }

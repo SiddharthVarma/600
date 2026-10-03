@@ -5,15 +5,15 @@ export const SCIENCE = {
   penguins: {
     title: 'PENGUIN COLONY TRACKING',
     signal: 'EMPEROR PENGUINS · SEA ICE SURVEY',
-    text: "Emperor penguins breed on the sea ice, and their colonies stain it brown. Tap each colony to mark it, then downlink your survey to the University of Oxford. Grey rocks and icebergs aren't colonies.",
-    uni: 'University of Oxford',
+    text: "Penguin colonies show up as brown patches on the sea ice. Tap each colony to mark it, then downlink your survey to the University of Oxford. Grey rocks and icebergs aren't colonies.",
+    uni: 'Antarctic Survey',
     noun: ['colony', 'colonies'],
     earthAt: [118, 214],
     coords: '70.6°S 11.6°W',
   },
   whales: {
     title: 'WHALE POPULATION TRACKING',
-    signal: 'SOUTHERN RIGHT WHALES · OPEN OCEAN SURVEY',
+    signal: 'SOUTHERN BLUE WHALES · OPEN OCEAN SURVEY',
     text: "Tap each whale to mark it, then downlink your survey to the University of St Andrews. Watch for their blows. Boats, rocks and kelp don't count.",
     uni: 'University of St Andrews',
     noun: ['whale', 'whales'],
@@ -32,8 +32,8 @@ export const SCIENCE = {
   interstellar: {
     title: 'INTERSTELLAR OBJECT TRACKING',
     signal: 'OBJECT 2026 A1 · VISITOR FROM ANOTHER STAR',
-    text: "An object from another star is passing through. Keep it inside the telescope's reticle until all its data is recorded. The telescope can only turn so fast.",
-    uni: 'University of Hawaiʻi',
+    text: 'An extra-galactic object from streaking through our solar system! Keep it inside the reticle until all its data is recorded.',
+    uni: 'Instituto de Astrofísica de Canarias',
     coords: 'RA 16h 21m · DEC +12°',
   },
 };

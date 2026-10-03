@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, hudText, report } from './common.js';
 import { BH, BW, bay, makeBuffer, rng } from './scenes.js';
 
-// Interstellar object: keep a tumbling object from another star inside the telescope's reticle until all its data is
-// recorded. The telescope turns at a limited speed and the object gets livelier the longer you watch. No timer: it
-// stays in the field until you're done.
+// Interstellar object: keep a tumbling object from another star inside the reticle (which sits right on the pointer)
+// until all its data is recorded. It streaks across the field along one gentle curve; if it gets away before you're
+// done, the next sweep picks it up crossing back the other way, with the data so far kept. No timer, no fail.
+// the view never grows taller than the window leaves room for: header and instructions above, buttons and result below
+const FIT = `min(${BW * 4}px, calc((100vh - 340px) * ${BW / BH}))`;
 const SCALE = 4,
-  SLEW = 40, // scene pixels per second the telescope can turn
-  RECORD = 6, // % of the data recorded per second while locked
+  PASS = 18, // seconds for one streak across the field
+  RECORD = 7, // % of the data recorded per second while locked
   LOCK = 8; // how close (scene pixels) the reticle must be
 const mix = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
 
@@ -22,17 +24,19 @@ function makeSky(seed) {
       tw: r() * 10,
     })),
     gal: { x: 40 + r() * 160, y: 30 + r() * 90, a: r() * Math.PI },
-    path: [r() * 6, r() * 6, r() * 6, r() * 6],
+    r,
   };
 }
-function objectAt(sky, t) {
-  // it wanders the field on overlapping swings, speeding up as time goes on
-  const s = t * (1 + Math.min(0.5, t / 60)),
-    [a, b, c, d] = sky.path;
-  return {
-    x: BW / 2 + Math.sin(s * 0.31 + a) * 82 + Math.sin(s * 0.77 + b) * 22,
-    y: BH / 2 + Math.sin(s * 0.26 + c) * 44 + Math.sin(s * 0.93 + d) * 12,
-  };
+// one streak edge to edge, bowed into a single curve
+function makePass(r, fromLeft) {
+  const y0 = 20 + r() * (BH - 40),
+    y1 = 20 + r() * (BH - 40),
+    [x0, x1] = fromLeft ? [-10, BW + 10] : [BW + 10, -10];
+  return { x0, y0, x1, y1, cx: BW / 2, cy: (y0 + y1) / 2 + (r() - 0.5) * 100 };
+}
+function objectAt(p, s) {
+  const u = 1 - s;
+  return { x: u * u * p.x0 + 2 * u * s * p.cx + s * s * p.x1, y: u * u * p.y0 + 2 * u * s * p.cy + s * s * p.y1 };
 }
 function drawSky(B, sky, t) {
   const { fb, put } = B;
@@ -89,8 +93,7 @@ export function Tracking() {
   const [phase, setPhase] = useState('track'); // track → downlink → done
   const live = useRef({});
   live.current = { phase };
-  const aim = useRef({ x: BW / 2, y: BH / 2 }),
-    want = useRef({ x: BW / 2, y: BH / 2 });
+  const aim = useRef({ x: BW / 2, y: BH / 2 });
 
   useEffect(() => {
     const ctx = canvasRef.current.getContext('2d'),
@@ -103,6 +106,8 @@ export function Tracking() {
     const t0 = performance.now() / 1000;
     let raf,
       last = t0,
+      pass = makePass(sky.r, sky.r() < 0.5),
+      passStart = 0,
       data = 0,
       lastPoint = 0,
       sentAt = 0;
@@ -114,18 +119,14 @@ export function Tracking() {
         W = ctx.canvas.width,
         H = ctx.canvas.height;
       last = now;
-      // the telescope turns toward where you point, but only so fast
-      const a = aim.current,
-        dx = want.current.x - a.x,
-        dy = want.current.y - a.y,
-        d = Math.hypot(dx, dy);
-      if (d > 0 && phase === 'track') {
-        const k = Math.min(1, (SLEW * dt) / d);
-        a.x += dx * k;
-        a.y += dy * k;
+      const a = aim.current;
+      // the object got away: the next sweep picks it up crossing back the other way
+      if ((t - passStart) / PASS >= 1 && phase === 'track') {
+        pass = makePass(sky.r, pass.x0 > BW / 2);
+        passStart = t;
       }
       drawSky(B, sky, t);
-      const o = objectAt(sky, t),
+      const o = objectAt(pass, Math.min(1, (t - passStart) / PASS)),
         bright = drawObject(B, o, t),
         locked = phase === 'track' && Math.abs(o.x - a.x) < LOCK && Math.abs(o.y - a.y) < LOCK;
       if (locked) {
@@ -215,7 +216,7 @@ export function Tracking() {
 
   const point = e => {
     const r = e.currentTarget.getBoundingClientRect();
-    want.current = { x: ((e.clientX - r.left) / r.width) * BW, y: ((e.clientY - r.top) / r.height) * BH };
+    aim.current = { x: ((e.clientX - r.left) / r.width) * BW, y: ((e.clientY - r.top) / r.height) * BH };
   };
   return (
     <>
@@ -233,7 +234,7 @@ export function Tracking() {
         onPointerMove={point}
         style={{
           width: '100%',
-          maxWidth: BW * SCALE,
+          maxWidth: FIT,
           display: 'block',
           imageRendering: 'pixelated',
           border: '1px solid #34403a',

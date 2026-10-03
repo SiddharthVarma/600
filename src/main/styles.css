@@ -611,15 +611,96 @@ button.command:hover {
   color: var(--science);
 }
 
-.science-summary.arrived,
-.science-ticket {
+.science-card.arrived {
   animation: alert-in 0.45s cubic-bezier(0.22, 0.8, 0.2, 1);
 }
 
-.science-summary {
+/* the list scrolls, so its tickets fade up in place rather than slide in from off-screen */
+.science-list .science-ticket {
+  animation: science-in 0.25s ease-out;
+}
+
+@keyframes science-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* several requests fold into a stack: the other cards peek out underneath, the count sits in a badge */
+.science-stack {
+  margin-bottom: 11px;
   box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.55),
     0 0 16px rgba(85, 182, 255, 0.14);
+}
+
+.science-stack::before,
+.science-stack::after {
+  content: '';
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: -6px;
+  height: 12px;
+  border: 1px solid rgba(85, 182, 255, 0.35);
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  background: rgba(14, 17, 16, 0.96);
+  z-index: -1;
+}
+
+.science-stack::after {
+  left: 18px;
+  right: 18px;
+  bottom: -11px;
+  opacity: 0.6;
+}
+
+.science-stack.two::after {
+  display: none;
+}
+
+.science-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--science);
+  color: #061018;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+
+/* fanned out: capped at half the screen so it never runs into the anomaly alerts, scrolling inside if it must */
+.science-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 50vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  pointer-events: auto;
+  padding: 2px 0;
+}
+
+.science-less {
+  align-self: flex-start;
+  pointer-events: auto;
+  padding: 6px 12px;
+  border: 1px solid rgba(85, 182, 255, 0.4);
+  border-radius: 999px;
+  background: rgba(14, 17, 16, 0.96);
+  color: var(--science);
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  cursor: pointer;
 }
 
 .science-note {

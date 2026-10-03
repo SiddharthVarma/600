@@ -172,7 +172,7 @@ firstEvent(triggerFlare, scheduleFlare, 120, 240);
 firstEvent(triggerDebris, scheduleDebris, 120, 240);
 firstEvent(triggerKraken, scheduleKraken, 240, 360);
 // the first science request comes within a minute or so; more follow every couple of minutes
-firstEvent(pushScience, scheduleScience, 40, 70);
+firstEvent(pushScience, scheduleScience, 30, 50);
 setInterval(() => {
   const ticking = krakenLive() ? [] : satellites.filter(s => s.anomaly && s.countdown > 0);
   ticking.forEach(s => {
