@@ -1,5 +1,6 @@
 import { W, point, ringProgress, satellites } from '../constellation.js';
 import { activeEvent, setSunGlow, startEvent } from './core.js';
+import { sunIn } from './sun.js';
 
 const FLARE_SATS = 7;
 export function scheduleFlare() {
@@ -22,8 +23,6 @@ export function triggerFlare() {
   const picked = [];
   while (picked.length < FLARE_SATS) picked.push(sunlit.splice(Math.floor(Math.random() * sunlit.length), 1)[0]);
   startEvent('flare', picked);
-  const flash = document.getElementById('flareFlash');
-  flash.classList.add('on');
-  setTimeout(() => flash.classList.remove('on'), 180);
+  sunIn(); // the sun creeps in from the right and erupts once it has arrived
   setSunGlow(0.4);
 }

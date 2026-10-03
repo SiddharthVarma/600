@@ -395,3 +395,78 @@ input {
   outline: 2px solid var(--yellow);
   outline-offset: 5px;
 }
+
+/* ---- Phones (portrait) ----
+   Only narrow touch screens; laptops never match, so their layout is untouched. The window's header and instructions get
+   compact so the game itself gets the screen. */
+@media (max-width: 600px) and (pointer: coarse) {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .app {
+    padding: 8px 12px 12px;
+  }
+
+  .top {
+    flex-wrap: wrap;
+    gap: 2px 10px;
+    padding: 4px 44px 8px 0; /* room for the window's × */
+  }
+
+  .top .brand {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+  }
+
+  .top .eyebrow {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+  }
+
+  .board {
+    padding: 8px 2px;
+  }
+
+  .board > .eyebrow:first-child {
+    display: none;
+  }
+
+  .board h1 {
+    font-size: 19px;
+    margin: 2px 0;
+  }
+
+  .signal {
+    font-size: 10px;
+  }
+
+  .instructions {
+    font-size: 12px;
+    line-height: 1.45;
+    margin: 6px 0 8px;
+  }
+
+  .readout {
+    font-size: 15px;
+    margin: 6px 0;
+  }
+
+  .legend {
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    font-size: 10px;
+  }
+
+  .actions,
+  .success,
+  .failure {
+    margin-top: 8px;
+  }
+
+  .success,
+  .failure {
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+}

@@ -2,6 +2,7 @@ import { drawHighlight } from './alerts.js';
 import { ANOMALY_FAIL_WINDOW } from './anomalies.js';
 import { drawEventFx, flareFlicker } from './events/core.js';
 import { drawKraken } from './events/creature.js';
+import { drawSun, drawSunFlash } from './events/sun.js';
 import { cctx, chart } from './panel.js';
 import { state } from './state.js';
 
@@ -58,6 +59,7 @@ export function ringProgress(i, t) {
 }
 export function draw(t) {
   ctx.clearRect(0, 0, W, H);
+  drawSun(t);
   const slow = 1,
     unit = Math.min(W, H),
     cx = W * 0.5,
@@ -142,5 +144,6 @@ export function draw(t) {
   drawEventFx(t);
   drawKraken(t);
   drawHighlight(t);
+  drawSunFlash();
   requestAnimationFrame(draw);
 }

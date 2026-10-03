@@ -503,21 +503,6 @@ button.command:hover {
   justify-self: start;
 }
 
-.flare-flash {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-  pointer-events: none;
-  opacity: 0;
-  background: linear-gradient(270deg, rgba(255, 248, 230, 0.6), rgba(255, 248, 230, 0) 70%);
-  transition: opacity 1.6s ease-out;
-}
-
-.flare-flash.on {
-  opacity: 1;
-  transition: opacity 0.15s ease-in;
-}
-
 .repair-frame {
   width: min(1100px, 97vw);
   height: min(860px, 97vh);
@@ -576,5 +561,159 @@ button.command:hover {
   .panel {
     padding-left: 24px;
     padding-right: 24px;
+  }
+}
+
+.alerts-more,
+.alert-short {
+  display: none;
+}
+
+/* ---- Phones (portrait) ----
+   Everything below applies only to narrow touch screens. Laptops (mouse or trackpad) never match, however narrow the
+   window or high the browser zoom, so the laptop layout is untouched. */
+@media (max-width: 600px) and (pointer: coarse) {
+  .topline {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    top: 18px;
+    left: 16px;
+    right: 16px;
+  }
+
+  .brand {
+    font-size: 20px;
+    letter-spacing: 0.18em;
+  }
+
+  .signal {
+    font-size: 10px;
+    gap: 7px;
+  }
+
+  .alerts {
+    top: 74px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    gap: 6px;
+  }
+
+  .alert {
+    padding: 8px 56px 8px 10px;
+    border-radius: 8px;
+  }
+
+  .alert-head,
+  .alert-body,
+  .alert-x,
+  .alerts:not(.expanded) .alert.folded {
+    display: none;
+  }
+
+  .alert-title {
+    margin-top: 0;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .alert-short {
+    display: block;
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .alerts-more.show {
+    display: block;
+    align-self: flex-start;
+    pointer-events: auto;
+    padding: 6px 12px;
+    border: 1px solid #2b3230;
+    border-radius: 999px;
+    background: rgba(14, 17, 16, 0.96);
+    color: var(--muted);
+    font: inherit;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    cursor: pointer;
+  }
+
+  /* Minigame windows fill the visible screen on phones, pinned to the top. Centring them in a box that includes the area
+     behind Safari's toolbars pushed their bottom out of sight; dvh is the height actually visible (vh is the fallback). */
+  .repair-modal {
+    padding: 0;
+    place-items: start stretch;
+    bottom: auto;
+    height: 100%;
+    height: 100dvh;
+  }
+
+  .repair-frame {
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .repair-close {
+    top: 4px;
+    right: 6px;
+    padding: 6px 10px;
+    z-index: 1;
+  }
+
+  /* the side panel covers the alerts instead of the other way round */
+  /* On phones the panel scrolls as one page: it is as tall as the visible screen (iPhone Safari counts the area behind its
+     toolbar in 100%), keeps its scrolling to itself, and leaves room for the home bar. */
+  .panel {
+    z-index: 16;
+    height: 100%;
+    height: 100dvh;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(32px + env(safe-area-inset-bottom));
+  }
+
+  /* iOS Safari often won't let a finger scroll an element that slides in with a CSS transform, so on phones the panel
+     simply appears instead of sliding in (laptops keep the slide) */
+  .panel,
+  .panel.open {
+    transform: none;
+    transition: none;
+  }
+
+  .panel {
+    visibility: hidden;
+  }
+
+  .panel.open {
+    visibility: visible;
+  }
+
+  /* terminal files become thumb-sized tap targets (Apple's minimum is 44px) */
+  /* no scroll box inside the scrolling panel: iOS won't pass a swipe from an inner scroller up to the panel */
+  .term {
+    height: auto;
+    overflow: visible;
+    font-size: 12px;
+  }
+
+  .term-file {
+    padding: 13px 0;
+  }
+
+  button,
+  .alert,
+  .term-file {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 }

@@ -1,7 +1,8 @@
 # Lessons learnt
 
-Problems found while play-testing Six Hundred, what caused them, how they were fixed, and why the fix works.
-Each entry ends with a one-line takeaway for explaining it in an interview.
+Problems found while play-testing Six Hundred, what caused them, how they were fixed, and why the fix works, plus the
+engineering practices and tools used to build it safely. Each entry ends with a one-line takeaway for explaining it in an
+interview.
 
 ---
 
@@ -275,6 +276,130 @@ That worked, but every change touched a giant file. A single typo stopped everyt
 - `index.html` went from 1,213 lines to 64.
 
 **Takeaway:** refactor a working prototype with tools, not by hand. A parser-driven split doesn't miss a reference. A linter proves nothing is undefined. And the same behavioural tests run against old and new builds prove nothing changed. That last part is what makes a big refactor safe to ship.
+
+---
+
+## 18. Making it work on phones without changing the laptop at all
+
+**The goal:** fix the phone layout, which had alerts covering the screen, 18px tap targets and an unreadable title, with a hard rule that the laptop experience must not change by a single pixel.
+
+**How:**
+- Phone styles live in a CSS media query. Phone-specific React layout uses `matchMedia` through a small `usePhone()` hook.
+- **The leak found in review:** a width-only query (`max-width: 600px`) also matches laptops whose browser window is narrowed, split-screened or zoomed in (250% zoom on a 1440px laptop leaves about 576px). Those users would have got the phone layout.
+- **The fix:** `(max-width: 600px) and (pointer: coarse)`. "Coarse pointer" means a finger, so mice and trackpads never match, whatever the window size or zoom.
+
+**How it was proven:**
+- 57 laptop screenshots (4 window sizes, all 11 minigames) were taken from the old and new production builds and compared pixel by pixel. They were identical.
+- The 51-check behaviour test was also run against both builds.
+- To make screenshots comparable at all (see #20), randomness was seeded, the clock was paused and stepped by hand, and CSS animations were turned off.
+
+**Takeaway:** responsive design is about capabilities, not just screen width. And "I didn't break desktop" is a claim you can prove with deterministic before/after screenshot diffs.
+
+---
+
+## 19. Two iPhone Safari gotchas
+
+- **Auto-zoom on text boxes:** iOS Safari zooms the whole page when you tap an input whose font is smaller than 16px. The CPU Overload command box was 12px. **Fix:** 16px on phones only.
+- **`100vh` isn't the visible height:** on iOS Safari, `vh` includes the area behind the browser toolbars, so a window sized to 97vh can sit partly under the toolbar. **Fix:** dynamic viewport units (`97dvh`), with the `vh` line kept as a fallback for older browsers. That wasn't enough: the window was still *centred* in a fixed box that included the toolbar area, so on the phone its bottom stayed out of sight. **Final fix:** on phones the minigame window is pinned to the top and fills exactly the visible screen.
+
+**Takeaway:** mobile Safari has its own rules. Testing in a desktop browser's phone emulator won't show either problem, so check on a real device.
+
+---
+
+## 20. Making automated tests trustworthy (flaky tests)
+
+**Found while testing:** comparisons between two builds kept showing "differences" that weren't real.
+
+**Causes, all in the tests rather than the game:**
+- The dev server reloaded the page mid-test because a file had just been saved.
+- CSS animations and the canvas run on real time even under a fake test clock.
+- A check read "the top alert" while random everyday alerts kept arriving.
+- A countdown read "1:00" or "0:59" depending on when its once-a-second tick landed.
+
+**Fixes:**
+- Test against production builds, not the dev server.
+- Seed the random number generator, and pause the clock so it only moves when the test says so.
+- Turn animations off for screenshots.
+- Look for the expected alert rather than assuming its position.
+- Normalise values that depend on timing.
+- Run the *baseline* twice: if the same build differs from itself, the test is flaky, not the change.
+
+**Takeaway:** a test that sometimes fails on unchanged code is worse than no test. Control the sources of nondeterminism (time, randomness, animation, ordering) before trusting a diff.
+
+---
+
+## 21. Security check: secrets, cost exposure, and what was public
+
+**The check:**
+- Scanned every file **and the full git history** for API keys, tokens, passwords and private keys. Found none.
+- The game makes no network calls.
+- The site is purely static on Cloudflare Pages: no server functions, and free unlimited static bandwidth. A traffic spike can't cost money.
+- CI has a $0 spending limit by default.
+- `npm audit` on shipped dependencies: 0 vulnerabilities.
+
+**What was actually exposed:** before the Vite build (#17), Cloudflare published the **whole repository folder**, so the README, this file, `scripts/` and the CI config were all publicly downloadable from the site. Nothing secret, but more than intended. With a build step, only the built `dist/` folder is deployed.
+
+**Minor, not fixed:** the game accepts `postMessage` results from any window. Someone embedding the site could fake a win, but only in their own browser, since there's no server or shared state.
+
+**Takeaway:** check git history, not just current files, for secrets. Know exactly what your deploy publishes. A build output folder is a security boundary as well as a performance one.
+
+---
+
+## 22. A bug I couldn't reproduce: the side panel wouldn't scroll on an iPhone
+
+**Found while testing:** on a real iPhone (Safari), the satellite side panel wouldn't scroll, so the terminal at its bottom was unreachable. Every test on the Mac passed, including Chrome's phone emulation and WebKit (Safari's engine) run headless.
+
+**What didn't work, three educated guesses, each deployed and tested on the phone:**
+- Removing the scroll box nested inside the panel.
+- Sizing the panel with the visible-height unit (`dvh`).
+- Removing the slide-in `transform` (a known WebKit quirk).
+
+None of them fixed it.
+
+**What did work: getting data from the real device.** Safari Web Inspector, connected to the iPhone by cable, ran small diagnostics live on the phone:
+- **The setup was fine:** the panel was open, on top, set to scroll, and its content was 456px taller than the screen.
+- **The touch was fine:** every touch landed inside the panel, and nothing on the page cancelled it.
+- **Code could scroll it:** setting `panel.scrollTop = 200` from code moved it instantly.
+- **Each remaining suspect was ruled out with a one-line live test:** the page-level `overflow: hidden`, the animated canvas behind the panel, and scroll containment.
+
+So the browser received the swipe, nothing blocked it, the panel could scroll, and iOS still didn't turn the swipe into scrolling. That's a WebKit quirk outside the page's control.
+
+**Fix:** on phones only (narrow + touch screen), the panel scrolls itself, using the one thing proven to work on the device.
+- Touch handlers set `scrollTop` as the finger drags.
+- A flick keeps gliding, with friction.
+- A touch that moves less than 6px still counts as a tap, so buttons and terminal files keep working.
+
+Laptops never run this code, and the pixel audit (#18) confirmed they're unchanged. The same scroller (now in `src/shared/`) also scrolls the minigame windows on phones. It leaves alone any drag that starts on a game board, so dragging the antenna or the solar array still plays the game.
+
+**Takeaway:** when a bug only appears on one device, stop guessing after the first miss and **instrument the real device**. Then reduce it by elimination: what works, what doesn't, one variable at a time. If the root cause is in the platform, build a narrow, well-scoped workaround around what you've *proven* works.
+
+---
+
+## 23. Practice: how every change is tested (regression suite, pixel audit, feature checks)
+
+The game has no unit tests. It's a canvas, iframes and timers, and most bugs live in how those interact. So changes are tested from the outside, the way a player uses the game, using three Playwright scripts that drive a real headless browser. They're run locally for now, not yet in the repo or CI.
+
+**1. Behaviour regression (`regress.py`, 51 checks).**
+- The script plays the game like a player:
+  - boot, and the console test hooks;
+  - click a satellite and run the procedure in the terminal; the minigame opens and the fix is reported;
+  - every celestial event: right ticket, crosshairs on the right satellites, wrong script rejected, right script accepted, abort and reopen, result and satellite count;
+  - the creature: tentacles out, zap, grab, take, retreat;
+  - relaunch resets everything;
+  - all 11 minigames render, and a bot solves CPU Overload;
+  - no JavaScript errors anywhere.
+- **The trick is that it runs twice,** against a build of the last commit and against the new build, and compares the two records line by line. Nothing needs hand-written expected values: the old version *is* the expected value. Any line that differs is either an intended change or a regression.
+- Values that are random by design (which satellite, exact timings) are reduced to what matters, e.g. "7 satellites pulsed" rather than which 7.
+
+**2. Pixel audit (`pixel_audit.py`, 57 screenshots).** The main screen at 4 window sizes and every minigame at 3, from old and new builds, compared pixel by pixel. It made "the laptop didn't change at all" (#18) provable instead of a feeling. To be repeatable it seeds randomness, pauses the clock, and turns off animations (#20).
+
+**3. Feature checks, when old vs new is *supposed* to differ.** Comparing against the old build can't test something new, like the pixel-art sun. So a new feature gets its own checks of the behaviour that matters: the sun is absent before a flare, *creeps* in (its edge measured moving 20 → 60 → 84 → 100 px, never jumping), erupts toward the Earth, survives an abort, creeps out after a win or a loss, and never appears for other events.
+
+**Triaging a failure, two real examples:**
+- **The test was wrong, not the game.** Two sun checks failed because they measured a 12px strip at the screen edge, which the sun crosses in one frame, so a smooth creep looked like a jump. The check was rewritten to measure where the sun's edge is. The code was never changed to satisfy the test.
+- **The difference was noise.** One regression line differed (alerts on screen just after relaunch), and it was the *old* build that had the extra alert. Re-running only that step 8 times on each build gave identical results: a random everyday alert had landed in the window. Classified as noise, not a regression.
+
+**Takeaway:** test the product the way it's used, compare against the last known-good version so the old build is the expected result, and when a check fails, first ask whether it measured the right thing, then whether the difference is real.
 
 ---
 
