@@ -14,6 +14,23 @@ export const games = [
   ['whales', 'WHALE TRACKING', 'Science · mark the whales'],
   ['wildfire', 'WILDFIRE TRACKING', 'Science · mark the fires'],
   ['interstellar', 'INTERSTELLAR OBJECT', 'Science · track the visitor'],
+  ['flamingos', 'FLAMINGO TRACKING', 'Science · mark the flocks'],
+  ['aircraft', 'FIGHTER JET COUNT', 'Science · mark the fighter jets'],
+  ['oil', 'OIL SPILL TRACKING', 'Science · mark the slicks'],
+  ['darkships', 'DARK SHIP TRACKING', 'Science · find the ships not broadcasting'],
+  ['supernova', 'SUPERNOVA SEARCH', 'Science · blink for the new star'],
+  ['exoplanet', 'EXOPLANET TRANSIT', 'Science · catch the dips'],
 ];
 // science requests open in the same window, framed as the science lab
-export const SCIENCE_TYPES = new Set(['penguins', 'whales', 'wildfire', 'interstellar']);
+export const SCIENCE_TYPES = new Set([
+  'penguins',
+  'whales',
+  'wildfire',
+  'interstellar',
+  'flamingos',
+  'aircraft',
+  'oil',
+  'darkships',
+  'supernova',
+  'exoplanet',
+]);

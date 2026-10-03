@@ -18,7 +18,8 @@ function score(marks, targets) {
   const pairs = [];
   marks.forEach((m, i) =>
     targets.forEach((tg, j) => {
-      const d = Math.hypot(m.x - tg.x, m.y - tg.y);
+      // a target with a shape (an oil slick) counts a mark anywhere on it; otherwise it's a point
+      const d = tg.hit ? (tg.hit(m.x, m.y) ? 0 : Infinity) : Math.hypot(m.x - tg.x, m.y - tg.y);
       if (d < MATCH) pairs.push([d, i, j]);
     }),
   );
@@ -78,7 +79,7 @@ export function Survey({ kind }) {
           // what you found (green), what you missed (red), and marks on nothing (red ×)
           ctx.lineWidth = 3;
           scene.targets.forEach((tg, j) => {
-            const r = 26 + Math.sin(t * 4) * 2;
+            const r = (tg.box || 26) + Math.sin(t * 4) * 2;
             ctx.strokeStyle = result.found.has(j) ? '#c9ff4d' : '#ff5964';
             ctx.strokeRect(tg.x * SCALE - r / 2, tg.y * SCALE - r / 2, r, r);
           });
@@ -95,7 +96,7 @@ export function Survey({ kind }) {
           });
         }
         brackets(ctx);
-        hudText(ctx, ir ? 'THERMAL IR' : 'VISIBLE', 'left', 'top');
+        hudText(ctx, scene.toggle ? scene.toggle[ir ? 'on' : 'off'] : 'VISIBLE', 'left', 'top');
         hudText(ctx, info.coords, 'right', 'top');
         hudText(ctx, '0.5 m/px', 'left', 'bottom', 'rgba(201,255,77,.6)');
         if (phase === 'downlink') {
@@ -158,9 +159,9 @@ export function Survey({ kind }) {
         }}
       />
       <div className="actions" style={{ alignItems: 'center' }}>
-        {scene.ir && (
+        {scene.toggle && (
           <button className="action" onClick={() => setIr(!ir)}>
-            THERMAL IR: {ir ? 'ON' : 'OFF'}
+            {scene.toggle.button}: {ir ? 'ON' : 'OFF'}
           </button>
         )}
         <span className="eyebrow">{marks.length ? `${marks.length} MARKED` : 'TAP TO MARK'}</span>
@@ -182,7 +183,7 @@ export function Survey({ kind }) {
       </div>
       {phase === 'done' && (
         <div className={perfect ? 'success' : 'failure'} style={perfect ? {} : { color: 'var(--yellow)', borderColor: 'var(--yellow)' }}>
-          {info.uni.toUpperCase()} RECEIVED YOUR SURVEY ·{' '}
+          {info.uni.toUpperCase()} RECEIVED YOUR DATA ·{' '}
           {perfect
             ? `ALL ${plural(total, info.noun).toUpperCase()} FOUND`
             : `YOU FOUND ${found} OF ${plural(total, info.noun).toUpperCase()}`}
