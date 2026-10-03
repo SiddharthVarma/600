@@ -403,6 +403,83 @@ The game has no unit tests. It's a canvas, iframes and timers, and most bugs liv
 
 ---
 
+## 24. Practice: procedurally generated scenes (seeded noise, dithering, spaced placement)
+
+Every science request draws a fresh scene: penguin colonies on sea ice, whales, wildfires, flamingo lakes, airbases, oil spills, dark fishing fleets, a supernova field, an exoplanet's light curve. The pixel-art sun during a solar flare uses the same techniques. None of it uses a library. It's about 20 lines of maths, hand-written, plus a renderer per scene.
+
+**The short answer, if asked "how did you generate it?":**
+> Seeded value noise summed over several octaves (fractal Brownian motion) for the terrain, quantised into a small fixed palette with ordered (Bayer) dithering for the pixel-art look, and rejection sampling with a minimum distance (a cheap version of Poisson-disc sampling) to place things. I chose those because they're deterministic (the same seed gives the same scene, so tests reproduce), dependency-free, fast enough at low resolution to run every frame, and the spacing guarantees a fair puzzle: targets never overlap decoys.
+
+**The pieces, and why each one:**
+- **A seeded random number generator (mulberry32).** A 32-bit generator in a few lines: each call scrambles a counter with multiplies and shifts. `Math.random()` can't be seeded, and a seed means a scene can be regenerated exactly. That made the screenshot and test runs repeatable (#20).
+- **Value noise.** A hash gives a pseudo-random value at every integer grid point. The classic shader hash, `fract(sin(x·127.1 + y·311.7) · 43758.5453)`, is used here. Between grid points the value is blended with a smoothstep curve, 3t² − 2t³, so there are no visible creases.
+  - **Why value noise rather than Perlin or simplex:** Perlin (gradient) noise is smoother and has fewer grid artefacts, and simplex scales better to 3D and beyond. At 240×150 pixel art the difference is invisible, and value noise is about 15 lines.
+- **Fractal Brownian motion (fBm).** Several layers ("octaves") of noise are summed, each at double the frequency and half the amplitude. Large shapes get small detail on top, the way coastlines, clouds and terrain look in nature.
+  - The ice-shelf edge, sea-ice texture, forest canopy, cloud decks and the sun's granulation are all fBm.
+  - Wrapping the grid coordinates (a period) makes it tile, which lets the ocean's swell animate seamlessly.
+- **Stretched and rotated coordinates.** Sampling noise as (x/9, y/1.4) stretches it into wind-blown ripples on the ice. Rotating coordinates into the wind's frame gives the radar view its wind streaks.
+- **Ordered (Bayer) dithering.** Each pixel's continuous value (brightness, depth, heat) is snapped to one of a few palette colours. A 4×4 threshold matrix nudges the rounding pixel by pixel, so gradients become patterned rather than banded. It's the classic retro look, and it keeps every scene in a deliberate palette.
+- **Placement by rejection sampling with a minimum distance.** Throw a random point; reject it if it's within *d* of anything already placed; repeat, with a cap on tries.
+  - It's a simple stand-in for Poisson-disc sampling. Bridson's algorithm would be more even and faster at scale, but for fewer than 30 objects the simple version is plenty.
+  - It guarantees colonies don't touch rocks, aircraft don't overlap, and every target can be marked.
+  - The aircraft scene places its targets first, so they always get room (a bug found by generating a dozen bases: one had only 2 targets).
+- **Implicit shapes with noisy edges.** A blob is "distance from centre ÷ radius < 1 + noise", which gives ragged colonies, rocks and oil slicks. An oil slick is an ellipse stretched along the wind and tapered downwind. Aircraft are point lists in their own frame, rotated into place, with a shadow offset.
+- **Real physics where it matters (the astronomy scenes):**
+  - *Exoplanet:*
+    - transit depth = (R_planet / R_star)²;
+    - orbit size from Kepler's third law, a³ = M·P² (AU, solar masses, years);
+    - transit duration ≈ (P/π)·asin(R_star / a);
+    - a limb-darkened dip floor;
+    - photometric noise approximated as Gaussian by summing four uniforms (Irwin–Hall);
+    - slow starspot modulation, and flares that decay exponentially;
+    - the result works the period out from the player's own taps (least squares), and the equilibrium temperature from T_star·√(R_star / 2a)·(1 − albedo)^¼.
+  - *Supernova:*
+    - every star is drawn through the same Gaussian blur (the telescope's point-spread function), while cosmic-ray hits are single sharp pixels; that difference is the clue the player learns;
+    - galaxies are a steep bulge (a Sérsic-style profile) plus an exponential disc;
+    - brightness is tone-mapped with 1 − e^(−kI);
+    - the distance shown uses Hubble's law, d = cz/H₀.
+  - *The sun:* limb darkening (brightness ∝ μ^0.4, where μ = √(1 − r²)), corona streamers from noise around the limb (computed once per frame into a table rather than per pixel), and particles for the eruption.
+
+**Takeaway:** procedural generation is a few small, well-understood building blocks (a seeded RNG, layered noise, quantisation, spaced sampling) chosen for the constraints at hand. Determinism is the one that pays off most, because it's what makes generated content testable.
+
+---
+
+## 25. Practice: bots that prove every minigame can be finished
+
+A minigame that looks right but can't be completed is the worst kind of bug. Players just think they're bad at it. So new games were checked by **bots that play them through the screen, like a person**: they read pixels and move the mouse, with no access to the game's internals.
+
+- **Exoplanet:** the bot reads the light-curve chart's pixels, finds columns sitting well below the median brightness (a dip), and taps there. It finished on both runs, and the derived numbers checked out against Kepler's law (e.g. a 2.01-day period and 0.029 AU orbit imply a 0.8 solar-mass star, the K-type host it had picked).
+- **Interstellar:** the bot finds the object by its colour, moves the mouse onto it each frame, and waits for the data bar to reach 100%.
+- **Surveys:** a bot marks, downlinks and reads the result line. Play-testing on a 13" laptop showed the survey window cut off at the bottom; measuring the layout at four window sizes confirmed it: the DOWNLINK button sat below the bottom of the window. The view now sizes itself to the window's height, and the same measurement confirmed the fix at every size.
+- **SUDO's walkthrough:** a bot plays the whole tutorial as a newcomer (#26) and found two real bugs: a crash before the first line appeared, and a way for the walkthrough to hang.
+
+**When a bot failed, the bot was usually wrong first:**
+- the interstellar bot chased the red reticle and the yellow light curve, because they matched its colour test;
+- it also clicked in the wrong place, because Playwright reports positions inside an iframe in page coordinates and the window offset was added twice.
+
+Each was fixed in the bot, never in the game, and confirmed by running the game itself.
+
+**Takeaway:** "it renders" isn't "it works". A black-box bot that plays through the real UI proves a game can be finished, and when a bot disagrees with the game, debug the bot before the game.
+
+---
+
+## 26. Practice: SUDO's walkthrough as a step machine that watches the game
+
+SUDO, the sarcastic onboard computer, walks a first-time player through their first fault, their first science request and a goodbye. It's built as a small state machine.
+
+- **Steps as data.** Each step has its line, an optional nudge (shown after 10 s of waiting), and either a NEXT target (for lines you read) or a condition (for things you do). Adding or reordering steps is editing a table, not rewriting logic.
+- **It watches; it doesn't wire in.** Rather than adding callbacks to the alerts, panel, terminal and launcher, the walkthrough checks the game's visible state four times a second: is this satellite highlighted? Is its panel open? Is the repair window showing? Is the fault cleared? The rest of the game knows almost nothing about it.
+- **One flag pauses the rest of the game.** A single `state.intro` flag is checked by the existing gates (random faults, science requests, celestial events), so nothing new appears mid-tutorial. The tutorial fault's countdown is frozen until its repair opens, so a slow reader can't lose it.
+- **The bug the bot found:** the walkthrough moved on when it *saw the repair window open*. A window that opened and closed between two checks (a quarter-second apart) was never seen, and the walkthrough hung on that step forever.
+  - **The fix:** move on from durable outcomes (the fault is cleared, or the satellite is lost), not just momentary ones (a window is showing).
+  - This is the polling version of the difference between level-triggered and edge-triggered events: when you sample state, trust conditions that persist, not transitions you might miss.
+- **Feedback changed the design.** The first version moved on by itself after a few seconds. Play-testing showed new players need time to read, so the lines you read now wait for NEXT, and only the "do this" steps move on by themselves.
+- **Shown once,** remembered in the browser's storage. Storage can be blocked (private browsing), so every read and write is wrapped and fails safely: the walkthrough just shows again.
+
+**Takeaway:** for a tutorial over an existing app, observe state rather than threading hooks through every module, and when you observe by sampling, make transitions depend on states that persist, not on moments you might sample past.
+
+---
+
 ## Checked and fine
 
 - **Events can no longer freeze the game:** this used to be a known issue (an event window that failed to load had no way out). Every event window now has a × that aborts back to the ticket (#15), and a ticket that runs out resolves the event, so an event always ends.

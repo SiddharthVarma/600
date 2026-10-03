@@ -6,9 +6,9 @@ import { state } from './state.js';
 // the right script for the fault hands over to the repair lab, any other is rejected.
 const SCRIPTS = {
   'align_array.py': 'solar',
-  'blind_acq.py': 'contact',
-  'burn_plan.py': 'orbit',
+  'contact_acq.py': 'contact',
   'cpu_purge.py': 'process',
+  'orbit_burn.py': 'orbit',
   'power_cycle.py': 'power',
   'thermal_reroute.py': 'thermal',
   'tracker_recal.py': 'startracker',
@@ -74,10 +74,16 @@ export function termLine(html, cls = '') {
   d.className = 'term-line ' + cls;
   d.innerHTML = html;
   const panelEl = term.closest('.panel'),
-    pinned = panelEl.scrollTop > 0 && panelEl.scrollHeight - panelEl.scrollTop - panelEl.clientHeight < 80; // only once the player has scrolled down to it
+    view = panelEl.getBoundingClientRect(),
+    was = term.getBoundingClientRect(),
+    watching = was.bottom > view.top && was.bottom < view.bottom + 40; // the terminal's last line is on screen
   term.appendChild(d);
   term.scrollTop = term.scrollHeight;
-  if (PHONE.matches && pinned) panelEl.scrollTop = panelEl.scrollHeight; // already at the bottom: keep following new lines
+  if (PHONE.matches && watching) {
+    // the player is reading the terminal: keep its newest line in view as it grows
+    const over = term.getBoundingClientRect().bottom - (view.bottom - 12);
+    if (over > 0) panelEl.scrollTop += over;
+  }
   return d;
 }
 export function termPrompt(s) {
