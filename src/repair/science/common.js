@@ -59,8 +59,8 @@ export const SCIENCE = {
   darkships: {
     title: 'DARK SHIP TRACKING',
     signal: 'ILLEGAL FISHING · AIS CROSS-CHECK',
-    text: "Ships broadcast their position, but some switch it off to fish illegally. Turn on the automatic identification system (AIS) overlay to see who's broadcasting, mark every ship without a blue marker, then downlink to the University of California, Santa Barbara.",
-    uni: 'University of California, Santa Barbara',
+    text: 'Ships broadcast their position every few seconds, but some switch it off to fish illegally. Watch for the pings and mark every ship that stays silent, then downlink to Global Fishing Watch.',
+    uni: 'Global Fishing Watch',
     noun: ['dark ship', 'dark ships'],
     earthAt: [130, 50],
     coords: '1.3°S 91.5°W',

@@ -1112,31 +1112,31 @@ function darkships(B, r) {
       ay: y - Math.sin(a) * lag + (r() - 0.5) * 2,
     });
   }
+  // each broadcasting ship pings on its own rhythm, every few seconds
+  ships.forEach(s => {
+    s.every = 2.5 + r() * 3.5;
+    s.ph = r() * s.every;
+  });
   return {
     targets: ships.filter(s => s.dark),
-    toggle: { button: 'AIS OVERLAY', on: 'VISIBLE + AIS', off: 'VISIBLE' },
-    frame(t, ais) {
+    frame(t) {
       ocean(put, n, t, glint);
       ships.forEach(s => ship(put, s.x, s.y, s.a, s.big));
-      if (!ais) return;
-      // each broadcasting ship's reported position: a blue diamond
+      // a ping: a ring spreading from the position the ship reported, fading as it goes. Silent ships never ping.
       ships.forEach(s => {
         if (s.dark) return;
-        for (const [dx, dy] of [
-          [0, -3],
-          [1, -2],
-          [2, -1],
-          [3, 0],
-          [2, 1],
-          [1, 2],
-          [0, 3],
-          [-1, 2],
-          [-2, 1],
-          [-3, 0],
-          [-2, -1],
-          [-1, -2],
-        ])
-          put(s.ax + dx, s.ay + dy, [85, 182, 255]);
+        const age = (t + s.ph) % s.every;
+        if (age > 1.4) return;
+        const rad = 1 + age * 6,
+          fade = 1 - age / 1.4,
+          steps = Math.ceil(rad * 7);
+        if (age < 0.25) put(s.ax, s.ay, [230, 255, 236]);
+        for (let k = 0; k < steps; k++) {
+          const a = (k / steps) * Math.PI * 2,
+            x = s.ax + Math.cos(a) * rad,
+            y = s.ay + Math.sin(a) * rad;
+          if (bay(Math.round(x), Math.round(y)) < fade + 0.15) put(x, y, [196, 255, 214], 0.85 * fade + 0.1);
+        }
       });
     },
   };

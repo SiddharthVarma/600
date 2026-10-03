@@ -17,7 +17,7 @@ const REQUESTS = {
   flamingos: { what: 'Flamingo Flock Tracking', uni: 'University of Nairobi', to: 'earth', earthAt: [205, 120] },
   aircraft: { what: 'Fighter Jet Count', uni: 'Ministry of Defence', to: 'earth', earthAt: [80, 185] },
   oil: { what: 'Oil Spill Tracking', uni: 'University of Southampton', to: 'earth', earthAt: [140, 190] },
-  darkships: { what: 'Dark Ship Tracking', uni: 'University of California, Santa Barbara', to: 'earth', earthAt: [130, 50] },
+  darkships: { what: 'Dark Ship Tracking', uni: 'Global Fishing Watch', to: 'earth', earthAt: [130, 50] },
   supernova: { what: 'Supernova Search', uni: 'University of Surrey', to: 'space' },
   exoplanet: { what: 'Exoplanet Transit Search', uni: 'University of Hawaiʻi', to: 'space' },
 };
