@@ -50,9 +50,12 @@ export function Survey({ kind }) {
 
   useEffect(() => {
     const ctx = canvasRef.current.getContext('2d'),
-      buf = document.createElement('canvas');
+      buf = document.createElement('canvas'),
+      refBuf = document.createElement('canvas');
     buf.width = BW;
     buf.height = BH;
+    refBuf.width = 40;
+    refBuf.height = 30;
     const t0 = performance.now() / 1000 - SKIP;
     let raf,
       reported = false;
@@ -62,7 +65,7 @@ export function Survey({ kind }) {
         { phase, ir, marks, result } = live.current;
       if (phase === 'zoom') {
         blit(ctx, buf, drawZoom(ctx, SCALE, earth, info.earthAt, scene, t));
-        hudText(ctx, 'ACQUIRING · ' + info.coords, 'left', 'top');
+        hudText(ctx, 'ACQUIRING · ' + (scene.coords || info.coords), 'left', 'top');
         if (t >= ZOOM_TIME) setPhase('look');
       } else {
         scene.frame(t, ir);
@@ -97,7 +100,27 @@ export function Survey({ kind }) {
         }
         brackets(ctx);
         hudText(ctx, scene.toggle ? scene.toggle[ir ? 'on' : 'off'] : 'VISIBLE', 'left', 'top');
-        hudText(ctx, info.coords, 'right', 'top');
+        hudText(ctx, scene.coords || info.coords, 'right', 'top');
+        if (scene.reference && phase !== 'done') {
+          // the target card: what you're looking for, top down, as it looks from up here
+          const W = ctx.canvas.width,
+            x0 = W - 196,
+            y0 = 46,
+            ref = scene.reference;
+          ctx.fillStyle = 'rgba(2,4,6,.85)';
+          ctx.fillRect(x0, y0, 180, 136);
+          ctx.strokeStyle = 'rgba(201,255,77,.55)';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x0, y0, 180, 136);
+          refBuf.getContext('2d').putImageData(ref.img, 0, 0);
+          ctx.drawImage(refBuf, x0 + 30, y0 + 22, 120, 90);
+          ctx.font = '13px "Courier New", monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillStyle = 'rgba(201,255,77,.85)';
+          ctx.fillText('TARGET', x0 + 90, y0 + 6);
+          ctx.fillText(ref.name, x0 + 90, y0 + 114);
+        }
         hudText(ctx, '0.5 m/px', 'left', 'bottom', 'rgba(201,255,77,.6)');
         if (phase === 'downlink') {
           const d = now - sentAt.current;
@@ -185,8 +208,8 @@ export function Survey({ kind }) {
         <div className={perfect ? 'success' : 'failure'} style={perfect ? {} : { color: 'var(--yellow)', borderColor: 'var(--yellow)' }}>
           {info.uni.toUpperCase()} RECEIVED YOUR DATA ·{' '}
           {perfect
-            ? `ALL ${plural(total, info.noun).toUpperCase()} FOUND`
-            : `YOU FOUND ${found} OF ${plural(total, info.noun).toUpperCase()}`}
+            ? `ALL ${plural(total, scene.noun || info.noun).toUpperCase()} FOUND`
+            : `YOU FOUND ${found} OF ${plural(total, scene.noun || info.noun).toUpperCase()}`}
           {wrong > 0 && ` · ${wrong} ${wrong === 1 ? 'MARK WAS' : 'MARKS WERE'} ON NOTHING`}
         </div>
       )}

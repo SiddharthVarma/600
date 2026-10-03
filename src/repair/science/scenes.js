@@ -784,155 +784,355 @@ function flamingos(B, r) {
   };
 }
 
-const GRASS = [
-  [58, 78, 44],
-  [70, 92, 52],
-  [86, 106, 60],
-  [104, 118, 70],
-];
-const TARMAC = [
-  [76, 78, 80],
-  [88, 90, 92],
-  [100, 102, 104],
-];
-// a parked aircraft seen from above, nose along a: fuselage, swept wings, tailplane. Its shadow falls to the lower
-// right; outline: just painted lines on the tarmac, with no body and no shadow.
-function plane(B, x, y, a, len, outline = false) {
-  const ca = Math.cos(a),
+// ---- Aircraft recognition: an airbase, one aircraft type to find among others ----
+
+// Each type as points in its own frame: s runs nose-ward along the body, q across it, both in units of its length L.
+// c: an optional detail colour for that point (canopy, spine, rotor).
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const AIRCRAFT = {
+  delta: {
+    name: 'DELTA-WING FIGHTER',
+    plural: 'delta-wing fighters',
+    L: 10,
+    color: [112, 118, 124],
+    pts(L) {
+      const p = [];
+      for (let s = -0.5; s <= 0.5; s += 0.05) p.push([s, 0, s > 0.1 && s < 0.45 ? [142, 148, 154] : null]);
+      // the delta, from just behind the cockpit to full span at the tail
+      for (let s = -0.45; s <= 0.08; s += 0.05) {
+        const half = ((0.08 - s) / 0.53) * 0.42;
+        for (let q = -half; q <= half; q += 0.05) p.push([s, q]);
+      }
+      // canards: little wings near the nose
+      for (const side of [-1, 1]) for (let q = 0.08; q <= 0.2; q += 0.05) p.push([0.28, side * q]);
+      p.push([0.38, 0, [40, 56, 72]]);
+      return p;
+    },
+  },
+  twintail: {
+    name: 'TWIN-TAIL FIGHTER',
+    plural: 'twin-tail fighters',
+    L: 11,
+    color: [124, 132, 140],
+    pts() {
+      const p = [];
+      for (let s = -0.5; s <= 0.5; s += 0.05) for (const q of [-0.04, 0.04]) p.push([s, q]); // a wide body: two engines
+      // swept wings with a straight trailing edge
+      for (let s = -0.18; s <= 0.14; s += 0.04) {
+        const half = 0.06 + clamp01((0.14 - s) / 0.24) * 0.42;
+        for (let q = -half; q <= half; q += 0.05) p.push([s, q]);
+      }
+      // separate tailplanes, and the two fins standing up between them
+      for (let s = -0.5; s <= -0.38; s += 0.04) {
+        const half = 0.06 + clamp01((-0.38 - s) / 0.12) * 0.2;
+        for (let q = -half; q <= half; q += 0.05) p.push([s, q]);
+      }
+      for (const side of [-1, 1]) for (let s = -0.46; s <= -0.3; s += 0.05) p.push([s, side * 0.1, [84, 90, 98]]);
+      p.push([0.36, 0, [40, 56, 72]]);
+      return p;
+    },
+  },
+  stealth: {
+    name: 'STEALTH BOMBER',
+    plural: 'stealth bombers',
+    L: 9,
+    color: [58, 60, 66],
+    pts() {
+      // a flying wing: no body, no tail; swept leading edge, sawtooth trailing edge
+      const p = [];
+      for (let q = -1; q <= 1; q += 0.04) {
+        const lead = 0.3 - Math.abs(q) * 0.5,
+          saw = Math.abs(q) % 0.33,
+          trail = -0.12 - Math.abs(q) * 0.2 + (saw < 0.165 ? saw : 0.33 - saw) * 0.9;
+        for (let s = Math.min(lead, trail); s <= lead; s += 0.05) p.push([s, q]);
+      }
+      p.push([0.22, 0, [86, 90, 98]]);
+      return p;
+    },
+  },
+  drone: {
+    name: 'RECONNAISSANCE DRONE',
+    plural: 'reconnaissance drones',
+    L: 8,
+    color: [184, 186, 188],
+    pts() {
+      const p = [];
+      for (let s = -0.5; s <= 0.5; s += 0.05) p.push([s, 0]);
+      // very long, thin, straight wings
+      for (let q = -1.05; q <= 1.05; q += 0.05) p.push([0.02, q]);
+      // a V-tail
+      for (let k = 0; k <= 0.25; k += 0.05) for (const side of [-1, 1]) p.push([-0.48 + k * 0.5, side * k]);
+      p.push([0.45, 0, [120, 124, 128]]);
+      return p;
+    },
+  },
+  heli: {
+    name: 'HELICOPTER',
+    plural: 'helicopters',
+    L: 10,
+    color: [92, 102, 70],
+    pts() {
+      const p = [];
+      // cabin, a thin tail boom, a tail rotor across the end
+      for (let s = -0.1; s <= 0.4; s += 0.05) for (let q = -0.1; q <= 0.1; q += 0.05) p.push([s, q]);
+      for (let s = -0.5; s <= -0.1; s += 0.05) p.push([s, 0]);
+      for (let q = -0.1; q <= 0.1; q += 0.05) p.push([-0.5, q]);
+      // the main rotor: two crossed blades over the cabin
+      for (let k = -0.55; k <= 0.55; k += 0.05) {
+        p.push([0.15 + k * 0.7, k * 0.7, [60, 64, 52]]);
+        p.push([0.15 + k * 0.7, -k * 0.7, [60, 64, 52]]);
+      }
+      p.push([0.33, 0, [40, 56, 72]]);
+      return p;
+    },
+  },
+  transport: {
+    name: 'TRANSPORT AIRCRAFT',
+    plural: 'transport aircraft',
+    L: 18,
+    color: [204, 206, 208],
+    pts() {
+      const p = [];
+      for (let s = -0.5; s <= 0.5; s += 0.03) for (const q of [-0.03, 0.03]) p.push([s, q]);
+      // long straight wings with four engine pods, a tailplane
+      for (let q = -0.5; q <= 0.5; q += 0.03) p.push([0.04 - Math.abs(q) * 0.12, q]);
+      for (const q of [-0.32, -0.18, 0.18, 0.32]) p.push([0.07 - Math.abs(q) * 0.12, q, [120, 122, 126]]);
+      for (let q = -0.18; q <= 0.18; q += 0.03) p.push([-0.46, q]);
+      p.push([0.47, 0, [60, 70, 84]]);
+      return p;
+    },
+  },
+};
+const MILITARY = ['delta', 'twintail', 'stealth', 'drone', 'heli'];
+// draw one aircraft (nose along a); outline: just paint on the ground, the right shape but no body and no shadow
+function drawAircraft(B, kind, x, y, a, L, outline = false) {
+  const T = AIRCRAFT[kind],
+    ca = Math.cos(a),
     sa = Math.sin(a),
-    pts = [];
-  const at = (s, q) => [x + ca * s - sa * q, y + sa * s + ca * q];
-  for (let s = -len / 2; s <= len / 2; s += 0.5) pts.push(at(s, 0));
-  const span = len * 0.9,
-    wing = len * 0.08;
-  for (let q = -span / 2; q <= span / 2; q += 0.5) pts.push(at(wing - Math.abs(q) * 0.35, q));
-  for (let q = -len * 0.2; q <= len * 0.2; q += 0.5) pts.push(at(-len / 2 + 1 - Math.abs(q) * 0.3, q));
-  if (outline) return pts.forEach(([px, py]) => bay(Math.round(px), Math.round(py)) < 0.6 && B.setBase(px, py, [150, 152, 148]));
-  pts.forEach(([px, py]) => B.setBase(px + 2, py + 1, [42, 44, 46]));
-  pts.forEach(([px, py]) => B.setBase(px, py, [204, 206, 208]));
-  for (let s = -len / 2 + 1; s < len / 2 - 1; s += 0.5) B.setBase(...at(s, 1), [176, 178, 180]);
-  B.setBase(...at(len / 2 - 1, 0), [60, 70, 84]); // cockpit
+    pts = T.pts(L).map(([s, q, c]) => [x + ca * s * L - sa * q * L, y + sa * s * L + ca * q * L, c]);
+  if (outline) return pts.forEach(([px, py]) => bay(Math.round(px), Math.round(py)) < 0.35 && B.setBase(px, py, [168, 170, 164]));
+  pts.forEach(([px, py]) => B.setBase(px + 2, py + 1, [30, 32, 34]));
+  pts.forEach(([px, py, c]) => B.setBase(px, py, c || T.color));
 }
-// a fighter jet from above, nose along a: short fuselage, delta wings swept back to the tail, twin fins; dark grey,
-// shadow to the lower right. outline: just painted lines on the tarmac, with no body and no shadow.
-function fighter(B, x, y, a, len, outline = false) {
-  const ca = Math.cos(a),
-    sa = Math.sin(a),
-    pts = [];
-  const at = (s, q) => [x + ca * s - sa * q, y + sa * s + ca * q];
-  for (let s = -len / 2; s <= len / 2; s += 0.5) pts.push(at(s, 0));
-  // the delta: half-span grows from nothing just behind the cockpit to full at the tail
-  const root = len * 0.15,
-    tail = -len / 2 + 1;
-  for (let s = tail; s <= root; s += 0.5) {
-    const half = ((root - s) / (root - tail)) * len * 0.42;
-    for (let q = -half; q <= half; q += 0.5) pts.push(at(s, q));
-  }
-  for (const side of [-1, 1]) for (let k = 0; k < 2; k++) pts.push(at(-len / 2 + k, side * 1.5)); // twin fins
-  if (outline) return pts.forEach(([px, py]) => bay(Math.round(px), Math.round(py)) < 0.35 && B.setBase(px, py, [150, 152, 148]));
-  pts.forEach(([px, py]) => B.setBase(px + 2, py + 1, [36, 38, 40]));
-  pts.forEach(([px, py]) => B.setBase(px, py, [112, 118, 124]));
-  for (let s = -len / 2 + 1; s < len / 2 - 1; s += 0.5) B.setBase(...at(s, 0), [142, 148, 154]); // the spine catches the light
-  B.setBase(...at(len / 2 - 1.5, 0), [40, 56, 72]); // canopy
+// a tiny buffer for the reference card's silhouette
+function makeMini(w, h) {
+  const img = new ImageData(w, h);
+  return {
+    img,
+    setBase(x, y, c) {
+      x = Math.round(x);
+      y = Math.round(y);
+      if (x < 0 || y < 0 || x >= w || y >= h) return;
+      const i = (y * w + x) * 4;
+      img.data[i] = c[0];
+      img.data[i + 1] = c[1];
+      img.data[i + 2] = c[2];
+      img.data[i + 3] = 255;
+    },
+  };
 }
+
+const BIOMES = [
+  {
+    name: 'TEMPERATE',
+    ground: [
+      [58, 78, 44],
+      [70, 92, 52],
+      [86, 106, 60],
+      [104, 118, 70],
+    ],
+    tarmac: [
+      [76, 78, 80],
+      [88, 90, 92],
+      [100, 102, 104],
+    ],
+    dots: [46, 66, 38],
+    coords: '52.6°N 1.2°E',
+  },
+  {
+    name: 'DESERT',
+    ground: [
+      [170, 144, 100],
+      [188, 162, 116],
+      [204, 180, 134],
+      [218, 196, 150],
+    ],
+    tarmac: [
+      [104, 100, 94],
+      [118, 114, 106],
+      [132, 128, 120],
+    ],
+    dots: [132, 116, 76],
+    coords: '24.6°N 54.5°E',
+  },
+  {
+    name: 'ARCTIC',
+    ground: [
+      [190, 200, 214],
+      [208, 218, 230],
+      [226, 233, 242],
+      [242, 246, 251],
+    ],
+    tarmac: [
+      [70, 72, 76],
+      [82, 84, 88],
+      [94, 96, 100],
+    ],
+    dots: [34, 58, 42],
+    coords: '69.3°N 16.1°E',
+  },
+];
+const CARD = { x: BW - 50, y: 0, w: 50, h: 46 }; // top-right corner, kept clear for the reference card
+
 function aircraft(B, r) {
   const { setBase, fb, base } = B,
     n = makeNoise(r() * 1000),
-    free = spacer();
+    free = spacer(),
+    biome = BIOMES[Math.floor(r() * BIOMES.length)];
+  // ground: the biome's palette, with scattered bushes, rocks or pines
   for (let y = 0; y < BH; y++)
-    for (let x = 0; x < BW; x++) setBase(x, y, pick(GRASS, n(x / 14, y / 14, 3) * 0.8 + n(x / 2, y / 2, 1) * 0.25, x, y));
-  const tar = (x, y) => setBase(x, y, pick(TARMAC, n(x / 3 + 20, y / 3, 1), x, y));
-  // the runway across the top, with centre-line dashes and threshold stripes; a taxiway below it; aprons below that
-  const ry = 22 + Math.floor(r() * 14);
-  for (let x = 6; x < BW - 6; x++)
-    for (let y = ry - 4; y <= ry + 4; y++) {
-      tar(x, y);
-      if (y === ry && x % 8 < 4 && x > 22 && x < BW - 22) setBase(x, y, [226, 226, 220]);
-      if ((x < 16 || x > BW - 17) && (y - ry) % 2 === 0 && Math.abs(y - ry) < 4) setBase(x, y, [226, 226, 220]);
+    for (let x = 0; x < BW; x++) {
+      setBase(x, y, pick(biome.ground, n(x / 14, y / 14, 3) * 0.8 + n(x / 2, y / 2, 1) * 0.25, x, y));
+      const h = Math.sin(x * 91.7 + y * 47.3) * 9871.3;
+      if (h - Math.floor(h) > 0.975) setBase(x, y, biome.dots);
     }
-  const ty = ry + 15;
-  for (let x = 14; x < BW - 14; x++) for (let y = ty - 1; y <= ty + 1; y++) tar(x, y);
-  for (const cxx of [30, BW / 2, BW - 30]) for (let y = ry + 4; y < ty; y++) for (let x = cxx - 1; x <= cxx + 1; x++) tar(x, y);
-  const aprons = [
-    [12, ty + 6, 100, BH - 10],
-    [124, ty + 6, BW - 40, BH - 10],
-  ];
+  const tar = (x, y) => setBase(x, y, pick(biome.tarmac, n(x / 3 + 20, y / 3, 1), x, y));
+  // runways: one, sometimes two crossing; each is a line through a point at an angle
+  const runways = [{ x: BW / 2, y: 26 + r() * 26, a: [0, 0.3, -0.3][Math.floor(r() * 3)] }];
+  if (r() < 0.35) runways.push({ x: BW * (0.3 + r() * 0.4), y: BH / 2, a: runways[0].a + 1.05 + r() * 0.3 });
+  const across = (rw, x, y) => -(x - rw.x) * Math.sin(rw.a) + (y - rw.y) * Math.cos(rw.a),
+    along = (rw, x, y) => (x - rw.x) * Math.cos(rw.a) + (y - rw.y) * Math.sin(rw.a);
+  for (let y = 0; y < BH; y++)
+    for (let x = 0; x < BW; x++)
+      runways.forEach((rw, k) => {
+        const q = across(rw, x, y),
+          s = along(rw, x, y);
+        if (Math.abs(q) <= 4) {
+          tar(x, y);
+          if (Math.abs(q) < 0.6 && ((s % 8) + 8) % 8 < 4) setBase(x, y, [226, 226, 220]); // centre line
+          if (biome.name === 'ARCTIC' && Math.abs(q) > 3.4) setBase(x, y, [236, 240, 246]); // ploughed snow at the edges
+        }
+        if (k === 0 && Math.abs(q - 15) <= 1) tar(x, y); // taxiway alongside the main runway
+      });
+  const clearOfRunways = (x, y, m) => runways.every(rw => Math.abs(across(rw, x, y)) > m);
+  // aprons: rectangles in open ground, each linked to the taxiway by a short road
+  const aprons = [];
+  for (let tries = 0; aprons.length < 3 && tries < 400; tries++) {
+    const w = 56 + r() * 30,
+      h = 28 + r() * 14,
+      x0 = 6 + r() * (BW - w - 12),
+      y0 = 6 + r() * (BH - h - 12);
+    const corners = [
+      [x0, y0],
+      [x0 + w, y0],
+      [x0, y0 + h],
+      [x0 + w, y0 + h],
+      [x0 + w / 2, y0 + h / 2],
+    ];
+    if (!corners.every(([x, y]) => clearOfRunways(x, y, 19))) continue;
+    if (aprons.some(([a0, b0, a1, b1]) => x0 < a1 + 6 && x0 + w > a0 - 6 && y0 < b1 + 6 && y0 + h > b0 - 6)) continue;
+    if (x0 + w > CARD.x - 2 && y0 < CARD.h + 2) continue;
+    aprons.push([x0, y0, x0 + w, y0 + h]);
+  }
   aprons.forEach(([x0, y0, x1, y1]) => {
-    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) tar(x, y);
-    for (let x = x0 + 8; x < x1; x += 16) for (let y = y0 + 2; y < y0 + 8; y++) setBase(x, y, [168, 150, 70]); // parking lines
+    for (let y = Math.round(y0); y < y1; y++) for (let x = Math.round(x0); x < x1; x++) tar(x, y);
+    // a road straight toward the main taxiway
+    const rw = runways[0],
+      cx = (x0 + x1) / 2,
+      cy = (y0 + y1) / 2,
+      d = across(rw, cx, cy) - 15,
+      nx = Math.sin(rw.a),
+      ny = -Math.cos(rw.a);
+    for (let k = 0; k < Math.abs(d); k++) for (let w = -1; w <= 1; w++) tar(cx + nx * k * Math.sign(d) + w, cy + ny * k * Math.sign(d));
   });
-  for (let x = 40; x < 60; x++) for (let y = ty + 1; y < ty + 6; y++) tar(x, y);
-  for (let x = 160; x < 180; x++) for (let y = ty + 1; y < ty + 6; y++) tar(x, y);
-  // hangars along the right edge, roofs lit from the top left
-  for (let k = 0; k < 3; k++) {
-    const hx = BW - 34,
-      hy = ty + 8 + k * 26;
-    if (hy + 18 > BH - 4) break;
-    for (let y = 0; y < 18; y++) for (let x = 0; x < 26; x++) setBase(hx + x + 2, hy + y + 2, [40, 44, 40]);
-    for (let y = 0; y < 18; y++) for (let x = 0; x < 26; x++) setBase(hx + x, hy + y, y < 9 ? [168, 168, 162] : [138, 138, 134]);
-    free(hx + 13, hy + 9, 20);
+  // a hangar on the edge of the first apron
+  if (aprons[0]) {
+    const [x0, y0] = aprons[0];
+    for (let y = 0; y < 12; y++) for (let x = 0; x < 18; x++) setBase(x0 + 4 + x + 2, y0 + 3 + y + 2, [40, 44, 40]);
+    for (let y = 0; y < 12; y++) for (let x = 0; x < 18; x++) setBase(x0 + 4 + x, y0 + 3 + y, y < 6 ? [168, 168, 162] : [138, 138, 134]);
+    free(x0 + 13, y0 + 9, 16);
   }
-  const onApron = (x, y, m = 7) => aprons.some(([x0, y0, x1, y1]) => x > x0 + m && x < x1 - m && y > y0 + m && y < y1 - m);
-  // decoys first, as they need the most room: big transport and tanker planes...
-  for (let k = 0, tries = 0; k < 2 && tries < 300; tries++) {
-    const x = r() * BW,
-      y = r() * BH;
-    if (!onApron(x, y, 11) || !free(x, y, 22)) continue;
-    plane(B, x, y, -Math.PI / 2 + (r() - 0.5) * 0.3, 17 + r() * 3);
-    k++;
-  }
-  // ...round fuel tanks out on the grass, each with its shadow...
-  const farm = { x: 20 + r() * 60, y: BH - 14 };
-  for (let k = 0; k < 3; k++) {
-    const x = farm.x + k * 9,
-      y = farm.y;
-    if (!free(x, y, 7)) continue;
-    blob(
-      x + 2,
-      y + 1,
-      3.2,
-      (px, py) => setBase(px, py, [38, 44, 34]),
-      () => 0.5,
-      0,
-    );
-    blob(
-      x,
-      y,
-      3.2,
-      (px, py, d) => setBase(px, py, d < 0.35 ? [236, 236, 230] : d < 0.8 ? [206, 208, 204] : [150, 152, 148]),
-      () => 0.5,
-      0,
-    );
-  }
-  // ...and fuel trucks on the aprons
-  for (let k = 0, tries = 0; k < 3 && tries < 200; tries++) {
+  // somewhere to park: spots on the aprons, plus pads in front of hardened shelters (concrete bunkers) on some bases
+  const slots = [];
+  aprons.forEach(([x0, y0, x1, y1]) => slots.push({ inside: (x, y, m) => x > x0 + m && x < x1 - m && y > y0 + m && y < y1 - m }));
+  if (r() < 0.5)
+    for (let k = 0, tries = 0; k < 4 && tries < 300; tries++) {
+      const x = 14 + r() * (BW - 28),
+        y = 14 + r() * (BH - 28);
+      if (!clearOfRunways(x, y, 24) || aprons.some(([x0, y0, x1, y1]) => x > x0 - 14 && x < x1 + 14 && y > y0 - 14 && y < y1 + 14))
+        continue;
+      if (x > CARD.x - 12 && y < CARD.h + 12) continue;
+      if (!free(x, y - 6, 14)) continue;
+      // the shelter: a rounded concrete mound, its open end facing down onto a pad
+      for (let yy = -5; yy <= 5; yy++)
+        for (let xx = -8; xx <= 8; xx++) {
+          const e = (xx / 8.5) ** 2 + (yy / 5.5) ** 4;
+          if (e < 1) setBase(x + xx + 1, y - 7 + yy + 1, [44, 46, 44]);
+          if (e < 1)
+            setBase(
+              x + xx,
+              y - 7 + yy,
+              pick(
+                [
+                  [118, 116, 108],
+                  [142, 140, 132],
+                  [166, 164, 156],
+                ],
+                1 - (yy + 5) / 12,
+                x + xx,
+                y + yy,
+              ),
+            );
+        }
+      for (let xx = -4; xx <= 4; xx++) setBase(x + xx, y - 2, [30, 30, 32]); // the open doors
+      for (let yy = 0; yy < 12; yy++) for (let xx = -6; xx <= 6; xx++) tar(x + xx, y + yy);
+      slots.push({ inside: (px, py, m) => Math.abs(px - x) < 6 - m / 3 && py > y + 2 && py < y + 10, pad: true });
+      k++;
+    }
+  const onSlot = (x, y, m) => slots.some(sl => sl.inside(x, y, m));
+  // the target type, and the other types that are there to confuse it
+  const target = MILITARY[Math.floor(r() * MILITARY.length)],
+    others = MILITARY.filter(k => k !== target)
+      .sort(() => r() - 0.5)
+      .slice(0, 2);
+  const place = (kind, count, painted = false) => {
+    const T = AIRCRAFT[kind],
+      L = T.L * (0.9 + r() * 0.2),
+      spots = [];
+    for (let tries = 0; spots.length < count && tries < 500; tries++) {
+      const x = r() * BW,
+        y = r() * BH,
+        m = L * 0.6;
+      if (!onSlot(x, y, kind === 'transport' ? m + 2 : Math.min(m, 6)) || !free(x, y, L * 1.15)) continue;
+      drawAircraft(B, kind, x, y, -Math.PI / 2 + (r() < 0.75 ? (r() - 0.5) * 0.3 : (r() - 0.5) * 3), L, painted);
+      spots.push({ x, y });
+    }
+    return spots;
+  };
+  // the targets claim their spots first, so there are always enough of them
+  const targets = place(target, 3 + Math.floor(r() * 4));
+  others.forEach(k => place(k, 1 + Math.floor(r() * 3)));
+  place('transport', 1 + Math.floor(r() * 2));
+  place(target, 1 + Math.floor(r() * 2), true);
+  // fuel trucks
+  for (let k = 0, tries = 0; k < 2 && tries < 200; tries++) {
     const x = Math.round(r() * BW),
       y = Math.round(r() * BH);
-    if (!onApron(x, y) || !free(x, y, 9)) continue;
+    if (!onSlot(x, y, 5) || !free(x, y, 8)) continue;
     for (let q = 0; q < 4; q++) for (let w = 0; w < 2; w++) setBase(x + q + 1, y + w + 1, [40, 42, 44]);
     for (let q = 0; q < 4; q++) for (let w = 0; w < 2; w++) setBase(x + q, y + w, q === 0 ? [236, 236, 230] : [222, 206, 110]);
     k++;
   }
-  // fighter jets on the aprons, mostly nose to the taxiway
-  const N = 3 + Math.floor(r() * 6),
-    targets = [];
-  for (let tries = 0; targets.length < N && tries < 600; tries++) {
-    const x = r() * BW,
-      y = r() * BH;
-    if (!onApron(x, y) || !free(x, y, 13)) continue;
-    fighter(B, x, y, -Math.PI / 2 + (r() < 0.75 ? (r() - 0.5) * 0.3 : (r() - 0.5) * 3), 9 + r() * 2);
-    targets.push({ x, y });
-  }
-  // and fighters painted on the tarmac: the right shape, but no shadow
-  for (let k = 0, tries = 0; k < 2 && tries < 200; tries++) {
-    const x = r() * BW,
-      y = r() * BH;
-    if (!onApron(x, y) || !free(x, y, 13)) continue;
-    fighter(B, x, y, -Math.PI / 2 + (r() - 0.5) * 0.4, 10, true);
-    k++;
-  }
+  // the reference card's silhouette
+  const T = AIRCRAFT[target],
+    mini = makeMini(40, 30),
+    ref = target === 'stealth' || target === 'drone' ? 16 : 22;
+  drawAircraft({ setBase: mini.setBase }, target, 20, 15, -Math.PI / 2, ref);
   return {
     targets,
+    noun: [T.plural.replace(/s$/, ''), T.plural],
+    coords: biome.coords,
+    reference: { name: T.name, img: mini.img },
     frame() {
       fb.set(base);
     },

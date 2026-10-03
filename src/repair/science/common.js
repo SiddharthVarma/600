@@ -39,9 +39,9 @@ export const SCIENCE = {
     coords: '0.25°N 36.10°E',
   },
   aircraft: {
-    title: 'FIGHTER JET COUNT',
+    title: 'AIRCRAFT RECOGNITION',
     signal: 'ARMS CONTROL VERIFICATION · DEFENCE SURVEY',
-    text: "Tap each fighter jet to mark it, then send your count to the Ministry of Defence. Fighters are small and dark with swept-back wings. Transport planes, fuel trucks and fuel tanks don't count.",
+    text: "The Ministry of Defence wants a count of one type of aircraft at this base, shown on the target card. Tap each one that matches, then downlink your count. Real aircraft cast a shadow; shapes painted on the tarmac don't.",
     uni: 'Ministry of Defence',
     noun: ['fighter jet', 'fighter jets'],
     earthAt: [80, 185],

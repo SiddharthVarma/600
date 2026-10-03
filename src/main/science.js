@@ -15,7 +15,7 @@ const REQUESTS = {
   wildfire: { what: 'Wildfire Hotspot Tracking', uni: 'Brazilian Fire Research Center', to: 'earth', earthAt: [64, 92] },
   interstellar: { what: 'Interstellar Object Tracking', uni: 'Instituto de Astrofísica de Canarias', to: 'space' },
   flamingos: { what: 'Flamingo Flock Tracking', uni: 'University of Nairobi', to: 'earth', earthAt: [205, 120] },
-  aircraft: { what: 'Fighter Jet Count', uni: 'Ministry of Defence', to: 'earth', earthAt: [80, 185] },
+  aircraft: { what: 'Aircraft Recognition', uni: 'Ministry of Defence', to: 'earth', earthAt: [80, 185] },
   oil: { what: 'Oil Spill Tracking', uni: 'University of Southampton', to: 'earth', earthAt: [140, 190] },
   darkships: { what: 'Dark Ship Tracking', uni: 'Global Fishing Watch', to: 'earth', earthAt: [130, 50] },
   supernova: { what: 'Supernova Search', uni: 'University of Surrey', to: 'space' },
