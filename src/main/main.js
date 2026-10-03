@@ -10,6 +10,7 @@ import { scheduleFlare, triggerFlare } from './events/flare.js';
 import { scheduleGRB, triggerGRB } from './events/grb.js';
 import { closeRepair, launchers, startIfReady } from './launcher.js';
 import { panel, renderSat } from './panel.js';
+import { closeScience, pushScience, resetScience, scheduleScience, scienceMessage } from './science.js';
 import { state } from './state.js';
 import { touchScroll } from '../shared/touchscroll.js';
 import { promptEl, term, termNote, termRunFile, UPLINK_STATIONS } from './terminal.js';
@@ -29,6 +30,7 @@ document.getElementById('restartAll').onclick = () => {
   state.selected = null;
   state.highlighted = [];
   clearAlerts();
+  resetScience();
   resetEvents();
   resetCreature();
   document.getElementById('gameOver').classList.remove('show');
@@ -82,6 +84,7 @@ term.addEventListener('click', e => {
   const f = e.target.closest('.term-file');
   if (f) termRunFile(f.dataset.file);
 });
+document.getElementById('scienceClose').onclick = closeScience;
 document.getElementById('repairClose').onclick = () => {
   closeRepair();
   termNote('procedure aborted', 'term-warn');
@@ -93,6 +96,10 @@ window.addEventListener('message', e => {
       L.loaded = true;
       startIfReady(L);
     }
+    return;
+  }
+  if (e.data?.type === 'science-complete' || e.data?.type === 'science-close') {
+    scienceMessage(e.data);
     return;
   }
   if (e.data?.type === 'grb-resolved' || e.data?.type === 'flare-resolved') {
@@ -164,6 +171,8 @@ firstEvent(triggerGRB, scheduleGRB, 120, 240);
 firstEvent(triggerFlare, scheduleFlare, 120, 240);
 firstEvent(triggerDebris, scheduleDebris, 120, 240);
 firstEvent(triggerKraken, scheduleKraken, 240, 360);
+// the first science request comes within a minute or so; more follow every couple of minutes
+firstEvent(pushScience, scheduleScience, 40, 70);
 setInterval(() => {
   const ticking = krakenLive() ? [] : satellites.filter(s => s.anomaly && s.countdown > 0);
   ticking.forEach(s => {
@@ -204,6 +213,7 @@ Object.assign(window, {
   triggerKraken,
   trySpawnAnomaly,
   pushAnomalyAlert,
+  pushScience,
   renderSat,
   eventActive,
   point,

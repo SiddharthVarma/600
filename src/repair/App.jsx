@@ -10,6 +10,8 @@ import { Solar } from './games/solar.jsx';
 import { StarTracker } from './games/startracker.jsx';
 import { Thermal } from './games/thermal.jsx';
 import { ReactionWheel } from './games/wheel.jsx';
+import { Survey } from './science/survey.jsx';
+import { Tracking } from './science/tracking.jsx';
 import { games } from './shared/catalog.js';
 import { Frame } from './shared/ui.jsx';
 
@@ -66,6 +68,10 @@ export function App() {
     bitflip: BitFlip,
     debris: Debris,
     flare: Flare,
+    penguins: () => <Survey kind="penguins" />,
+    whales: () => <Survey kind="whales" />,
+    wildfire: () => <Survey kind="wildfire" />,
+    interstellar: Tracking,
   }[type];
   return (
     <Frame type={type} setType={setType} remaining={remaining} timedOut={timedOut}>

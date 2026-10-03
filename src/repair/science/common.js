@@ -1,0 +1,134 @@
+import { BH, BW } from './scenes.js';
+
+// Each science request: who asked for it, what the window says, and where the camera dives in on the Earth sprite.
+export const SCIENCE = {
+  penguins: {
+    title: 'PENGUIN COLONY TRACKING',
+    signal: 'EMPEROR PENGUINS · SEA ICE SURVEY',
+    text: "Emperor penguins breed on the sea ice, and their colonies stain it brown. Tap each colony to mark it, then downlink your survey to the University of Oxford. Grey rocks and icebergs aren't colonies.",
+    uni: 'University of Oxford',
+    noun: ['colony', 'colonies'],
+    earthAt: [118, 214],
+    coords: '70.6°S 11.6°W',
+  },
+  whales: {
+    title: 'WHALE POPULATION TRACKING',
+    signal: 'SOUTHERN RIGHT WHALES · OPEN OCEAN SURVEY',
+    text: "Tap each whale to mark it, then downlink your survey to the University of St Andrews. Watch for their blows. Boats, rocks and kelp don't count.",
+    uni: 'University of St Andrews',
+    noun: ['whale', 'whales'],
+    earthAt: [150, 150],
+    coords: '41.2°S 63.9°W',
+  },
+  wildfire: {
+    title: 'WILDFIRE HOTSPOT TRACKING',
+    signal: 'BOREAL FOREST · ACTIVE FIRE SURVEY',
+    text: "Smoke hides the fires. Switch to thermal infrared to see through it, tap each active fire to mark it, then downlink your survey to the University of Maryland. Warm rooftops aren't fires.",
+    uni: 'University of Maryland',
+    noun: ['fire', 'fires'],
+    earthAt: [64, 92],
+    coords: '50.9°N 121.4°W',
+  },
+  interstellar: {
+    title: 'INTERSTELLAR OBJECT TRACKING',
+    signal: 'OBJECT 2026 A1 · VISITOR FROM ANOTHER STAR',
+    text: "An object from another star is passing through. Keep it inside the telescope's reticle until all its data is recorded. The telescope can only turn so fast.",
+    uni: 'University of Hawaiʻi',
+    coords: 'RA 16h 21m · DEC +12°',
+  },
+};
+export const report = data => window.parent !== window && window.parent.postMessage(data, '*');
+
+export function hudText(ctx, s, ax, ay, color = 'rgba(201,255,77,.85)') {
+  const W = ctx.canvas.width,
+    H = ctx.canvas.height;
+  ctx.font = '18px "Courier New", monospace';
+  ctx.textAlign = ax;
+  ctx.textBaseline = ay;
+  const x = ax === 'left' ? 16 : W - 16,
+    y = ay === 'top' ? 14 : H - 14,
+    w = ctx.measureText(s).width;
+  // a dark backing so the readout stays legible on white ice
+  ctx.fillStyle = 'rgba(2,4,6,.62)';
+  ctx.fillRect(ax === 'left' ? x - 6 : x - w - 6, ay === 'top' ? y - 4 : y - 22, w + 12, 26);
+  ctx.fillStyle = color;
+  ctx.fillText(s, x, y);
+}
+export function brackets(ctx) {
+  const W = ctx.canvas.width,
+    H = ctx.canvas.height,
+    L = 34;
+  ctx.strokeStyle = 'rgba(201,255,77,.55)';
+  ctx.lineWidth = 3;
+  for (const [x, y, dx, dy] of [
+    [10, 10, 1, 1],
+    [W - 10, 10, -1, 1],
+    [10, H - 10, 1, -1],
+    [W - 10, H - 10, -1, -1],
+  ]) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + dy * L);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x + dx * L, y);
+    ctx.stroke();
+  }
+}
+// the scene's low-res buffer, scaled up onto the display canvas with no smoothing
+export function blit(ctx, buf, img) {
+  buf.getContext('2d').putImageData(img, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(buf, 0, 0, ctx.canvas.width, ctx.canvas.height);
+}
+
+export const DOWNLINK_TIME = 2.8;
+// The downlink: the satellite beams the data down to the university's dish, in chunky pixels.
+export function drawDownlink(ctx, uni, d) {
+  const W = ctx.canvas.width,
+    H = ctx.canvas.height,
+    S = W / BW,
+    px = (x, y, w, h, c) => {
+      ctx.fillStyle = c;
+      ctx.fillRect(Math.round(x) * S, Math.round(y) * S, w * S, h * S);
+    };
+  ctx.fillStyle = 'rgba(2,4,6,.74)';
+  ctx.fillRect(0, 0, W, H);
+  const sx = 70,
+    sy = 30;
+  px(sx - 9, sy - 2, 6, 4, '#2b4f8a');
+  px(sx + 4, sy - 2, 6, 4, '#2b4f8a');
+  px(sx - 9, sy - 2, 6, 1, '#4a7bc4');
+  px(sx + 4, sy - 2, 6, 1, '#4a7bc4');
+  px(sx - 3, sy - 3, 7, 6, '#c9ccc8');
+  px(sx - 2, sy - 2, 5, 1, '#f0f2ee');
+  px(sx, sy + 3, 1, 2, '#99aaaa');
+  px(sx - 1, sy + 5, 3, 1, '#ffd166');
+  const gx = 176,
+    gy = BH - 32;
+  px(gx - 6, gy - 6, 12, 2, '#d8dad6');
+  px(gx - 5, gy - 4, 10, 2, '#b8bab6');
+  px(gx - 3, gy - 2, 6, 1, '#9a9c98');
+  px(gx, gy - 9, 1, 3, '#888888');
+  px(gx - 1, gy - 1, 3, 6, '#7a7c78');
+  px(gx - 5, gy + 5, 11, 4, '#5a5c58');
+  px(gx - 4, gy + 6, 2, 2, '#ffd166');
+  const p = Math.min(1, d / (DOWNLINK_TIME - 0.3));
+  for (let k = 0; k < 14; k++) {
+    const f = (k / 14 + d * 0.9) % 1;
+    px(sx + (gx - sx) * f, sy + 6 + (gy - 16 - sy) * f, 2, 2, f < p + 0.02 ? '#55b6ff' : 'rgba(85,182,255,.25)');
+  }
+  ctx.font = '18px "Courier New", monospace';
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#c9ccc8';
+  ctx.fillText(uni.toUpperCase() + ' GROUND STATION', gx * S, (gy + 12) * S);
+  const bw = 300,
+    bx = W / 2 - bw / 2,
+    by = H / 2 - 10;
+  ctx.strokeStyle = '#39453f';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(bx, by, bw, 18);
+  ctx.fillStyle = '#55b6ff';
+  ctx.fillRect(bx + 3, by + 3, (bw - 6) * p, 12);
+  ctx.fillStyle = '#c9ccc8';
+  ctx.fillText(p < 1 ? `DOWNLINK ${Math.round(p * 100)}% · ${(3.8 + Math.sin(d * 3) * 0.6).toFixed(1)} MB/s` : 'RECEIVED', W / 2, by - 30);
+}

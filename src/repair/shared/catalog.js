@@ -10,4 +10,10 @@ export const games = [
   ['bitflip', 'HAMMING CODE FAULT', 'GRB event · correct the bit flips'],
   ['debris', 'DEBRIS FIELD', 'Collision cascade · dodge the wreckage'],
   ['flare', 'SOLAR FLARE', 'Radio blackout · hold the downlink'],
+  ['penguins', 'PENGUIN TRACKING', 'Science · mark the colonies'],
+  ['whales', 'WHALE TRACKING', 'Science · mark the whales'],
+  ['wildfire', 'WILDFIRE TRACKING', 'Science · mark the fires'],
+  ['interstellar', 'INTERSTELLAR OBJECT', 'Science · track the visitor'],
 ];
+// science requests open in the same window, framed as the science lab
+export const SCIENCE_TYPES = new Set(['penguins', 'whales', 'wildfire', 'interstellar']);
