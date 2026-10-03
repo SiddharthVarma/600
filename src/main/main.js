@@ -150,10 +150,20 @@ setTimeout(() => {
 document.querySelectorAll('[data-abort]').forEach(b => {
   b.onclick = abortEvent;
 });
-setTimeout(scheduleGRB, 30000);
-setTimeout(scheduleDebris, 90000);
-setTimeout(scheduleFlare, 60000);
-setTimeout(scheduleKraken, 360000);
+// The first of each celestial event comes early enough to keep a new player hooked (somewhere in the given window, in
+// seconds); after that each repeats on its own interval.
+const firstEvent = (trigger, schedule, from, to) =>
+  setTimeout(
+    () => {
+      trigger();
+      schedule();
+    },
+    (from + Math.random() * (to - from)) * 1000,
+  );
+firstEvent(triggerGRB, scheduleGRB, 120, 240);
+firstEvent(triggerFlare, scheduleFlare, 120, 240);
+firstEvent(triggerDebris, scheduleDebris, 120, 240);
+firstEvent(triggerKraken, scheduleKraken, 240, 360);
 setInterval(() => {
   const ticking = krakenLive() ? [] : satellites.filter(s => s.anomaly && s.countdown > 0);
   ticking.forEach(s => {
