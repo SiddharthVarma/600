@@ -50,8 +50,8 @@ export const SCIENCE = {
   oil: {
     title: 'OIL SPILL TRACKING',
     signal: 'MARINE POLLUTION · RADAR SURVEY',
-    text: 'Switch to radar to see through the cloud. Oil smooths the sea, so slicks show up dark. Calm, windless patches are dark too, but slicks are long and narrow, often trailing from a ship or platform. Tap each slick to mark it, then downlink your survey to the University of Southampton.',
-    uni: 'University of Southampton',
+    text: 'Switch to radar to see through the cloud. Oil smooths the sea, so slicks show up dark. Calm, windless patches are dark too, but slicks are long and narrow, often trailing from a ship or platform. Tap each slick to mark it, then downlink your survey to University College Dublin.',
+    uni: 'University College Dublin',
     noun: ['slick', 'slicks'],
     earthAt: [140, 190],
     coords: '28.7°N 88.4°W',

@@ -43,7 +43,6 @@ export function spawnAnomaly(s, type) {
   if (s.anomalyType === 'solar') s.values.BATTERY = 31;
   if (s.anomalyType === 'wheel') s.values.TORQUE = 34;
   if (s.anomalyType === 'process') s.values.CPU = 98;
-  document.getElementById('hint').innerHTML = 'anomaly detected · locate the <span style="color:var(--danger)">red</span> signal';
   pushAnomalyAlert(s);
 }
 export function scheduleAnomaly() {

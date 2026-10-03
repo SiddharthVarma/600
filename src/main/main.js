@@ -25,6 +25,8 @@ document.getElementById('restartAll').onclick = () => {
     s.rejoining = false;
     s.rejoinProgress = 0;
     s.flarePending = false;
+    s.burst = false;
+    s.taken = false;
     s.values = { RSSI: 82, TEMPERATURE: 71, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 };
   });
   resetAnomalies();
@@ -36,8 +38,6 @@ document.getElementById('restartAll').onclick = () => {
   resetCreature();
   document.getElementById('gameOver').classList.remove('show');
   panel.classList.remove('open');
-  document.getElementById('hint').textContent = 'select a satellite to investigate';
-  document.getElementById('hint').style.opacity = 1;
   updateNetwork();
 };
 updateNetwork();
@@ -73,13 +73,11 @@ canvas.addEventListener('click', e => {
     state.highlighted = [];
     renderSat(best);
     panel.classList.add('open');
-    document.getElementById('hint').style.opacity = 0;
   }
 });
 document.getElementById('close').onclick = () => {
   panel.classList.remove('open');
   state.selected = null;
-  document.getElementById('hint').style.opacity = 1;
 };
 term.addEventListener('click', e => {
   const f = e.target.closest('.term-file');
@@ -124,9 +122,6 @@ window.addEventListener('message', e => {
     document.getElementById('log').textContent = wasOrbit
       ? 'SUCCESSFUL EXECUTION · REJOINING ORBIT'
       : 'SUCCESSFUL EXECUTION · TELEMETRY NOMINAL';
-    document.getElementById('hint').textContent = wasOrbit
-      ? 'satellite recovered · rejoining orbital plane'
-      : 'satellite recovered · network nominal';
     pushAlert({
       sat: state.selected,
       title: `${satTag(state.selected)} · RECOVERED`,
@@ -144,7 +139,6 @@ window.addEventListener('message', e => {
     state.selected.rejoining = false;
     updateNetwork();
     document.getElementById('log').textContent = 'SATELLITE COMMANDED TOO LATE · SATELLITE LOST';
-    document.getElementById('hint').textContent = 'satellite lost · signal unavailable';
     pushAlert({ sat: state.selected, title: `${satTag(state.selected)} · SIGNAL LOST`, body: 'Commanded too late.', crit: true });
     updateAlerts();
     termNote('link lost · satellite unrecoverable', 'term-err');
@@ -186,7 +180,6 @@ setInterval(() => {
       s.anomalyType = null;
       s.lost = true;
       updateNetwork();
-      document.getElementById('hint').textContent = 'satellite lost · signal unavailable';
       if (state.selected === s)
         document.getElementById('log').textContent = wasOrbit
           ? 'SIGNAL LOST · SATELLITE BELOW RECOVERY ALTITUDE'

@@ -247,7 +247,6 @@ export async function termRunFile(file) {
     if (eventActive()) cancelRepairPreload();
     else showRepair();
   } else {
-    document.getElementById('hint').textContent = 'command logged · anomaly persists';
     termLs(s);
   }
 }

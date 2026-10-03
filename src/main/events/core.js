@@ -109,7 +109,6 @@ export function openEventTicket(ev) {
   state.highlightAt = performance.now();
   state.selected = null;
   panel.classList.add('open', 'fleet');
-  document.getElementById('hint').style.opacity = 0;
   document.getElementById('panelEyebrow').textContent = 'Emergency / Fleet operations';
   document.getElementById('satName').textContent = EVENTS[ev.kind].name;
   document.getElementById('log').textContent = '';
@@ -191,7 +190,6 @@ function launchEvent(ev) {
   updateAlerts();
   renderFleetStatus();
   panel.classList.remove('open');
-  document.getElementById('hint').style.opacity = 1;
   if (document.getElementById('repairModal').classList.contains('show')) closeRepair();
   reveal(eventLauncher(ev));
 }
@@ -257,7 +255,6 @@ export function resolveEvent(saved) {
             ];
   updateNetwork();
   document.getElementById('log').textContent = log;
-  document.getElementById('hint').textContent = hint;
   if (ev.phase === 'running') {
     eventLauncher(ev).shown = false;
     fadeCloseModal(EVENTS[ev.kind].modal, EVENTS[ev.kind].frame);

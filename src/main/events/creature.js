@@ -178,6 +178,7 @@ function takeSatellite(tn, now) {
   const s = tn.prey;
   s.heldAt = null;
   s.lost = true;
+  s.taken = true; // dragged off, not blown up: no burst
   s.anomaly = false;
   s.anomalyType = null;
   updateNetwork();

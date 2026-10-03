@@ -1,7 +1,7 @@
 :root {
   --bg: #050607;
   --ink: #e6e7e4;
-  --muted: #7e8583;
+  --muted: #9aa19e;
   --dim: #343a39;
   --line: #222826;
   --accent: #c9ff4d;
@@ -48,7 +48,7 @@ canvas {
   justify-content: space-between;
   align-items: center;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   pointer-events: none;
@@ -73,17 +73,6 @@ canvas {
   border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 12px var(--accent);
-}
-
-.hint {
-  position: fixed;
-  left: 30px;
-  bottom: 24px;
-  color: var(--dim);
-  font-size: 13px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  transition: opacity 0.5s;
 }
 
 .alerts {
@@ -123,8 +112,8 @@ canvas {
   align-items: center;
   gap: 8px;
   color: var(--muted);
-  font-size: 9px;
-  letter-spacing: 0.16em;
+  font-size: 11px;
+  letter-spacing: 0.12em;
 }
 
 .alert-icon {
@@ -143,7 +132,7 @@ canvas {
 
 .alert-title {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.06em;
 }
 
@@ -154,7 +143,7 @@ canvas {
 .alert-body {
   margin-top: 3px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -227,7 +216,7 @@ canvas {
 
 .eyebrow {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
 }
@@ -241,7 +230,7 @@ h1 {
 
 .status {
   color: var(--warn);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
@@ -311,7 +300,7 @@ h1 {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.8;
 }
 
@@ -329,7 +318,7 @@ h1 {
 
 .chart-title {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.16em;
   margin-bottom: 10px;
 }
@@ -352,7 +341,7 @@ button.command {
   background: transparent;
   padding: 12px 10px;
   font: inherit;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.1em;
   cursor: pointer;
   transition: 0.2s;
@@ -370,7 +359,7 @@ button.command:hover {
   border: 1px solid #262d2b;
   background: #070909;
   color: #b9c0bb;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.65;
 }
 
@@ -436,7 +425,7 @@ button.command:hover {
   min-height: 40px;
   margin-top: 18px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
 }
 
@@ -554,11 +543,6 @@ button.command:hover {
     top: 18px;
   }
 
-  .hint {
-    left: 18px;
-    bottom: 18px;
-  }
-
   .panel {
     padding-left: 24px;
     padding-right: 24px;
@@ -576,8 +560,8 @@ button.command:hover {
   left: 50%;
   top: 50%;
   z-index: 26;
-  width: min(320px, calc(100vw - 24px));
-  padding: 10px 12px 12px;
+  width: min(380px, calc(100vw - 24px));
+  padding: 12px 14px 14px;
   border: 1px solid rgba(201, 255, 77, 0.5);
   border-radius: 10px;
   background: rgba(10, 13, 12, 0.97);
@@ -585,7 +569,7 @@ button.command:hover {
     0 10px 30px rgba(0, 0, 0, 0.6),
     0 0 18px rgba(201, 255, 77, 0.1);
   color: var(--ink);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.55;
   opacity: 0;
   pointer-events: none;
@@ -604,9 +588,9 @@ button.command:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   color: var(--accent);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.16em;
 }
 
@@ -615,7 +599,7 @@ button.command:hover {
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.12em;
   cursor: pointer;
 }
@@ -637,7 +621,7 @@ button.command:hover {
   background: transparent;
   color: var(--accent);
   font: inherit;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.14em;
   cursor: pointer;
 }
@@ -682,7 +666,7 @@ button.command:hover {
 .science {
   position: fixed;
   left: 24px;
-  bottom: 56px;
+  bottom: 24px;
   width: min(330px, calc(100vw - 48px));
   display: flex;
   flex-direction: column;
@@ -792,7 +776,7 @@ button.command:hover {
   background: rgba(14, 17, 16, 0.96);
   color: var(--science);
   font: inherit;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.12em;
   cursor: pointer;
 }
@@ -804,7 +788,7 @@ button.command:hover {
   border-radius: 999px;
   background: rgba(14, 17, 16, 0.96);
   color: var(--science);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.12em;
 }
 
@@ -872,7 +856,7 @@ button.command:hover {
   .science {
     left: 12px;
     right: 12px;
-    bottom: 44px;
+    bottom: 16px;
     width: auto;
     gap: 6px;
   }

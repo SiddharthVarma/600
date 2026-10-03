@@ -57,6 +57,55 @@ export function ringProgress(i, t) {
   const p = (t - RING_INTRO_DELAY - i * RING_INTRO_STAGGER) / RING_INTRO_FADE;
   return Math.max(0, Math.min(1, p));
 }
+// Losing a satellite: a tiny burst where it was. A white flash, a few specks scattering and cooling from orange to
+// grey, and one speck of debris that drifts on along the orbit before fading.
+const BURST_MS = 650,
+  DEBRIS_MS = 3200,
+  bursts = [];
+function noteLoss(s, t) {
+  if (s.burst) return;
+  s.burst = true;
+  if (s.taken || s.sx == null || s.sx < 0 || s.sy < 0 || s.sx > W || s.sy > H) return;
+  const along = Math.atan2(s.sy - H / 2, s.sx - W / 2) + (Math.sign(s.speed) || 1) * (Math.PI / 2);
+  bursts.push({
+    x: s.sx,
+    y: s.sy,
+    t0: t,
+    along,
+    specks: Array.from({ length: 7 }, () => ({ a: Math.random() * Math.PI * 2, d: 4 + Math.random() * 8, size: Math.random() < 0.4 ? 2 : 1 })),
+  });
+}
+const COOL = [
+  [255, 236, 200],
+  [255, 170, 80],
+  [220, 80, 50],
+  [110, 104, 100],
+];
+function drawBursts(t) {
+  for (let i = bursts.length - 1; i >= 0; i--) {
+    const b = bursts[i],
+      age = t - b.t0;
+    if (age > DEBRIS_MS) {
+      bursts.splice(i, 1);
+      continue;
+    }
+    const k = Math.min(1, age / BURST_MS);
+    if (age < 90) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(Math.round(b.x) - 1, Math.round(b.y) - 1, 3, 3);
+    }
+    if (k < 1) {
+      const c = COOL[Math.min(COOL.length - 1, Math.floor(k * COOL.length))],
+        out = 1 - Math.pow(1 - k, 2);
+      ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${1 - k * 0.7})`;
+      b.specks.forEach(p => ctx.fillRect(Math.round(b.x + Math.cos(p.a) * p.d * out), Math.round(b.y + Math.sin(p.a) * p.d * out), p.size, p.size));
+    }
+    // the debris, drifting on along the orbit
+    const d = (age / 1000) * 5;
+    ctx.fillStyle = `rgba(150,146,140,${0.8 * (1 - age / DEBRIS_MS)})`;
+    ctx.fillRect(Math.round(b.x + Math.cos(b.along) * d), Math.round(b.y + Math.sin(b.along) * d), 1.5, 1.5);
+  }
+}
 export function draw(t) {
   ctx.clearRect(0, 0, W, H);
   drawSun(t);
@@ -90,7 +139,7 @@ export function draw(t) {
     ctx.fill();
   }
   satellites.forEach(s => {
-    if (s.lost) return;
+    if (s.lost) return noteLoss(s, t);
     const ringAlpha = ringProgress(s.ring, t);
     if (ringAlpha <= 0) return;
     const earthRatio = earthR / (unit * s.r);
@@ -105,10 +154,7 @@ export function draw(t) {
       py = H * 0.5 + (p.y - H * 0.5) * eased;
       if (s.rejoinProgress >= 1) {
         s.rejoining = false;
-        if (state.selected === s) {
-          document.getElementById('log').textContent = 'TELEMETRY NOMINAL · ORBIT RESTORED';
-          document.getElementById('hint').textContent = 'satellite recovered · network nominal';
-        }
+        if (state.selected === s) document.getElementById('log').textContent = 'TELEMETRY NOMINAL · ORBIT RESTORED';
       }
     }
     if (s.heldAt) {
@@ -141,6 +187,7 @@ export function draw(t) {
     }
     ctx.globalAlpha = 1;
   });
+  drawBursts(t);
   drawEventFx(t);
   drawKraken(t);
   drawHighlight(t);
