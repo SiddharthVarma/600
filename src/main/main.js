@@ -84,6 +84,7 @@ term.addEventListener('click', e => {
   if (f) termRunFile(f.dataset.file);
 });
 document.getElementById('scienceClose').onclick = closeScience;
+document.getElementById('sudoHelp').onclick = replayIntro;
 document.getElementById('repairClose').onclick = () => {
   closeRepair();
   termNote('procedure aborted', 'term-warn');

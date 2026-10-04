@@ -635,6 +635,36 @@ button.command:hover {
   display: none;
 }
 
+/* the corner "?" that brings SUDO back */
+.sudo-help {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 14;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #39403c;
+  border-radius: 50%;
+  background: rgba(14, 17, 16, 0.9);
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.sudo-help:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.sudo-help[hidden] {
+  display: none;
+}
+
 /* what SUDO is talking about */
 .sudo-spot {
   outline: 2px solid var(--accent);
@@ -859,6 +889,13 @@ button.command:hover {
     bottom: 16px;
     width: auto;
     gap: 6px;
+  }
+
+  /* the science card spans the bottom on phones, so the "?" goes top right */
+  .sudo-help {
+    top: 18px;
+    right: 16px;
+    bottom: auto;
   }
 
   .science .alert {

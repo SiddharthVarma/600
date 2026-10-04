@@ -201,7 +201,7 @@ export function Tracking() {
       curve.slice(-cw / 4).forEach((b, i) => ctx.fillRect(cx + i * 4, cy - 4 - b * (ch - 10), 4, 4));
       if (phase === 'downlink') {
         const d = now - sentAt;
-        drawDownlink(ctx, info.uni, d);
+        drawDownlink(ctx, d);
         if (d >= DOWNLINK_TIME) {
           report({ type: 'science-complete', kind: 'interstellar' });
           setPhase('done');

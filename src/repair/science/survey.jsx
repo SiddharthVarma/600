@@ -124,7 +124,7 @@ export function Survey({ kind }) {
         hudText(ctx, '0.5 m/px', 'left', 'bottom', 'rgba(201,255,77,.6)');
         if (phase === 'downlink') {
           const d = now - sentAt.current;
-          drawDownlink(ctx, info.uni, d);
+          drawDownlink(ctx, d);
           if (d >= DOWNLINK_TIME && !reported) {
             reported = true;
             report({ type: 'science-complete', kind, found: result.found.size, total: scene.targets.length });

@@ -9,18 +9,19 @@ const PHONE = matchMedia('(max-width: 600px) and (pointer: coarse)');
 // Science requests: universities' hosted-payload proposals that arrive now and then. They wait, folded into one card in
 // the bottom left, until the player opens them; each opens its own window (a survey or a tracking job) and is done once
 // its data is downlinked. Nothing is lost by ignoring them or getting one wrong.
-// earthAt: the spot on the Earth sprite the camera dives at (Antarctica, open ocean, forest); interstellar looks away
+// want: the kind of spot on the spinning Earth the camera dives at (ice, ocean or land); the space ones look away
 const REQUESTS = {
-  penguins: { what: 'Penguin Colony Tracking', uni: 'British Antarctic Survey', to: 'earth', earthAt: [118, 214] },
-  whales: { what: 'Whale Population Tracking', uni: 'British Antarctic Survey', to: 'earth', earthAt: [150, 150] },
-  wildfire: { what: 'Wildfire Hotspot Tracking', uni: 'Brazilian Fire Research Center', to: 'earth', earthAt: [64, 92] },
+  penguins: { what: 'Penguin Colony Tracking', uni: 'British Antarctic Survey', to: 'earth', want: 'ice' },
+  whales: { what: 'Whale Population Tracking', uni: 'British Antarctic Survey', to: 'earth', want: 'ocean' },
+  wildfire: { what: 'Wildfire Hotspot Tracking', uni: 'Brazilian Fire Research Center', to: 'earth', want: 'land' },
   interstellar: { what: 'Interstellar Object Tracking', uni: 'Instituto de Astrofísica de Canarias', to: 'space' },
-  flamingos: { what: 'Flamingo Flock Tracking', uni: 'University of Nairobi', to: 'earth', earthAt: [205, 120] },
-  aircraft: { what: 'Aircraft Recognition', uni: 'Ministry of Defence', to: 'earth', earthAt: [80, 185] },
-  oil: { what: 'Oil Spill Tracking', uni: 'University College Dublin', to: 'earth', earthAt: [140, 190] },
-  darkships: { what: 'Dark Ship Tracking', uni: 'Global Fishing Watch', to: 'earth', earthAt: [130, 50] },
+  flamingos: { what: 'Flamingo Flock Tracking', uni: 'University of Nairobi', to: 'earth', want: 'land' },
+  aircraft: { what: 'Aircraft Recognition', uni: 'Ministry of Defence', to: 'earth', want: 'land' },
+  oil: { what: 'Oil Spill Tracking', uni: 'University College Dublin', to: 'earth', want: 'ocean' },
+  darkships: { what: 'Dark Ship Tracking', uni: 'Global Fishing Watch', to: 'earth', want: 'ocean' },
   supernova: { what: 'Supernova Search', uni: 'University of Surrey', to: 'space' },
   exoplanet: { what: 'Exoplanet Transit Search', uni: 'University of Hawaiʻi', to: 'space' },
+  galaxies: { what: 'Galaxy Classification', uni: 'Instituto de Astrofísica de Canarias', to: 'space' },
 };
 const MAX_WAITING = 4;
 const el = document.getElementById('science'),
@@ -50,7 +51,7 @@ export function scheduleScience() {
       pushScience();
       scheduleScience();
     },
-    75000 + Math.random() * 60000,
+    40000 + Math.random() * 40000,
   );
 }
 function openRequest(r) {

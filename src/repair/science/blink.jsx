@@ -202,7 +202,7 @@ export function Blink() {
       hudText(ctx, info.coords, 'right', 'top');
       if (phase === 'downlink') {
         const d = now - sentAt.current;
-        drawDownlink(ctx, info.uni, d);
+        drawDownlink(ctx, d);
         if (d >= DOWNLINK_TIME && !reported) {
           reported = true;
           report({ type: 'science-complete', kind: 'supernova', found: verdict === 'sn' ? 1 : 0, total: 1 });

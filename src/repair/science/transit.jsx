@@ -220,7 +220,7 @@ export function Transit() {
       brackets(ctx);
       if (phase === 'downlink') {
         const d = now - sentAt;
-        drawDownlink(ctx, info.uni, d);
+        drawDownlink(ctx, d);
         if (d >= DOWNLINK_TIME && !reported) {
           reported = true;
           report({ type: 'science-complete', kind: 'exoplanet' });

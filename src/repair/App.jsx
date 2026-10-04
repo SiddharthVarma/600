@@ -13,6 +13,7 @@ import { ReactionWheel } from './games/wheel.jsx';
 import { Blink } from './science/blink.jsx';
 import { Survey } from './science/survey.jsx';
 import { Transit } from './science/transit.jsx';
+import { Galaxies } from './science/galaxies.jsx';
 import { Tracking } from './science/tracking.jsx';
 import { games } from './shared/catalog.js';
 import { Frame } from './shared/ui.jsx';
@@ -80,6 +81,7 @@ export function App() {
     darkships: () => <Survey kind="darkships" />,
     supernova: Blink,
     exoplanet: Transit,
+    galaxies: Galaxies,
   }[type];
   return (
     <Frame type={type} setType={setType} remaining={remaining} timedOut={timedOut}>

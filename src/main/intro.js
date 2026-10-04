@@ -174,8 +174,13 @@ function tick() {
   if (bubble.classList.contains('on')) place();
 }
 
-export function startIntro() {
+// the corner "?" that replays the walkthrough; hidden while SUDO is talking
+const help = document.getElementById('sudoHelp');
+export function startIntro(delay = 1800) {
   state.intro = true;
+  step = null;
+  sat = null;
+  help.hidden = true;
   bubble = document.createElement('div');
   bubble.className = 'sudo';
   bubble.innerHTML =
@@ -186,7 +191,7 @@ export function startIntro() {
   bubble.querySelector('.sudo-skip').onclick = finish;
   document.body.appendChild(bubble);
   poll = setInterval(tick, 250);
-  setTimeout(() => go('welcome'), 1800);
+  setTimeout(() => go('welcome'), delay);
 }
 // hand the game back: faults, science and events carry on, and the walkthrough won't show again
 function release() {
@@ -205,6 +210,7 @@ function finish() {
   spotlight(null);
   bubble?.remove();
   bubble = null;
+  help.hidden = false;
 }
 // first visit only
 export function maybeStartIntro() {
@@ -216,11 +222,8 @@ export function maybeStartIntro() {
   startIntro();
   return true;
 }
+// play it again on demand, right where the game is: no reload, nothing reset
 export function replayIntro() {
-  try {
-    localStorage.removeItem(SEEN);
-  } catch {
-    // nothing stored to clear
-  }
-  location.reload();
+  if (bubble) return;
+  startIntro(300);
 }

@@ -1,5 +1,6 @@
 import { drawHighlight } from './alerts.js';
 import { ANOMALY_FAIL_WINDOW } from './anomalies.js';
+import { drawEarth } from './earth.js';
 import { drawEventFx, flareFlicker } from './events/core.js';
 import { drawKraken } from './events/creature.js';
 import { drawSun, drawSunFlash } from './events/sun.js';
@@ -8,8 +9,6 @@ import { state } from './state.js';
 
 export const canvas = document.getElementById('constellation'),
   ctx = canvas.getContext('2d');
-const earthImg = new Image();
-earthImg.src = '600_earth_assets/earth.png';
 export let W, H, dpr;
 export const satellites = Array.from({ length: 600 }, (_, i) => ({
   id: i + 1,
@@ -72,7 +71,11 @@ function noteLoss(s, t) {
     y: s.sy,
     t0: t,
     along,
-    specks: Array.from({ length: 7 }, () => ({ a: Math.random() * Math.PI * 2, d: 4 + Math.random() * 8, size: Math.random() < 0.4 ? 2 : 1 })),
+    specks: Array.from({ length: 7 }, () => ({
+      a: Math.random() * Math.PI * 2,
+      d: 4 + Math.random() * 8,
+      size: Math.random() < 0.4 ? 2 : 1,
+    })),
   });
 }
 const COOL = [
@@ -98,7 +101,9 @@ function drawBursts(t) {
       const c = COOL[Math.min(COOL.length - 1, Math.floor(k * COOL.length))],
         out = 1 - Math.pow(1 - k, 2);
       ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${1 - k * 0.7})`;
-      b.specks.forEach(p => ctx.fillRect(Math.round(b.x + Math.cos(p.a) * p.d * out), Math.round(b.y + Math.sin(p.a) * p.d * out), p.size, p.size));
+      b.specks.forEach(p =>
+        ctx.fillRect(Math.round(b.x + Math.cos(p.a) * p.d * out), Math.round(b.y + Math.sin(p.a) * p.d * out), p.size, p.size),
+      );
     }
     // the debris, drifting on along the orbit
     const d = (age / 1000) * 5;
@@ -128,16 +133,7 @@ export function draw(t) {
   ctx.globalAlpha = 1;
   ctx.restore();
   const earthR = Math.max(19, unit * 0.052);
-  if (earthImg.complete && earthImg.naturalWidth) {
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(earthImg, cx - earthR, cy - earthR, earthR * 2, earthR * 2);
-    ctx.imageSmoothingEnabled = true;
-  } else {
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(cx, cy, earthR, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  drawEarth(ctx, cx, cy, earthR, t);
   satellites.forEach(s => {
     if (s.lost) return noteLoss(s, t);
     const ringAlpha = ringProgress(s.ring, t);

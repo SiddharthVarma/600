@@ -1,4 +1,3 @@
-import { BH, BW } from './scenes.js';
 
 // Each science request: who asked for it, what the window says, and where the camera dives in on the Earth sprite.
 export const SCIENCE = {
@@ -78,6 +77,13 @@ export const SCIENCE = {
     text: "When a planet passes in front of its star, the star dims slightly, once every orbit. Watch its brightness and tap each dip as it scrolls past. Three dips pin down the orbit. Flares, sudden upward spikes, aren't transits.",
     uni: 'University of Hawaiʻi',
   },
+  galaxies: {
+    title: 'GALAXY CLASSIFICATION',
+    signal: 'DEEP FIELD · SORT BY SHAPE',
+    text: 'Sort each galaxy by its shape. Spiral: arms winding round a bright centre. Irregular: clumpy, with no clear shape. Elliptical: a smooth oval glow. Disk: seen edge-on, a thin streak, often split by a dark dust lane. Tap a button or press 1–4. Classify all 12 and the results go to the Instituto de Astrofísica de Canarias.',
+    uni: 'Instituto de Astrofísica de Canarias',
+    coords: 'RA 12h 36m · DEC +62°',
+  },
   interstellar: {
     title: 'INTERSTELLAR OBJECT TRACKING',
     signal: 'OBJECT 2026 A1 · VISITOR FROM ANOTHER STAR',
@@ -130,46 +136,16 @@ export function blit(ctx, buf, img) {
 }
 
 export const DOWNLINK_TIME = 2.8;
-// The downlink: the satellite beams the data down to the university's dish, in chunky pixels.
-export function drawDownlink(ctx, uni, d) {
+// The downlink: the view dims and a progress bar fills as the data goes down.
+export function drawDownlink(ctx, d) {
   const W = ctx.canvas.width,
     H = ctx.canvas.height,
-    S = W / BW,
-    px = (x, y, w, h, c) => {
-      ctx.fillStyle = c;
-      ctx.fillRect(Math.round(x) * S, Math.round(y) * S, w * S, h * S);
-    };
+    p = Math.min(1, d / (DOWNLINK_TIME - 0.3));
   ctx.fillStyle = 'rgba(2,4,6,.74)';
   ctx.fillRect(0, 0, W, H);
-  const sx = 70,
-    sy = 30;
-  px(sx - 9, sy - 2, 6, 4, '#2b4f8a');
-  px(sx + 4, sy - 2, 6, 4, '#2b4f8a');
-  px(sx - 9, sy - 2, 6, 1, '#4a7bc4');
-  px(sx + 4, sy - 2, 6, 1, '#4a7bc4');
-  px(sx - 3, sy - 3, 7, 6, '#c9ccc8');
-  px(sx - 2, sy - 2, 5, 1, '#f0f2ee');
-  px(sx, sy + 3, 1, 2, '#99aaaa');
-  px(sx - 1, sy + 5, 3, 1, '#ffd166');
-  const gx = 176,
-    gy = BH - 32;
-  px(gx - 6, gy - 6, 12, 2, '#d8dad6');
-  px(gx - 5, gy - 4, 10, 2, '#b8bab6');
-  px(gx - 3, gy - 2, 6, 1, '#9a9c98');
-  px(gx, gy - 9, 1, 3, '#888888');
-  px(gx - 1, gy - 1, 3, 6, '#7a7c78');
-  px(gx - 5, gy + 5, 11, 4, '#5a5c58');
-  px(gx - 4, gy + 6, 2, 2, '#ffd166');
-  const p = Math.min(1, d / (DOWNLINK_TIME - 0.3));
-  for (let k = 0; k < 14; k++) {
-    const f = (k / 14 + d * 0.9) % 1;
-    px(sx + (gx - sx) * f, sy + 6 + (gy - 16 - sy) * f, 2, 2, f < p + 0.02 ? '#55b6ff' : 'rgba(85,182,255,.25)');
-  }
   ctx.font = '18px "Courier New", monospace';
   ctx.textBaseline = 'top';
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#c9ccc8';
-  ctx.fillText(uni.toUpperCase() + ' GROUND STATION', gx * S, (gy + 12) * S);
   const bw = 300,
     bx = W / 2 - bw / 2,
     by = H / 2 - 10;
