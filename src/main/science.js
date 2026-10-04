@@ -1,5 +1,6 @@
 import { satellites } from './constellation.js';
 import { dive, diving } from './dive.js';
+import { releaseHeldEvent } from './events/core.js';
 import { state } from './state.js';
 import { fadeCloseModal, launcher, preload, reveal } from './launcher.js';
 import { touchScroll } from '../shared/touchscroll.js';
@@ -59,6 +60,7 @@ function openRequest(r) {
   if (!r.sat || r.sat.lost) r.sat = hostSat();
   opened = r;
   expanded = false;
+  state.science = true; // from the dive on, celestial events wait for this window to close
   render();
   // the window loads hidden during the dive and opens once the screen is covered; ?dive tells it to start in the clouds
   preload(L, `react.html?type=${r.kind}&sat=${r.sat.id}&dive=1`);
@@ -69,6 +71,9 @@ export function closeScience() {
   L.shown = false;
   opened = null;
   fadeCloseModal('scienceModal', 'scienceFrame');
+  // back at mission control: any celestial event that came due meanwhile starts now
+  state.science = false;
+  releaseHeldEvent();
 }
 // messages from the science window
 export function scienceMessage(data) {
@@ -89,6 +94,7 @@ export function resetScience() {
   expanded = false;
   note = null;
   closeScience();
+  state.science = false;
   render();
 }
 
@@ -106,6 +112,19 @@ function ticket(r, arrived) {
   c.onclick = () => openRequest(r);
   return c;
 }
+// The fanned-out list only takes the room left below the fault tickets (and at most half the screen), scrolling inside
+// if it must, so the two never overlap. The list is anchored at the bottom, so its bottom edge stays put while its
+// height is capped. Re-fitted whenever the tickets change or the window resizes.
+const alertsEl = document.getElementById('alerts');
+function fitList() {
+  const list = el.querySelector('.science-list');
+  if (!list) return;
+  list.style.maxHeight = '';
+  const room = list.getBoundingClientRect().bottom - (alertsEl.getBoundingClientRect().bottom + 12);
+  list.style.maxHeight = Math.max(84, Math.min(room, innerHeight * 0.5)) + 'px';
+}
+new ResizeObserver(fitList).observe(alertsEl);
+addEventListener('resize', fitList);
 function render(arrived = false) {
   el.replaceChildren();
   if (note) {
@@ -137,6 +156,7 @@ function render(arrived = false) {
       render();
     };
     el.append(list, less);
+    fitList();
     return;
   }
   // folded: a stack showing the newest request, with the count in a badge and the others peeking out underneath

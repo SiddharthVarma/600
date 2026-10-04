@@ -28,6 +28,23 @@ export const eventBusy = () => !!activeEvent || eventIncoming || state.intro;
 export function setEventIncoming(v) {
   eventIncoming = v;
 }
+// A celestial event that comes due while a science window is open waits, and starts as soon as the window closes, so its
+// arrival is never missed and no countdown runs unseen. Only the first waits; any others that come due skip their turn
+// as usual. A relaunch cancels it.
+let held = null,
+  heldGen = 0;
+export function holdForScience(trigger) {
+  if (!state.science) return false;
+  held ||= trigger;
+  return true;
+}
+export function releaseHeldEvent() {
+  const trigger = held,
+    gen = heldGen;
+  held = null;
+  // once the window has faded away
+  if (trigger) setTimeout(() => gen === heldGen && trigger(), 600);
+}
 
 // Celestial events. An event marks its satellites, plays its effect in the sky and posts a CRITICAL ticket with a
 // countdown. The player answers when ready: the ticket opens the ops computer in emergency/, the matching script
@@ -328,6 +345,8 @@ export function drawEventFx(t) {
 export function resetEvents() {
   activeEvent = null;
   eventIncoming = false;
+  held = null;
+  heldGen++;
   pulses = [];
   setSunGlow(0);
   sunOut();

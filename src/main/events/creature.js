@@ -1,6 +1,6 @@
 import { pushAlert, satTag } from '../alerts.js';
 import { H, W, ctx, point, satellites, updateNetwork } from '../constellation.js';
-import { activeEvent, eventBusy, pulse, resolveEvent, startEvent } from './core.js';
+import { activeEvent, eventBusy, holdForScience, pulse, resolveEvent, startEvent } from './core.js';
 
 // Tentacle event: no window and no procedure. Tentacles reach in from the screen edges for real satellites. Click a
 // tentacle to zap it back (it returns angrier and takes more hits); if one grabs a satellite, click the satellite fast
@@ -303,7 +303,7 @@ export function scheduleKraken() {
   );
 } // rare, so it stays a surprise
 export function triggerKraken() {
-  if (eventBusy()) return;
+  if (eventBusy() || holdForScience(triggerKraken)) return;
   // prey only from rings 7 and 9: they orbit the same way, so tentacles chasing them don't sweep into each other
   const pool = satellites.filter(s => !s.lost && !s.anomaly && !s.rejoining && (s.ring === 7 || s.ring === 9)),
     picked = [];

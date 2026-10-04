@@ -122,7 +122,22 @@ export function Survey({ kind }) {
           ctx.fillText('TARGET', x0 + 90, y0 + 6);
           ctx.fillText(ref.name, x0 + 90, y0 + 114);
         }
-        hudText(ctx, '0.5 m/px', 'left', 'bottom', 'rgba(201,255,77,.6)');
+        // while something passes below, the readouts glitch
+        const below = scene.beast && scene.beast(t),
+          glitch = below && Math.floor(t * 6) % 5 !== 0;
+        hudText(ctx, glitch ? 'DEPTH ???' : '0.5 m/px', 'left', 'bottom', glitch ? 'rgba(176,108,224,.85)' : 'rgba(201,255,77,.6)');
+        if (below && Math.floor(t * 9) % 7 !== 0) {
+          const W = ctx.canvas.width,
+            msg = 'UNKNOWN CONTACT BELOW THE SURFACE';
+          ctx.font = '18px "Courier New", monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          const w = ctx.measureText(msg).width;
+          ctx.fillStyle = 'rgba(2,4,6,.7)';
+          ctx.fillRect(W / 2 - w / 2 - 10, 46, w + 20, 28);
+          ctx.fillStyle = `rgba(176,108,224,${0.6 + 0.4 * Math.abs(Math.sin(t * 5))})`;
+          ctx.fillText(msg, W / 2, 50);
+        }
         if (phase === 'downlink') {
           const d = now - sentAt.current;
           drawDownlink(ctx, d);
