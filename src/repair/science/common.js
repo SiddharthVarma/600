@@ -1,5 +1,10 @@
+import { inSky, onEarth } from './scenes.js';
 
 // Each science request: who asked for it, what the window says, and where the camera dives in on the Earth sprite.
+// coords: picks a fresh, believable location each time a window opens (a spot in the right part of the world, or
+// anywhere on the sky).
+const earth = (lat, lon) => () => onEarth(Math.random, lat, lon),
+  sky = () => inSky(Math.random);
 export const SCIENCE = {
   penguins: {
     title: 'PENGUIN COLONY TRACKING',
@@ -8,7 +13,7 @@ export const SCIENCE = {
     uni: 'British Antarctic Survey',
     noun: ['colony', 'colonies'],
     earthAt: [118, 214],
-    coords: '70.6°S 11.6°W',
+    coords: earth([-78, -65], [-180, 180]), // the Antarctic coast
   },
   whales: {
     title: 'WHALE POPULATION TRACKING',
@@ -17,7 +22,7 @@ export const SCIENCE = {
     uni: 'British Antarctic Survey',
     noun: ['whale', 'whales'],
     earthAt: [150, 150],
-    coords: '41.2°S 63.9°W',
+    coords: earth([-60, -35], [-180, 180]), // the Southern Ocean
   },
   wildfire: {
     title: 'WILDFIRE HOTSPOT TRACKING',
@@ -26,7 +31,7 @@ export const SCIENCE = {
     uni: 'Brazilian Fire Research Center',
     noun: ['fire', 'fires'],
     earthAt: [64, 92],
-    coords: '9.0°S 63.0°W',
+    coords: earth([-14, -2], [-70, -50]), // the Amazon
   },
   flamingos: {
     title: 'FLAMINGO FLOCK TRACKING',
@@ -35,16 +40,16 @@ export const SCIENCE = {
     uni: 'University of Nairobi',
     noun: ['flock', 'flocks'],
     earthAt: [205, 120],
-    coords: '0.25°N 36.10°E',
+    coords: earth([-3, 1], [35.5, 36.5]), // the East African Rift lakes
   },
   aircraft: {
     title: 'AIRCRAFT RECOGNITION',
     signal: 'ARMS CONTROL VERIFICATION · DEFENCE SURVEY',
-    text: "The Ministry of Defence wants a count of one type of aircraft at this base, shown on the target card. Tap each one that matches, then downlink your count..",
+    text: 'The Ministry of Defence wants a count of one type of aircraft at this base, shown on the target card. Tap each one that matches, then downlink your count.',
     uni: 'Ministry of Defence',
     noun: ['fighter jet', 'fighter jets'],
     earthAt: [80, 185],
-    coords: '45.2°N 12.6°E',
+    coords: earth([48, 58], [-5, 20]), // fallback: each airbase sets its own, by climate
   },
   oil: {
     title: 'OIL SPILL TRACKING',
@@ -53,7 +58,7 @@ export const SCIENCE = {
     uni: 'University College Dublin',
     noun: ['slick', 'slicks'],
     earthAt: [140, 190],
-    coords: '28.7°N 88.4°W',
+    coords: earth([24, 29], [-95, -85]), // the Gulf of Mexico
   },
   darkships: {
     title: 'DARK SHIP TRACKING',
@@ -62,14 +67,14 @@ export const SCIENCE = {
     uni: 'Global Fishing Watch',
     noun: ['dark ship', 'dark ships'],
     earthAt: [130, 50],
-    coords: '1.3°S 91.5°W',
+    coords: earth([-5, 2], [-95, -82]), // off the Galápagos and Ecuador
   },
   supernova: {
     title: 'SUPERNOVA SEARCH',
     signal: 'TRANSIENT SURVEY · ARCHIVE VS TONIGHT',
     text: "Tonight's image of this patch of sky is flicking back and forth with an older one. Find the new star that wasn't there before, tap it, then downlink to the University of Surrey. Anything that moves between the two is an asteroid, and a sharp single-pixel speck is a cosmic ray hit.",
     uni: 'University of Surrey',
-    coords: 'RA 12h 31m · DEC +14°',
+    coords: sky,
   },
   exoplanet: {
     title: 'EXOPLANET TRANSIT SEARCH',
@@ -80,16 +85,16 @@ export const SCIENCE = {
   galaxies: {
     title: 'GALAXY CLASSIFICATION',
     signal: 'DEEP FIELD · SORT BY SHAPE',
-    text: 'Sort each galaxy by its shape. Spiral: arms winding round a bright centre. Irregular: clumpy, with no clear shape. Elliptical: a smooth oval glow. Disk: seen edge-on, a thin streak, often split by a dark dust lane. Tap a button or press 1–4. Classify all 12 and the results go to the Instituto de Astrofísica de Canarias.',
+    text: 'Sort each galaxy by its shape - spiral, irregular, elliptical, or disk. Classify all 12 to help with ongoing research at the Instituto de Astrofísica de Canarias.',
     uni: 'Instituto de Astrofísica de Canarias',
-    coords: 'RA 12h 36m · DEC +62°',
+    coords: sky,
   },
   interstellar: {
     title: 'INTERSTELLAR OBJECT TRACKING',
     signal: 'OBJECT 2026 A1 · VISITOR FROM ANOTHER STAR',
     text: 'An interstellar object is streaking through our solar system! Keep it inside the reticle until all its data is recorded.',
     uni: 'Instituto de Astrofísica de Canarias',
-    coords: 'RA 16h 21m · DEC +12°',
+    coords: sky,
   },
 };
 export const report = data => window.parent !== window && window.parent.postMessage(data, '*');

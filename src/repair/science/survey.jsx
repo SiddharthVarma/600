@@ -37,6 +37,7 @@ const plural = (n, [one, many]) => `${n} ${n === 1 ? one : many}`;
 
 export function Survey({ kind }) {
   const info = SCIENCE[kind];
+  const [coords] = useState(info.coords); // a fresh spot in the right part of the world each time
   const canvasRef = useRef(null);
   const [scene] = useState(() => makeSurvey(kind, Math.floor(Math.random() * 1e9)));
   const [phase, setPhase] = useState('zoom'); // zoom → look → downlink → done
@@ -65,7 +66,7 @@ export function Survey({ kind }) {
         { phase, ir, marks, result } = live.current;
       if (phase === 'zoom') {
         blit(ctx, buf, drawZoom(ctx, SCALE, earth, info.earthAt, scene, t));
-        hudText(ctx, 'ACQUIRING · ' + (scene.coords || info.coords), 'left', 'top');
+        hudText(ctx, 'ACQUIRING · ' + (scene.coords || coords), 'left', 'top');
         if (t >= ZOOM_TIME) setPhase('look');
       } else {
         scene.frame(t, ir);
@@ -100,7 +101,7 @@ export function Survey({ kind }) {
         }
         brackets(ctx);
         hudText(ctx, scene.toggle ? scene.toggle[ir ? 'on' : 'off'] : 'VISIBLE', 'left', 'top');
-        hudText(ctx, scene.coords || info.coords, 'right', 'top');
+        hudText(ctx, scene.coords || coords, 'right', 'top');
         if (scene.reference && phase !== 'done') {
           // the target card: what you're looking for, top down, as it looks from up here
           const W = ctx.canvas.width,

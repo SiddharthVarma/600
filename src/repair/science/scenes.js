@@ -19,6 +19,20 @@ export function rng(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+// readouts for where a scene is: a random point in a lat/lon box, or anywhere on the sky. r: a 0..1 random source.
+const between = (r, [a, b]) => a + r() * (b - a);
+export function onEarth(r, lat, lon) {
+  const la = between(r, lat),
+    lo = between(r, lon);
+  return `${Math.abs(la).toFixed(1)}°${la < 0 ? 'S' : 'N'} ${Math.abs(lo).toFixed(1)}°${lo < 0 ? 'W' : 'E'}`;
+}
+export function inSky(r) {
+  const ra = r() * 24,
+    h = Math.floor(ra),
+    m = Math.floor((ra - h) * 60),
+    dec = Math.round(between(r, [-60, 75]));
+  return `RA ${h}h ${String(m).padStart(2, '0')}m · DEC ${dec < 0 ? '−' : '+'}${Math.abs(dec)}°`;
+}
 export function makeNoise(seed, period = 0) {
   const h = (x, y) => {
     if (period) {
@@ -947,7 +961,10 @@ const BIOMES = [
       [100, 102, 104],
     ],
     dots: [46, 66, 38],
-    coords: '52.6°N 1.2°E',
+    where: [
+      [48, 58],
+      [-5, 20],
+    ],
   },
   {
     name: 'DESERT',
@@ -963,7 +980,10 @@ const BIOMES = [
       [132, 128, 120],
     ],
     dots: [132, 116, 76],
-    coords: '24.6°N 54.5°E',
+    where: [
+      [20, 30],
+      [40, 56],
+    ],
   },
   {
     name: 'ARCTIC',
@@ -979,7 +999,10 @@ const BIOMES = [
       [94, 96, 100],
     ],
     dots: [34, 58, 42],
-    coords: '69.3°N 16.1°E',
+    where: [
+      [64, 70],
+      [10, 30],
+    ],
   },
 ];
 const CARD = { x: BW - 50, y: 0, w: 50, h: 46 }; // top-right corner, kept clear for the reference card
@@ -1131,7 +1154,7 @@ function aircraft(B, r) {
   return {
     targets,
     noun: [T.plural.replace(/s$/, ''), T.plural],
-    coords: biome.coords,
+    coords: onEarth(r, ...biome.where),
     reference: { name: T.name, img: mini.img },
     frame() {
       fb.set(base);

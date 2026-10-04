@@ -13,7 +13,8 @@ const FIT = `min(${BW * 4}px, calc((100vh - 340px) * ${BW / BH}))`;
 const SCALE = 4,
   COUNT = 12,
   KINDS = ['spiral', 'irregular', 'elliptical', 'disk'],
-  LABEL = { spiral: 'SPIRAL', irregular: 'IRREGULAR', elliptical: 'ELLIPTICAL', disk: 'DISK' },
+  CHOICES = [...KINDS, 'unknown'],
+  LABEL = { spiral: 'SPIRAL', irregular: 'IRREGULAR', elliptical: 'ELLIPTICAL', disk: 'DISK', unknown: '???' },
   ARTICLE = { spiral: 'A SPIRAL', irregular: 'AN IRREGULAR', elliptical: 'AN ELLIPTICAL', disk: 'AN EDGE-ON DISK' };
 
 // Each galaxy is a light function f(x, y) → [r, g, b] in its own frame, centred on the origin, sized in scene pixels.
@@ -129,9 +130,10 @@ function disk(r) {
 const MAKERS = { spiral, elliptical, irregular, disk };
 
 // one galaxy, centred in the frame, with a few foreground stars and faint noise, tone-mapped and dithered to pixel art
-function paint(kind, seed) {
+const paint = (kind, seed) => render(seed, MAKERS[kind]);
+function render(seed, makeLight) {
   const r = rng(seed),
-    light = MAKERS[kind](r),
+    light = makeLight(r),
     stars = Array.from({ length: 26 }, () => [r() * BW, r() * BH, 0.4 + Math.pow(r(), 4) * 3]),
     img = new ImageData(BW, BH),
     d = img.data,
@@ -161,14 +163,91 @@ function paint(kind, seed) {
   return img;
 }
 
+// The thing that isn't a galaxy. A big spiral glows behind it, and in front the creature's silhouette blots out the
+// light: a dark body and tentacles reaching across the frame. They slowly writhe, the starlight catches their edges in
+// a thin purple rim, and every few seconds, near the middle, something blinks.
+function makeThing(seed) {
+  const r = rng(seed),
+    bg = render(seed, rr => spiral(rr, 0, 0, 1.7)).data,
+    body = { x: BW / 2 + (r() - 0.5) * 30, y: BH / 2 + (r() - 0.5) * 16, rad: 9 + r() * 4 },
+    arms = Array.from({ length: 7 }, (_, k) => ({
+      a: (k / 7) * Math.PI * 2 + (r() - 0.5) * 0.6,
+      len: 45 + r() * 40,
+      curl: (r() - 0.5) * 0.09,
+      ph: r() * 9,
+      wig: 0.6 + r() * 0.6,
+    })),
+    img = new ImageData(BW, BH),
+    d = img.data,
+    mask = new Uint8Array(BW * BH);
+  const stamp = (cx, cy, rad) => {
+    for (let y = Math.floor(cy - rad); y <= cy + rad; y++)
+      for (let x = Math.floor(cx - rad); x <= cx + rad; x++)
+        if (x >= 0 && y >= 0 && x < BW && y < BH && (x - cx) ** 2 + (y - cy) ** 2 <= rad * rad) mask[y * BW + x] = 1;
+  };
+  return t => {
+    mask.fill(0);
+    stamp(body.x, body.y, body.rad);
+    stamp(body.x + 4, body.y - 3, body.rad * 0.7);
+    stamp(body.x - 3, body.y + 3, body.rad * 0.75);
+    arms.forEach(arm => {
+      let a = arm.a,
+        x = body.x,
+        y = body.y;
+      for (let s = 0; s < arm.len; s++) {
+        const f = s / arm.len;
+        a += Math.sin(t * 0.7 + f * 6 + arm.ph) * 0.03 * arm.wig + arm.curl * f;
+        x += Math.cos(a);
+        y += Math.sin(a);
+        stamp(x, y, Math.max(0.6, (1 - f) * 4.2));
+      }
+    });
+    for (let i = 0, p = 0; i < mask.length; i++, p += 4) {
+      const x = i % BW,
+        y = (i / BW) | 0;
+      d[p + 3] = 255;
+      if (mask[i]) {
+        d[p] = 4;
+        d[p + 1] = 2;
+        d[p + 2] = 8;
+        continue;
+      }
+      // the rim: starlight catching the edge, purple, brighter where the galaxy behind is brighter
+      const edge = (x > 0 && mask[i - 1]) || (x < BW - 1 && mask[i + 1]) || (y > 0 && mask[i - BW]) || (y < BH - 1 && mask[i + BW]);
+      if (edge) {
+        const k = Math.min(1, 0.25 + ((bg[p] + bg[p + 1] + bg[p + 2]) / 765) * 1.6);
+        d[p] = 118 * k;
+        d[p + 1] = 58 * k;
+        d[p + 2] = 168 * k;
+      } else {
+        d[p] = bg[p];
+        d[p + 1] = bg[p + 1];
+        d[p + 2] = bg[p + 2];
+      }
+    }
+    // the blink
+    if (t % 7 < 0.35)
+      for (const ex of [-2, 2]) {
+        const p = (Math.round(body.y - 1) * BW + Math.round(body.x + ex)) * 4;
+        d[p] = 176;
+        d[p + 1] = 110;
+        d[p + 2] = 224;
+      }
+    return img;
+  };
+}
+
 export function Galaxies() {
   const info = SCIENCE.galaxies;
+  const [coords] = useState(info.coords); // a fresh patch of sky each time
   const canvasRef = useRef(null);
-  // the set to sort: a shuffled mix, three of each kind
+  // the set to sort: a shuffled mix, three of each kind. In about two runs in five, one of them isn't a galaxy.
   const [deck] = useState(() => {
     const r = rng(Math.floor(Math.random() * 1e9)),
-      kinds = Array.from({ length: COUNT }, (_, i) => KINDS[i % KINDS.length]).sort(() => r() - 0.5);
-    return kinds.map(kind => ({ kind, img: paint(kind, Math.floor(r() * 1e9)) }));
+      kinds = Array.from({ length: COUNT }, (_, i) => KINDS[i % KINDS.length]).sort(() => r() - 0.5),
+      deck = kinds.map(kind => ({ kind, img: paint(kind, Math.floor(r() * 1e9)) }));
+    if (r() < 0.4) deck[4 + Math.floor(r() * 7)] = { kind: 'unknown', frame: makeThing(Math.floor(r() * 1e9)) };
+    return deck;
   });
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState([]);
@@ -191,19 +270,31 @@ export function Galaxies() {
         { index, flash, phase } = live.current,
         W = ctx.canvas.width,
         H = ctx.canvas.height;
-      blit(ctx, buf, deck[Math.min(index, COUNT - 1)].img);
+      const item = deck[Math.min(index, COUNT - 1)],
+        thing = item.kind === 'unknown' && phase === 'sort';
+      blit(ctx, buf, item.frame ? item.frame(now) : item.img);
       brackets(ctx);
-      hudText(ctx, `GALAXY ${Math.min(index + 1, COUNT)} OF ${COUNT}`, 'left', 'top');
-      hudText(ctx, info.coords, 'right', 'top');
+      // on the thing, the readout glitches
+      hudText(ctx, thing ? `GALAXY ?? OF ${COUNT}` : `GALAXY ${Math.min(index + 1, COUNT)} OF ${COUNT}`, 'left', 'top');
+      hudText(ctx, thing ? 'RA ??h ??m · DEC ??°' : coords, 'right', 'top');
       if (flash) {
         ctx.font = '22px "Courier New", monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
-        const msg = flash.ok ? `CORRECT · ${LABEL[flash.kind]}` : `IT WAS ${ARTICLE[flash.kind]}`,
+        const msg =
+            flash.kind === 'unknown'
+              ? flash.ok
+                ? 'IT SAW YOU.'
+                : 'THAT WAS NOT A GALAXY.'
+              : flash.chose === 'unknown'
+                ? 'NOTHING THERE. YET.'
+                : flash.ok
+                  ? `CORRECT · ${LABEL[flash.kind]}`
+                  : `IT WAS ${ARTICLE[flash.kind]}`,
           w = ctx.measureText(msg).width;
         ctx.fillStyle = 'rgba(2,4,6,.8)';
         ctx.fillRect(W / 2 - w / 2 - 14, H - 64, w + 28, 40);
-        ctx.fillStyle = flash.ok ? '#c9ff4d' : '#ff5964';
+        ctx.fillStyle = flash.kind === 'unknown' && flash.ok ? '#b06ce0' : flash.ok ? '#c9ff4d' : '#ff5964';
         ctx.fillText(msg, W / 2, H - 32);
       }
       if (phase === 'downlink') {
@@ -227,7 +318,7 @@ export function Galaxies() {
       ok = kind === truth;
     setAnswers([...answers, ok]);
     setStreak(ok ? streak + 1 : 0);
-    setFlash({ ok, kind: truth });
+    setFlash({ ok, kind: truth, chose: kind });
     // a moment to see whether you were right, then the next galaxy
     setTimeout(
       () => {
@@ -240,10 +331,10 @@ export function Galaxies() {
       ok ? 650 : 1300,
     );
   };
-  // keys 1, 2, 3
+  // keys 1–5
   useEffect(() => {
     const onKey = e => {
-      const k = KINDS[Number(e.key) - 1];
+      const k = CHOICES[Number(e.key) - 1];
       if (k) classify(k);
     };
     addEventListener('keydown', onKey);
@@ -274,12 +365,19 @@ export function Galaxies() {
       />
       <div className="actions" style={{ alignItems: 'center' }}>
         {phase === 'sort' &&
-          KINDS.map((k, i) => (
-            <button key={k} className="action" onClick={() => classify(k)} disabled={!!flash} style={flash ? { opacity: 0.5 } : {}}>
+          CHOICES.map((k, i) => (
+            <button
+              key={k}
+              className="action"
+              onClick={() => classify(k)}
+              disabled={!!flash}
+              // ??? sits there quietly, in grey, whether or not anything comes
+              style={{ ...(k === 'unknown' ? { color: '#6b7470', borderColor: '#39403c' } : {}), ...(flash ? { opacity: 0.5 } : {}) }}
+            >
               {i + 1} · {LABEL[k]}
             </button>
           ))}
-        <span className="eyebrow">{answers.length ? `${correct} OF ${answers.length} RIGHT · STREAK ${streak}` : 'PRESS 1–4'}</span>
+        <span className="eyebrow">{answers.length ? `${correct} OF ${answers.length} RIGHT · STREAK ${streak}` : 'PRESS 1–5'}</span>
         <span style={{ flex: 1 }} />
         {phase === 'done' && (
           <button className="action" onClick={() => report({ type: 'science-close' })}>
@@ -293,6 +391,7 @@ export function Galaxies() {
           style={correct >= COUNT - 2 ? {} : { color: 'var(--yellow)', borderColor: 'var(--yellow)' }}
         >
           {info.uni.toUpperCase()} RECEIVED YOUR CLASSIFICATIONS · {correct} OF {COUNT} CORRECT
+          {deck.some(g => g.kind === 'unknown') && ' · 1 IMAGE WITHHELD FROM THE ARCHIVE'}
         </div>
       )}
     </>

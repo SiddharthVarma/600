@@ -132,6 +132,7 @@ const LABEL = { sn: 'SUPERNOVA', asteroid: 'ASTEROID', cosmic: 'COSMIC RAY', var
 
 export function Blink() {
   const info = SCIENCE.supernova;
+  const [coords] = useState(info.coords); // a fresh patch of sky each time
   const canvasRef = useRef(null);
   const [field] = useState(() => makeField(Math.floor(Math.random() * 1e9)));
   const [phase, setPhase] = useState('look'); // look → downlink → done
@@ -199,7 +200,7 @@ export function Blink() {
         'top',
         showTonight ? 'rgba(201,255,77,.9)' : 'rgba(255,209,102,.9)',
       );
-      hudText(ctx, info.coords, 'right', 'top');
+      hudText(ctx, coords, 'right', 'top');
       if (phase === 'downlink') {
         const d = now - sentAt.current;
         drawDownlink(ctx, d);

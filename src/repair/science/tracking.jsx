@@ -89,6 +89,7 @@ function drawObject(B, o, t) {
 
 export function Tracking() {
   const info = SCIENCE.interstellar;
+  const [coords] = useState(info.coords); // a fresh patch of sky each time
   const canvasRef = useRef(null);
   const [phase, setPhase] = useState('track'); // track → downlink → done
   const live = useRef({});
@@ -170,7 +171,7 @@ export function Tracking() {
         'top',
         phase !== 'track' || locked ? '#c9ff4d' : 'rgba(255,89,100,.9)',
       );
-      hudText(ctx, info.coords, 'right', 'top');
+      hudText(ctx, coords, 'right', 'top');
       // the data recorded so far, and the light curve it's building (the tumbling shows up as a flicker)
       const bw = 260,
         bx = 16,
