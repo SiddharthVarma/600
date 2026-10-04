@@ -385,10 +385,55 @@ function whales(B, r) {
       y = r() * BH;
     if (free(x, y, 12)) kelp.push({ x, y, a: r() * Math.PI, len: 10 + r() * 16, ph: r() * 9 });
   }
+  // In about one pass in four, something huge passes under the water, soon after the survey starts (scene time ~5–8 s,
+  // so 2–5 s after the zoom lands), crossing in about 16 s. It's never a target and never a decoy: it's just there.
+  const beast =
+    r() < 0.25
+      ? { dir: r() < 0.5 ? 1 : -1, y0: 35 + r() * (BH - 70), tilt: (r() - 0.5) * 0.4, start: 4.8 + r() * 3, dur: 16, L: 80 + r() * 30 }
+      : null;
+  const beastAt = t => {
+    if (!beast) return null;
+    const k = (t - beast.start) / beast.dur;
+    if (k < 0 || k > 1) return null;
+    const span = BW + beast.L * 2.6,
+      x = beast.dir > 0 ? -beast.L * 1.3 + k * span : BW + beast.L * 1.3 - k * span;
+    return { x, y: beast.y0 + Math.sin(k * 3) * 6, a: (beast.dir > 0 ? 0 : Math.PI) + beast.tilt };
+  };
+  // the shape below: a long body tapering back into six trailing tentacles, seen only as the sea darkening above it,
+  // with soft edges that ripple with the waves
+  function drawBeast(t, at) {
+    const L = beast.L,
+      ca = Math.cos(at.a),
+      sa = Math.sin(at.a),
+      reach = L * 1.4;
+    for (let y = Math.max(0, Math.floor(at.y - reach)); y < Math.min(BH, at.y + reach); y++)
+      for (let x = Math.max(0, Math.floor(at.x - reach)); x < Math.min(BW, at.x + reach); x++) {
+        const s = (x - at.x) * ca + (y - at.y) * sa,
+          q = -(x - at.x) * sa + (y - at.y) * ca,
+          wobble = Math.sin(t * 2 + x * 0.3 + y * 0.2) * 0.08;
+        let shape = 0;
+        if (Math.abs(s) < L / 2) {
+          const half = L * 0.13 * Math.sqrt(1 - (s / (L / 2)) ** 2);
+          shape = Math.max(shape, 1 - Math.abs(q) / (half + 0.01));
+        }
+        if (s < -L * 0.35 && s > -L * 1.25)
+          for (let k = 0; k < 6; k++) {
+            const f = (-L * 0.35 - s) / (L * 0.9), // 0 at the root, 1 at the tip
+              mid = (k - 2.5) * 3.2 * (1 + f) + Math.sin(t * 1.6 + s * 0.12 + k * 1.7) * 4 * f,
+              half = 2.6 * (1 - f) + 0.5;
+            shape = Math.max(shape, 1 - Math.abs(q - mid) / half);
+          }
+        shape += wobble;
+        if (shape > 0 && bay(x, y) < shape * 1.4) put(x, y, [3, 14, 28], 0.62 * Math.min(1, shape * 1.6));
+      }
+  }
   return {
     targets,
+    beast: beast ? t => !!beastAt(t) : null,
     frame(t) {
       ocean(put, n, t, glint);
+      const at = beastAt(t);
+      if (at) drawBeast(t, at);
       kelp.forEach(k => {
         for (let s = 0; s < k.len; s++) {
           const w = Math.sin(s * 0.5 + t + k.ph) * 1.2;
@@ -435,12 +480,14 @@ function whales(B, r) {
         ship(put, (((b.x + Math.cos(b.a) * b.v * t) % BW) + BW) % BW, (((b.y + Math.sin(b.a) * b.v * t) % BH) + BH) % BH, b.a),
       );
       targets.forEach(w => {
-        // a whale bobs in place, nosing slowly round
+        // a whale bobs in place, nosing slowly round. While the thing passes nearby, it goes quiet: it sinks, and stops
+        // blowing, until it's gone.
         const a = w.a + Math.sin(t * 0.2 + w.ph) * 0.15,
           ca = Math.cos(a),
           sa = Math.sin(a),
           x = w.x,
-          y = w.y;
+          y = w.y,
+          quiet = w.deep || (at && Math.hypot(x - at.x, y - at.y) < beast.L * 0.9);
         // the flat, glassy patch a whale leaves on the surface
         for (let s = -w.len / 2 - 4; s <= w.len / 2 + 3; s++)
           for (let q = -4; q <= 4; q++) {
@@ -453,7 +500,7 @@ function whales(B, r) {
           for (let q = -Math.ceil(half); q <= Math.ceil(half); q++) {
             if (Math.abs(q) > half + 0.2) continue;
             const c = Math.abs(q) > half - 0.6 ? [28, 34, 40] : Math.abs(q) < 0.6 && k > -0.5 ? [128, 136, 138] : [86, 94, 100];
-            put(x + ca * s - sa * q, y + sa * s + ca * q, c, w.deep ? 0.5 : 0.95);
+            put(x + ca * s - sa * q, y + sa * s + ca * q, c, quiet ? 0.5 : 0.95);
           }
         }
         // tail flukes
@@ -461,8 +508,8 @@ function whales(B, r) {
           ty = y - sa * (w.len / 2 + 1);
         for (const side of [-1, 1])
           for (let q = 1; q <= 2; q++)
-            put(tx - ca * q * 0.6 - sa * side * q, ty - sa * q * 0.6 + ca * side * q, [70, 78, 84], w.deep ? 0.45 : 0.95);
-        if (w.deep) return;
+            put(tx - ca * q * 0.6 - sa * side * q, ty - sa * q * 0.6 + ca * side * q, [70, 78, 84], quiet ? 0.45 : 0.95);
+        if (quiet) return;
         // white callosities on the head, the right whale's fingerprint
         for (const [s, q] of [
           [w.len / 2 - 1, 0],

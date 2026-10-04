@@ -15,7 +15,10 @@ const SEEN = 'sixhundred.introSeen',
   NUDGE_AFTER = 10000,
   TYPE_SPEED = 45; // characters per second
 const STEPS = {
-  welcome: { line: "Morning. Welcome to your first night shift in mission control. 600 satellites, one sleepy you. Nothing's on fire yet.", next: 'ticket' },
+  welcome: {
+    line: "Morning. Welcome to your first night shift in mission control. 600 satellites, one sleepy you. Nothing's on fire yet.",
+    next: 'ticket',
+  },
   ticket: {
     line: 'Ah. SCID-UI has alerted that something IS on fire. Click the red ticket, top left.',
     nudge: "The red one. Top left. I'll wait.",
@@ -26,11 +29,11 @@ const STEPS = {
     nudge: "The array's misaligned… align_array.py looks like the right procedure to fix this anomaly.",
   },
   playing: {},
-  aborted: { line: 'Closed it? Bold. Run the script again when you feel ready. Fix it soon or else we\'re at risk of having of losing that scid!' },
+  aborted: { line: "Closed it? Bold. Run the script again when you feel ready. Fix it soon or else we're at risk of losing that scid!" },
   failed: { line: "And it's gone. Don't worry, there are 599 more.", next: 'science' },
   done: { line: 'Nice. One down, 599 potential anomalies for 599 potential satellites to go.', next: 'science' },
   science: {
-    line: "Not everything's on fire. Private organizations rent space on your satellites. These are optional. Nobody gets fired for ignoring requests to track penguin colonies",
+    line: "Not everything's on fire. Private organizations rent space on your satellites. These are optional. Nobody gets fired for ignoring requests to track penguin colonies.",
     next: 'hide',
   },
   sciencePlaying: {},
@@ -47,7 +50,8 @@ let bubble = null,
   sat = null,
   spot = null,
   poll = 0,
-  typing = 0;
+  typing = 0,
+  opening = 0;
 const repairOpen = () => document.getElementById('repairModal').classList.contains('show'),
   scienceOpen = () => document.getElementById('scienceModal').classList.contains('show') || !!document.querySelector('.dive.on');
 const satOpen = () => state.selected === sat && panel.classList.contains('open');
@@ -84,6 +88,7 @@ function spotlight(el) {
   if (spot) spot.classList.add('sudo-spot');
 }
 function go(name) {
+  if (!bubble) return; // the walkthrough has already ended
   step = name;
   since = performance.now();
   nudged = false;
@@ -191,7 +196,7 @@ export function startIntro(delay = 1800) {
   bubble.querySelector('.sudo-skip').onclick = finish;
   document.body.appendChild(bubble);
   poll = setInterval(tick, 250);
-  setTimeout(() => go('welcome'), delay);
+  opening = setTimeout(() => go('welcome'), delay);
 }
 // hand the game back: faults, science and events carry on, and the walkthrough won't show again
 function release() {
@@ -204,6 +209,7 @@ function release() {
   }
 }
 function finish() {
+  clearTimeout(opening);
   clearInterval(poll);
   clearInterval(typing);
   release();
