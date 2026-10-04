@@ -113,6 +113,8 @@ export function updateAlerts() {
     a.el.querySelector('.alert-time').textContent = mins ? `${mins}m ago` : 'now';
   });
 }
+// the ticket element showing a satellite's fault, if there is one
+export const alertElFor = s => alerts.find(a => a.sat === s)?.el;
 function highlightSat(s) {
   if (eventActive() || s.lost) return;
   state.highlighted = [s];

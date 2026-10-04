@@ -9,7 +9,9 @@ import { scheduleDebris, triggerDebris } from './events/debris.js';
 import { scheduleFlare, triggerFlare } from './events/flare.js';
 import { scheduleGRB, triggerGRB } from './events/grb.js';
 import { closeRepair, launchers, startIfReady } from './launcher.js';
+import { maybeStartIntro, replayIntro } from './intro.js';
 import { panel, renderSat } from './panel.js';
+import { closeScience, pushScience, resetScience, scheduleScience, scienceMessage } from './science.js';
 import { state } from './state.js';
 import { touchScroll } from '../shared/touchscroll.js';
 import { promptEl, term, termNote, termRunFile, UPLINK_STATIONS } from './terminal.js';
@@ -23,18 +25,19 @@ document.getElementById('restartAll').onclick = () => {
     s.rejoining = false;
     s.rejoinProgress = 0;
     s.flarePending = false;
+    s.burst = false;
+    s.taken = false;
     s.values = { RSSI: 82, TEMPERATURE: 71, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 };
   });
   resetAnomalies();
   state.selected = null;
   state.highlighted = [];
   clearAlerts();
+  resetScience();
   resetEvents();
   resetCreature();
   document.getElementById('gameOver').classList.remove('show');
   panel.classList.remove('open');
-  document.getElementById('hint').textContent = 'select a satellite to investigate';
-  document.getElementById('hint').style.opacity = 1;
   updateNetwork();
 };
 updateNetwork();
@@ -70,18 +73,18 @@ canvas.addEventListener('click', e => {
     state.highlighted = [];
     renderSat(best);
     panel.classList.add('open');
-    document.getElementById('hint').style.opacity = 0;
   }
 });
 document.getElementById('close').onclick = () => {
   panel.classList.remove('open');
   state.selected = null;
-  document.getElementById('hint').style.opacity = 1;
 };
 term.addEventListener('click', e => {
   const f = e.target.closest('.term-file');
   if (f) termRunFile(f.dataset.file);
 });
+document.getElementById('scienceClose').onclick = closeScience;
+document.getElementById('sudoHelp').onclick = replayIntro;
 document.getElementById('repairClose').onclick = () => {
   closeRepair();
   termNote('procedure aborted', 'term-warn');
@@ -93,6 +96,10 @@ window.addEventListener('message', e => {
       L.loaded = true;
       startIfReady(L);
     }
+    return;
+  }
+  if (e.data?.type === 'science-complete' || e.data?.type === 'science-close') {
+    scienceMessage(e.data);
     return;
   }
   if (e.data?.type === 'grb-resolved' || e.data?.type === 'flare-resolved') {
@@ -116,9 +123,6 @@ window.addEventListener('message', e => {
     document.getElementById('log').textContent = wasOrbit
       ? 'SUCCESSFUL EXECUTION · REJOINING ORBIT'
       : 'SUCCESSFUL EXECUTION · TELEMETRY NOMINAL';
-    document.getElementById('hint').textContent = wasOrbit
-      ? 'satellite recovered · rejoining orbital plane'
-      : 'satellite recovered · network nominal';
     pushAlert({
       sat: state.selected,
       title: `${satTag(state.selected)} · RECOVERED`,
@@ -136,26 +140,39 @@ window.addEventListener('message', e => {
     state.selected.rejoining = false;
     updateNetwork();
     document.getElementById('log').textContent = 'SATELLITE COMMANDED TOO LATE · SATELLITE LOST';
-    document.getElementById('hint').textContent = 'satellite lost · signal unavailable';
     pushAlert({ sat: state.selected, title: `${satTag(state.selected)} · SIGNAL LOST`, body: 'Commanded too late.', crit: true });
     updateAlerts();
     termNote('link lost · satellite unrecoverable', 'term-err');
     closeRepair();
   }
 });
+// a first-time player gets SUDO's walkthrough; random faults start a few seconds in either way (they wait while it runs)
+maybeStartIntro();
 setTimeout(() => {
   trySpawnAnomaly();
   scheduleAnomaly();
-}, 10000);
+}, 4000);
 document.querySelectorAll('[data-abort]').forEach(b => {
   b.onclick = abortEvent;
 });
-setTimeout(scheduleGRB, 30000);
-setTimeout(scheduleDebris, 90000);
-setTimeout(scheduleFlare, 60000);
-setTimeout(scheduleKraken, 360000);
+// The first of each celestial event comes early enough to keep a new player hooked (somewhere in the given window, in
+// seconds); after that each repeats on its own interval.
+const firstEvent = (trigger, schedule, from, to) =>
+  setTimeout(
+    () => {
+      trigger();
+      schedule();
+    },
+    (from + Math.random() * (to - from)) * 1000,
+  );
+firstEvent(triggerGRB, scheduleGRB, 120, 240);
+firstEvent(triggerFlare, scheduleFlare, 120, 240);
+firstEvent(triggerDebris, scheduleDebris, 120, 240);
+firstEvent(triggerKraken, scheduleKraken, 240, 360);
+// the first science request comes within a minute or so; more follow every couple of minutes
+firstEvent(pushScience, scheduleScience, 30, 50);
 setInterval(() => {
-  const ticking = krakenLive() ? [] : satellites.filter(s => s.anomaly && s.countdown > 0);
+  const ticking = krakenLive() ? [] : satellites.filter(s => s.anomaly && s.countdown > 0 && !s.frozen); // frozen: the intro's first fault waits for the player
   ticking.forEach(s => {
     s.countdown--;
     if (s.countdown === 0) {
@@ -164,7 +181,6 @@ setInterval(() => {
       s.anomalyType = null;
       s.lost = true;
       updateNetwork();
-      document.getElementById('hint').textContent = 'satellite lost · signal unavailable';
       if (state.selected === s)
         document.getElementById('log').textContent = wasOrbit
           ? 'SIGNAL LOST · SATELLITE BELOW RECOVERY ALTITUDE'
@@ -194,6 +210,8 @@ Object.assign(window, {
   triggerKraken,
   trySpawnAnomaly,
   pushAnomalyAlert,
+  pushScience,
+  replayIntro,
   renderSat,
   eventActive,
   point,

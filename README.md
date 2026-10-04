@@ -41,6 +41,7 @@ src/main/                  the constellation page
   terminal.js              ssh sessions, procedures/, emergency/ scripts
   launcher.js              minigame windows: load hidden, reveal, start
   alerts.js                SCID-UI alerts and crosshairs
+  science.js               science requests: the bottom-left card and their window
   anomalies.js             spawning everyday faults
   state.js                 the few values several modules share
   events/                  core.js (tickets, emergency scripts, results) + flare, debris, grb, creature
@@ -50,6 +51,7 @@ src/repair/                the repair lab (React)
   shared/                  frame, header, result, helpers, game catalog
   games/                   thermal, power, solar, contact, wheel, cpu, orbit, startracker
   events/                  bitflip (GRB), debris, flare
+  science/                 science requests: pixel-art scenes, Earth-observation survey, interstellar tracking
 scripts/check_assets.py    CI check that referenced images exist
 LESSONS_LEARNT.md          problems found while testing, and how they were fixed
 ```
@@ -70,3 +72,5 @@ Everyday repairs (a satellite can spawn any of these):
 | startracker | Star Tracker Lock — rebuild a star pattern from a catalog reference |
 
 Celestial events: Solar Flare (flare), Debris Field (debris), Gamma-Ray Burst (bitflip), and the creature, which is played on the main screen.
+
+Science requests (universities' hosted-payload proposals; optional, nothing is lost by skipping one): penguin colonies (penguins), whales (whales) and wildfires (wildfire) are Earth-observation surveys where you mark what you find; interstellar tracks a visiting object until all its data is recorded. `pushScience()` in the console adds one.

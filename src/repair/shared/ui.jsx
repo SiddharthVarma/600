@@ -1,20 +1,23 @@
 import { useState } from 'react';
-import { games } from './catalog.js';
+import { SCIENCE_TYPES, games } from './catalog.js';
 
 export function Frame({ type, setType, children, remaining, timedOut }) {
   const params = new URLSearchParams(location.search);
   const embedded = Boolean(params.get('type'));
   const multi = Boolean(params.get('sats'));
   const satId = params.get('sat');
-  const satLabel = multi
-    ? 'MULTIPLE SATELLITES · EMERGENCY OVERRIDE'
-    : satId
-      ? `SAT ${String(satId).padStart(3, '0')} · MANUAL OVERRIDE`
-      : 'SAT 421 · MANUAL OVERRIDE';
+  const science = SCIENCE_TYPES.has(type);
+  const satLabel = science
+    ? `SAT ${String(satId || 214).padStart(3, '0')} · HOSTED PAYLOAD`
+    : multi
+      ? 'MULTIPLE SATELLITES · EMERGENCY OVERRIDE'
+      : satId
+        ? `SAT ${String(satId).padStart(3, '0')} · MANUAL OVERRIDE`
+        : 'SAT 421 · MANUAL OVERRIDE';
   return (
     <div className="app">
       <header className="top">
-        <span className="brand">SIX HUNDRED / REPAIR LAB</span>
+        <span className="brand">SIX HUNDRED / {science ? 'SCIENCE' : 'REPAIR'} LAB</span>
         <span className="eyebrow">
           {satLabel}
           {remaining != null && !timedOut && (
