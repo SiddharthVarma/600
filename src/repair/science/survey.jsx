@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, hudText, report } from './common.js';
-import { BH, BW, ZOOM_TIME, drawZoom, makeSurvey } from './scenes.js';
+import { BH, BW, ZOOM_TIME, drawZoom, makeSurvey, placeText } from './scenes.js';
 
 // Earth-observation request (penguins, whales, wildfires): the camera dives in, the player taps what they're asked to
 // find, and downlinks the survey. No timer; a wrong survey costs nothing.
@@ -9,7 +9,8 @@ const FIT = `min(${BW * 4}px, calc((100vh - 340px) * ${BW / BH}))`;
 const SCALE = 4,
   MATCH = 7; // a mark within this many scene pixels of a target counts as finding it
 // after the main screen's dive the window opens inside the clouds, so its own zoom skips the Earth
-const SKIP = new URLSearchParams(location.search).has('dive') ? 1.25 : 0;
+const PARAMS = new URLSearchParams(location.search),
+  SKIP = PARAMS.has('dive') ? 1.25 : 0;
 const earth = new Image();
 earth.src = '600_earth_assets/earth.png';
 
@@ -37,9 +38,11 @@ const plural = (n, [one, many]) => `${n} ${n === 1 ? one : many}`;
 
 export function Survey({ kind }) {
   const info = SCIENCE[kind];
-  const [coords] = useState(info.coords); // a fresh spot in the right part of the world each time
+  // where this survey is: the spot the main screen dived at (and, for aircraft, the kind of base), or else a fresh spot
+  // in the right part of the world
+  const [coords] = useState(() => (PARAMS.has('lat') ? placeText(+PARAMS.get('lat'), +PARAMS.get('lon')) : info.coords()));
   const canvasRef = useRef(null);
-  const [scene] = useState(() => makeSurvey(kind, Math.floor(Math.random() * 1e9)));
+  const [scene] = useState(() => makeSurvey(kind, Math.floor(Math.random() * 1e9), { biome: PARAMS.get('biome') }));
   const [phase, setPhase] = useState('zoom'); // zoom → look → downlink → done
   const [ir, setIr] = useState(false);
   const [marks, setMarks] = useState([]);
@@ -66,7 +69,7 @@ export function Survey({ kind }) {
         { phase, ir, marks, result } = live.current;
       if (phase === 'zoom') {
         blit(ctx, buf, drawZoom(ctx, SCALE, earth, info.earthAt, scene, t));
-        hudText(ctx, 'ACQUIRING · ' + (scene.coords || coords), 'left', 'top');
+        hudText(ctx, 'ACQUIRING · ' + (PARAMS.has('lat') ? coords : scene.coords || coords), 'left', 'top');
         if (t >= ZOOM_TIME) setPhase('look');
       } else {
         scene.frame(t, ir);
@@ -101,7 +104,7 @@ export function Survey({ kind }) {
         }
         brackets(ctx);
         hudText(ctx, scene.toggle ? scene.toggle[ir ? 'on' : 'off'] : 'VISIBLE', 'left', 'top');
-        hudText(ctx, scene.coords || coords, 'right', 'top');
+        hudText(ctx, PARAMS.has('lat') ? coords : scene.coords || coords, 'right', 'top');
         if (scene.reference && phase !== 'done') {
           // the target card: what you're looking for, top down, as it looks from up here
           const W = ctx.canvas.width,

@@ -22,7 +22,7 @@ export const SCIENCE = {
     uni: 'British Antarctic Survey',
     noun: ['whale', 'whales'],
     earthAt: [150, 150],
-    coords: earth([-60, -35], [-180, 180]), // the Southern Ocean
+    coords: earth([-52, -42], [-50, 10]), // the South Atlantic
   },
   wildfire: {
     title: 'WILDFIRE HOTSPOT TRACKING',
@@ -49,7 +49,7 @@ export const SCIENCE = {
     uni: 'Ministry of Defence',
     noun: ['fighter jet', 'fighter jets'],
     earthAt: [80, 185],
-    coords: earth([48, 58], [-5, 20]), // fallback: each airbase sets its own, by climate
+    coords: earth([46, 54], [0, 20]), // fallback: each airbase sets its own, by climate
   },
   oil: {
     title: 'OIL SPILL TRACKING',
@@ -58,7 +58,7 @@ export const SCIENCE = {
     uni: 'University College Dublin',
     noun: ['slick', 'slicks'],
     earthAt: [140, 190],
-    coords: earth([24, 29], [-95, -85]), // the Gulf of Mexico
+    coords: earth([25.5, 29], [-89.5, -86]), // the Gulf of Mexico
   },
   darkships: {
     title: 'DARK SHIP TRACKING',

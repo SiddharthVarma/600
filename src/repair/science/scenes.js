@@ -21,11 +21,8 @@ export function rng(seed) {
 }
 // readouts for where a scene is: a random point in a lat/lon box, or anywhere on the sky. r: a 0..1 random source.
 const between = (r, [a, b]) => a + r() * (b - a);
-export function onEarth(r, lat, lon) {
-  const la = between(r, lat),
-    lo = between(r, lon);
-  return `${Math.abs(la).toFixed(1)}°${la < 0 ? 'S' : 'N'} ${Math.abs(lo).toFixed(1)}°${lo < 0 ? 'W' : 'E'}`;
-}
+export const placeText = (la, lo) => `${Math.abs(la).toFixed(1)}°${la < 0 ? 'S' : 'N'} ${Math.abs(lo).toFixed(1)}°${lo < 0 ? 'W' : 'E'}`;
+export const onEarth = (r, lat, lon) => placeText(between(r, lat), between(r, lon));
 export function inSky(r) {
   const ra = r() * 24,
     h = Math.floor(ra),
@@ -1009,8 +1006,8 @@ const BIOMES = [
     ],
     dots: [46, 66, 38],
     where: [
-      [48, 58],
-      [-5, 20],
+      [46, 54],
+      [0, 20],
     ],
   },
   {
@@ -1054,11 +1051,11 @@ const BIOMES = [
 ];
 const CARD = { x: BW - 50, y: 0, w: 50, h: 46 }; // top-right corner, kept clear for the reference card
 
-function aircraft(B, r) {
+function aircraft(B, r, opts = {}) {
   const { setBase, fb, base } = B,
     n = makeNoise(r() * 1000),
     free = spacer(),
-    biome = BIOMES[Math.floor(r() * BIOMES.length)];
+    biome = BIOMES.find(b => b.name.toLowerCase() === opts.biome) || BIOMES[Math.floor(r() * BIOMES.length)];
   // ground: the biome's palette, with scattered bushes, rocks or pines
   for (let y = 0; y < BH; y++)
     for (let x = 0; x < BW; x++) {
@@ -1413,9 +1410,9 @@ function darkships(B, r) {
 }
 
 const BUILDERS = { penguins, whales, wildfire, flamingos, aircraft, oil, darkships };
-export function makeSurvey(kind, seed) {
+export function makeSurvey(kind, seed, opts) {
   const B = makeBuffer();
-  return { ...B, ...BUILDERS[kind](B, rng(seed)) };
+  return { ...B, ...BUILDERS[kind](B, rng(seed), opts) };
 }
 
 // The zoom-in: the camera dives at the Earth sprite, punches through cloud, then the ground resolves from coarse blocks
