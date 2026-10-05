@@ -11,6 +11,7 @@ import { scheduleGRB, triggerGRB } from './events/grb.js';
 import { closeRepair, launchers, startIfReady } from './launcher.js';
 import { maybeStartIntro, replayIntro } from './intro.js';
 import { panel, renderSat } from './panel.js';
+import { closeLaunch, earn, launchMessage, resetCredits } from './credits.js';
 import { closeScience, pushScience, resetScience, scheduleScience, scienceMessage } from './science.js';
 import { state } from './state.js';
 import { touchScroll } from '../shared/touchscroll.js';
@@ -34,6 +35,8 @@ document.getElementById('restartAll').onclick = () => {
   state.highlighted = [];
   clearAlerts();
   resetScience();
+  closeLaunch();
+  resetCredits();
   resetEvents();
   resetCreature();
   document.getElementById('gameOver').classList.remove('show');
@@ -96,6 +99,10 @@ window.addEventListener('message', e => {
       L.loaded = true;
       startIfReady(L);
     }
+    return;
+  }
+  if (e.data?.type === 'launch-complete' || e.data?.type === 'launch-close') {
+    launchMessage(e.data);
     return;
   }
   if (e.data?.type === 'science-complete' || e.data?.type === 'science-close') {
@@ -169,7 +176,7 @@ firstEvent(triggerGRB, scheduleGRB, 120, 240);
 firstEvent(triggerFlare, scheduleFlare, 120, 240);
 firstEvent(triggerDebris, scheduleDebris, 120, 240);
 firstEvent(triggerKraken, scheduleKraken, 240, 360);
-// the first science request comes within a minute or so; more follow every couple of minutes
+// the first science request comes within a minute or so; more follow every 30 to 60 seconds
 firstEvent(pushScience, scheduleScience, 30, 50);
 setInterval(() => {
   const ticking = krakenLive() ? [] : satellites.filter(s => s.anomaly && s.countdown > 0 && !s.frozen); // frozen: the intro's first fault waits for the player
@@ -211,6 +218,7 @@ Object.assign(window, {
   trySpawnAnomaly,
   pushAnomalyAlert,
   pushScience,
+  earn,
   replayIntro,
   renderSat,
   eventActive,

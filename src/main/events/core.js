@@ -34,7 +34,7 @@ export function setEventIncoming(v) {
 let held = null,
   heldGen = 0;
 export function holdForScience(trigger) {
-  if (!state.science) return false;
+  if (!state.science && !state.launch) return false;
   held ||= trigger;
   return true;
 }

@@ -16,8 +16,8 @@
 <body>
   <main id="stage"><canvas id="constellation" aria-label="A constellation of 600 satellites"></canvas></main>
   <div class="sun-glow" id="sunGlow"></div>
-  <div class="topline"><span class="brand">SIX HUNDRED</span><span class="signal"><i class="pulse"></i><span
-        id="network">CONSTELLATION NOMINAL · 600/600</span></span></div>
+  <div class="topline"><span class="brand">SIX HUNDRED<span class="count">· <span id="network">600/600</span></span></span>
+    <span class="purse"><span class="credits" id="credits"></span><button class="launch" id="launch" hidden></button></span></div>
   <aside class="panel" id="panel">
     <button class="close" id="close" aria-label="Close">×</button>
     <div class="eyebrow" id="panelEyebrow">Investigation / Orbital relay</div>
@@ -42,6 +42,9 @@
   <div class="repair-modal" id="scienceModal"><button class="repair-close" id="scienceClose"
       aria-label="Close science request">×</button><iframe class="repair-frame" id="scienceFrame"
       title="Science request"></iframe></div>
+  <div class="repair-modal" id="launchModal"><button class="repair-close" id="launchClose"
+      aria-label="Close launch control">×</button><iframe class="repair-frame" id="launchFrame"
+      title="Replacement launch"></iframe></div>
   <div class="repair-modal" id="grbModal"><button class="repair-close" data-abort aria-label="Abort procedure">×</button><iframe class="repair-frame" id="grbFrame"
       title="Gamma ray burst emergency response"></iframe></div>
   </div>

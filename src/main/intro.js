@@ -233,3 +233,59 @@ export function replayIntro() {
   if (bubble) return;
   startIntro(300);
 }
+
+// SUDO's word on launches: the first time LAUNCH lights up (enough credits and a satellite to replace), once per browser.
+// It waits for the walkthrough to be over and for no window to be open, and points at the button.
+const LAUNCH_SEEN = 'sixhundred.launchSeen',
+  LAUNCH_LINE = "All that penguin counting paid off. 15 credits buys a rocket. Click LAUNCH up top to replace the satellites you've lost, up to four per ride.";
+const launchBtn = document.getElementById('launch');
+let hint = null;
+function launchHintSeen() {
+  try {
+    return !!localStorage.getItem(LAUNCH_SEEN);
+  } catch {
+    return false;
+  }
+}
+function closeHint() {
+  if (!hint) return;
+  clearInterval(hint.typing);
+  hint.el.remove();
+  launchBtn.classList.remove('sudo-spot');
+  hint = null;
+}
+const hintPoll = setInterval(() => {
+  if (hint) {
+    if (launchBtn.hidden || state.launch) closeHint();
+    return;
+  }
+  if (launchHintSeen()) return clearInterval(hintPoll);
+  const busy = bubble || state.intro || document.querySelector('.repair-modal.show') || document.querySelector('.dive.on');
+  if (launchBtn.hidden || launchBtn.disabled || busy) return;
+  try {
+    localStorage.setItem(LAUNCH_SEEN, '1');
+  } catch {
+    // no storage: it may show again next visit
+  }
+  const el = document.createElement('div');
+  el.className = 'sudo on';
+  el.innerHTML =
+    '<div class="sudo-head"><span>SUDO · ONBOARD COMPUTER</span></div><div class="sudo-text"></div><div class="sudo-foot"><button class="sudo-next">GOT IT</button></div>';
+  document.body.appendChild(el);
+  const text = el.querySelector('.sudo-text'),
+    line = say(LAUNCH_LINE),
+    r = launchBtn.getBoundingClientRect();
+  el.querySelector('.sudo-next').onclick = closeHint;
+  el.style.left = (PHONE.matches ? 12 : Math.max(12, r.right - el.offsetWidth)) + 'px';
+  el.style.top = r.bottom + 14 + 'px';
+  launchBtn.classList.add('sudo-spot');
+  let n = 0;
+  hint = {
+    el,
+    typing: setInterval(() => {
+      n = Math.min(line.length, n + 2);
+      text.textContent = line.slice(0, n);
+      if (n >= line.length) clearInterval(hint.typing);
+    }, 2000 / TYPE_SPEED),
+  };
+}, 500);

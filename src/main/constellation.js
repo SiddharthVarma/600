@@ -28,7 +28,7 @@ export const satellites = Array.from({ length: 600 }, (_, i) => ({
 export function updateNetwork() {
   const active = satellites.filter(s => !s.lost).length;
   const network = document.getElementById('network');
-  network.textContent = `CONSTELLATION ${active === 600 ? 'NOMINAL' : 'DEGRADED'} · ${active}/600`;
+  network.textContent = `${active}/600`;
   if (active === 0) document.getElementById('gameOver').classList.add('show');
 }
 export function resize() {

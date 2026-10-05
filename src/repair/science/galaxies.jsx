@@ -255,7 +255,7 @@ export function Galaxies() {
   const [flash, setFlash] = useState(null); // the last answer, shown briefly: { ok, kind }
   const [phase, setPhase] = useState('sort'); // sort → downlink → done
   const live = useRef({});
-  live.current = { index, flash, phase };
+  live.current = { index, flash, phase, answers };
   const sentAt = useRef(0);
 
   useEffect(() => {
@@ -302,7 +302,8 @@ export function Galaxies() {
         drawDownlink(ctx, d);
         if (d >= DOWNLINK_TIME && !reported) {
           reported = true;
-          report({ type: 'science-complete', kind: 'galaxies' });
+          const { answers } = live.current;
+          report({ type: 'science-complete', kind: 'galaxies', found: answers.filter(Boolean).length, total: answers.length });
           setPhase('done');
         }
       }

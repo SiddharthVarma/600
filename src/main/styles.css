@@ -60,19 +60,94 @@ canvas {
   letter-spacing: 0.22em;
 }
 
-.signal {
+/* the satellite count, beside the name */
+.count {
+  margin-left: 16px;
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  vertical-align: middle;
+}
+
+/* credits and the launch button, top right: always in view, the side panel opens below them */
+.purse {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 16px;
+  color: var(--ink);
   font-size: 13px;
 }
 
-.pulse {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 12px var(--accent);
+.credits {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coin {
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.2em;
+}
+
+/* a payment floats up off the coin count */
+.gain {
+  position: absolute;
+  right: 0;
+  top: 0;
+  color: var(--warn);
+  animation: gain 1.6s ease-out forwards;
+}
+
+@keyframes gain {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-22px);
+  }
+}
+
+.launch {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  pointer-events: auto;
+  padding: 6px 14px;
+  border: 1px solid var(--warn);
+  border-radius: 6px;
+  background: rgba(14, 17, 16, 0.96);
+  color: var(--warn);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  animation: launch-ready 1.6s ease-in-out infinite;
+}
+
+.launch[hidden] {
+  display: none;
+}
+
+.launch:hover:not(:disabled) {
+  background: var(--warn);
+  color: #070809;
+}
+
+/* during a celestial event it waits */
+.launch:disabled {
+  opacity: 0.4;
+  cursor: default;
+  animation: none;
+}
+
+@keyframes launch-ready {
+  50% {
+    box-shadow: 0 0 14px rgba(255, 209, 102, 0.45);
+  }
 }
 
 .alerts {
@@ -186,13 +261,14 @@ canvas {
 
 .panel {
   position: fixed;
-  top: 0;
+  top: 68px;
   right: 0;
   width: min(410px, 100vw);
-  height: 100%;
-  padding: 92px 34px 32px;
+  height: calc(100% - 68px);
+  padding: 56px 34px 32px;
   background: rgba(7, 9, 9, 0.94);
   border-left: 1px solid var(--line);
+  border-top: 1px solid var(--line);
   transform: translateX(102%);
   transition: transform 0.55s cubic-bezier(0.22, 0.8, 0.2, 1);
   overflow: auto;
@@ -204,7 +280,7 @@ canvas {
 
 .close {
   position: absolute;
-  top: 28px;
+  top: 18px;
   right: 30px;
   border: 0;
   background: none;
@@ -840,13 +916,23 @@ button.command:hover {
     letter-spacing: 0.18em;
   }
 
-  .signal {
+  .count {
+    margin-left: 10px;
     font-size: 10px;
-    gap: 7px;
+  }
+
+  .purse {
+    gap: 12px;
+    font-size: 11px;
+  }
+
+  .launch {
+    padding: 4px 10px;
+    font-size: 10px;
   }
 
   .alerts {
-    top: 74px;
+    top: 82px;
     left: 12px;
     right: 12px;
     width: auto;
@@ -953,8 +1039,9 @@ button.command:hover {
      toolbar in 100%), keeps its scrolling to itself, and leaves room for the home bar. */
   .panel {
     z-index: 16;
-    height: 100%;
-    height: 100dvh;
+    top: 76px;
+    height: calc(100% - 76px);
+    height: calc(100dvh - 76px);
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     padding-bottom: calc(32px + env(safe-area-inset-bottom));

@@ -146,7 +146,7 @@ export function Survey({ kind }) {
           drawDownlink(ctx, d);
           if (d >= DOWNLINK_TIME && !reported) {
             reported = true;
-            report({ type: 'science-complete', kind, found: result.found.size, total: scene.targets.length });
+            report({ type: 'science-complete', kind, found: result.found.size, total: scene.targets.length, wrong: result.wrong.length });
             setPhase('done');
           }
         }

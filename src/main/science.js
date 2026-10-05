@@ -1,4 +1,5 @@
 import { satellites } from './constellation.js';
+import { COIN, earn, payFor } from './credits.js';
 import { dive, diving } from './dive.js';
 import { releaseHeldEvent } from './events/core.js';
 import { state } from './state.js';
@@ -9,7 +10,7 @@ const PHONE = matchMedia('(max-width: 600px) and (pointer: coarse)');
 
 // Science requests: universities' hosted-payload proposals that arrive now and then. They wait, folded into one card in
 // the bottom left, until the player opens them; each opens its own window (a survey or a tracking job) and is done once
-// its data is downlinked. Nothing is lost by ignoring them or getting one wrong.
+// its data is downlinked. They pay in credits (see credits.js); nothing is lost by ignoring them or getting one wrong.
 // area: where on Earth the request is ([latitudes], [longitudes]); the camera dives at a spot picked inside it, and the
 // window shows that same spot. Aircraft bases come in three climates, each with its own area. The space ones look away.
 const REQUESTS = {
@@ -119,7 +120,7 @@ export function scheduleScience() {
       pushScience();
       scheduleScience();
     },
-    40000 + Math.random() * 40000,
+    30000 + Math.random() * 30000,
   );
 }
 function openRequest(r) {
@@ -158,7 +159,9 @@ export function closeScience() {
 export function scienceMessage(data) {
   if (data.type === 'science-complete' && opened) {
     waiting = waiting.filter(r => r !== opened);
-    note = `DATA RECEIVED · ${opened.uni.toUpperCase()}`;
+    const pay = payFor(data);
+    earn(pay);
+    note = { text: `DATA RECEIVED · ${opened.uni.toUpperCase()}`, pay };
     clearTimeout(noteTimer);
     noteTimer = setTimeout(() => {
       note = null;
@@ -209,7 +212,8 @@ function render(arrived = false) {
   if (note) {
     const n = document.createElement('div');
     n.className = 'science-note';
-    n.textContent = note;
+    n.textContent = note.text;
+    if (note.pay) n.insertAdjacentHTML('beforeend', ` · +${note.pay} ${COIN}`);
     el.append(n);
   }
   const n = waiting.length,
