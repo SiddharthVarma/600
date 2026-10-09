@@ -17,12 +17,12 @@ function nextAnomalyType() {
   return next;
 }
 export const MAX_CONCURRENT_ANOMALIES = 2,
-  ANOMALY_FAIL_WINDOW = 60;
-// event satellites don't count toward the limit, so everyday faults keep coming while an event ticket waits
-export function trySpawnAnomaly() {
+  ANOMALY_FAIL_WINDOW = 90; // seconds to fix a fault: time to read the ticket, the terminal and the repair
+// everyday faults under way (event satellites don't count, so faults keep coming while an event ticket waits)
+export const activeFaults = () => satellites.filter(s => s.anomaly && !EVENT_TYPES.includes(s.anomalyType));
+export function trySpawnAnomaly(max = MAX_CONCURRENT_ANOMALIES) {
   if (eventActive() || krakenLive() || state.intro) return;
-  const activeCount = satellites.filter(s => s.anomaly && !EVENT_TYPES.includes(s.anomalyType)).length;
-  if (activeCount < MAX_CONCURRENT_ANOMALIES) {
+  if (activeFaults().length < max) {
     const available = satellites.filter(s => !s.lost && !s.anomaly && !s.rejoining),
       s = available[Math.floor(Math.random() * available.length)];
     if (s) spawnAnomaly(s, nextAnomalyType());
@@ -51,7 +51,7 @@ export function scheduleAnomaly() {
       trySpawnAnomaly();
       scheduleAnomaly();
     },
-    4000 + Math.random() * 6000,
+    20000 + Math.random() * 20000,
   );
 }
 

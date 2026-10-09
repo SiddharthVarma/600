@@ -33,6 +33,7 @@ export function setEventIncoming(v) {
 // as usual. A relaunch cancels it.
 let held = null,
   heldGen = 0;
+export const eventHeld = () => !!held;
 export function holdForScience(trigger) {
   if (!state.science && !state.launch) return false;
   held ||= trigger;
@@ -126,8 +127,7 @@ export function openEventTicket(ev) {
   state.highlightAt = performance.now();
   state.selected = null;
   panel.classList.add('open', 'fleet');
-  document.getElementById('panelEyebrow').textContent = 'Emergency / Fleet operations';
-  document.getElementById('satName').textContent = EVENTS[ev.kind].name;
+  document.getElementById('satName').textContent = `${EVENTS[ev.kind].name} · FLEET OPERATIONS`;
   document.getElementById('log').textContent = '';
   renderFleetStatus();
   // a new emergency gets a fresh session; the same one (e.g. after an abort) keeps its history but lists the scripts again

@@ -1,17 +1,16 @@
 import { spawnAnomaly } from './anomalies.js';
 import { alertElFor } from './alerts.js';
 import { H, W, ringProgress, satellites } from './constellation.js';
+import { startPacing } from './pacing.js';
 import { panel } from './panel.js';
 import { pushScience } from './science.js';
 import { state } from './state.js';
 
-// SUDO, the satellite's sarcastic onboard computer, walks a first-time player through their first fault: the ticket,
-// the satellite, its terminal, the repair, then the first science request. It watches what the player does rather than
-// blocking anything; while it runs, random faults, science requests and celestial events wait, and the tutorial
-// fault's countdown is frozen until its repair is open. Shown once per browser; replayIntro() in the console shows it
-// again.
-const SEEN = 'sixhundred.introSeen',
-  PHONE = matchMedia('(max-width: 600px) and (pointer: coarse)'),
+// SUDO, the satellite's sarcastic onboard computer, walks the player through their first fault: the ticket, its
+// terminal, the repair, then the first science request. It watches what the player does rather than blocking anything;
+// while it runs, random faults, science requests and celestial events wait, and the tutorial fault's countdown is
+// frozen until its repair is open. It opens every visit (skip ends it); the corner "?" replays it.
+const PHONE = matchMedia('(max-width: 600px) and (pointer: coarse)'),
   NUDGE_AFTER = 10000,
   TYPE_SPEED = 45; // characters per second
 const STEPS = {
@@ -198,15 +197,11 @@ export function startIntro(delay = 1800) {
   poll = setInterval(tick, 250);
   opening = setTimeout(() => go('welcome'), delay);
 }
-// hand the game back: faults, science and events carry on, and the walkthrough won't show again
+// hand the game back: pacing.js takes it from here
 function release() {
   state.intro = false;
   if (sat) sat.frozen = false;
-  try {
-    localStorage.setItem(SEEN, '1');
-  } catch {
-    // private browsing or storage blocked: it'll just show again next time
-  }
+  startPacing();
 }
 function finish() {
   clearTimeout(opening);
@@ -217,16 +212,6 @@ function finish() {
   bubble?.remove();
   bubble = null;
   help.hidden = false;
-}
-// first visit only
-export function maybeStartIntro() {
-  try {
-    if (localStorage.getItem(SEEN)) return false;
-  } catch {
-    // no storage: show it
-  }
-  startIntro();
-  return true;
 }
 // play it again on demand, right where the game is: no reload, nothing reset
 export function replayIntro() {

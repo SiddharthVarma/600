@@ -4,7 +4,6 @@ import { drawEarth } from './earth.js';
 import { drawEventFx, flareFlicker } from './events/core.js';
 import { drawKraken } from './events/creature.js';
 import { drawSun, drawSunFlash } from './events/sun.js';
-import { cctx, chart } from './panel.js';
 import { state } from './state.js';
 
 export const canvas = document.getElementById('constellation'),
@@ -38,9 +37,6 @@ export function resize() {
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  chart.width = chart.clientWidth * dpr;
-  chart.height = 90 * dpr;
-  cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 export function point(s, t) {
   const rr = s.r * Math.min(W, H),

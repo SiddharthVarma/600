@@ -1,16 +1,17 @@
 // Entry point for the constellation page: wires the modules to the page, starts the clocks, and handles
 // messages from the minigame windows. Each feature lives in its own module next to this one.
 import { clearAlerts, pushAlert, pushAnomalyAlert, satTag, updateAlerts } from './alerts.js';
-import { ANOMALY_FAIL_WINDOW, resetAnomalies, scheduleAnomaly, trySpawnAnomaly } from './anomalies.js';
+import { ANOMALY_FAIL_WINDOW, resetAnomalies, trySpawnAnomaly } from './anomalies.js';
 import { canvas, draw, H, point, resize, ringProgress, satellites, updateNetwork, W } from './constellation.js';
 import { abortEvent, activeEvent, eventActive, pulses, renderFleetStatus, resetEvents, resolveEvent, tickEvent } from './events/core.js';
-import { kraken, krakenClick, krakenLive, resetCreature, scheduleKraken, triggerKraken } from './events/creature.js';
-import { scheduleDebris, triggerDebris } from './events/debris.js';
-import { scheduleFlare, triggerFlare } from './events/flare.js';
-import { scheduleGRB, triggerGRB } from './events/grb.js';
+import { kraken, krakenClick, krakenLive, resetCreature, triggerKraken } from './events/creature.js';
+import { triggerDebris } from './events/debris.js';
+import { triggerFlare } from './events/flare.js';
+import { triggerGRB } from './events/grb.js';
+import { pacingStage } from './pacing.js';
 import { closeRepair, launchers, startIfReady } from './launcher.js';
-import { maybeStartIntro, replayIntro } from './intro.js';
-import { panel, renderSat } from './panel.js';
+import { replayIntro, startIntro } from './intro.js';
+import { closePanel, openSat, panel, renderCountdown, renderSat } from './panel.js';
 import { closeLaunch, earn, launchMessage, resetCredits } from './credits.js';
 import { closeScience, pushScience, resetScience, scheduleScience, scienceMessage } from './science.js';
 import { state } from './state.js';
@@ -71,17 +72,9 @@ canvas.addEventListener('click', e => {
       best = s;
     }
   });
-  if (best) {
-    state.selected = best;
-    state.highlighted = [];
-    renderSat(best);
-    panel.classList.add('open');
-  }
+  if (best) openSat(best);
 });
-document.getElementById('close').onclick = () => {
-  panel.classList.remove('open');
-  state.selected = null;
-};
+document.getElementById('close').onclick = closePanel;
 term.addEventListener('click', e => {
   const f = e.target.closest('.term-file');
   if (f) termRunFile(f.dataset.file);
@@ -153,17 +146,12 @@ window.addEventListener('message', e => {
     closeRepair();
   }
 });
-// a first-time player gets SUDO's walkthrough; random faults start a few seconds in either way (they wait while it runs)
-maybeStartIntro();
-setTimeout(() => {
-  trySpawnAnomaly();
-  scheduleAnomaly();
-}, 4000);
+// SUDO's walkthrough opens every visit; once it hands over (or is skipped), pacing.js ramps the game up
+startIntro();
 document.querySelectorAll('[data-abort]').forEach(b => {
   b.onclick = abortEvent;
 });
-// The first of each celestial event comes early enough to keep a new player hooked (somewhere in the given window, in
-// seconds); after that each repeats on its own interval.
+// the first science request comes somewhere in the given window, in seconds; after that on its own interval
 const firstEvent = (trigger, schedule, from, to) =>
   setTimeout(
     () => {
@@ -172,11 +160,6 @@ const firstEvent = (trigger, schedule, from, to) =>
     },
     (from + Math.random() * (to - from)) * 1000,
   );
-firstEvent(triggerGRB, scheduleGRB, 120, 240);
-firstEvent(triggerFlare, scheduleFlare, 120, 240);
-firstEvent(triggerDebris, scheduleDebris, 120, 240);
-firstEvent(triggerKraken, scheduleKraken, 240, 360);
-// the first science request comes within a minute or so; more follow every 30 to 60 seconds
 firstEvent(pushScience, scheduleScience, 30, 50);
 setInterval(() => {
   const ticking = krakenLive() ? [] : satellites.filter(s => s.anomaly && s.countdown > 0 && !s.frozen); // frozen: the intro's first fault waits for the player
@@ -198,10 +181,7 @@ setInterval(() => {
         body: wasOrbit ? 'Satellite below recovery altitude.' : 'Satellite unrecoverable.',
         crit: true,
       });
-    } else if (state.selected === s) {
-      document.getElementById('log').textContent =
-        s.anomalyType === 'orbit' ? `ORBIT DECAY · IMPACT IN ${s.countdown}s` : `SATELLITE LOST IN ${s.countdown}s IF UNRESOLVED`;
-    }
+    } else if (state.selected === s) renderCountdown(s);
   });
   tickEvent();
   renderFleetStatus();
@@ -219,6 +199,7 @@ Object.assign(window, {
   pushAnomalyAlert,
   pushScience,
   earn,
+  pacingStage,
   replayIntro,
   renderSat,
   eventActive,

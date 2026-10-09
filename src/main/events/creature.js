@@ -235,8 +235,9 @@ export function drawKraken(t) {
   kBuffer();
   kraken.tentacles.forEach(tn => {
     updateTentacle(tn, t, dt);
-    if (tn.state !== 'retreat') {
-      // a retreating arm pulls back along its last line
+    if (tn.state === 'reach' || tn.state === 'recoil') {
+      // an arm still hunting follows its satellite round the orbit; once it has hold (and as it retreats) its line is
+      // fixed, so it drags the satellite straight back out the way it came instead of swinging round with the orbit
       const o = point(tn.prey, t),
         dx = o.x - W / 2 || 1e-6,
         dy = o.y - H / 2 || 1e-6,

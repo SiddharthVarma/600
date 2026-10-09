@@ -259,16 +259,21 @@ canvas {
   }
 }
 
+/* the uplink window: docked in the bottom-right corner, small enough that events on screen stay in view */
 .panel {
   position: fixed;
-  top: 68px;
   right: 0;
-  width: min(410px, 100vw);
-  height: calc(100% - 68px);
-  padding: 56px 34px 32px;
+  bottom: 0;
+  z-index: 16;
+  width: min(430px, 100vw);
+  max-height: calc(100% - 68px);
+  padding: 16px 20px 14px;
   background: rgba(7, 9, 9, 0.94);
-  border-left: 1px solid var(--line);
-  border-top: 1px solid var(--line);
+  border: 1px solid var(--line);
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 10px 0 0 0;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
   transform: translateX(102%);
   transition: transform 0.55s cubic-bezier(0.22, 0.8, 0.2, 1);
   overflow: auto;
@@ -280,8 +285,8 @@ canvas {
 
 .close {
   position: absolute;
-  top: 18px;
-  right: 30px;
+  top: 10px;
+  right: 16px;
   border: 0;
   background: none;
   color: var(--muted);
@@ -319,58 +324,6 @@ h1 {
   color: var(--accent);
 }
 
-.rule {
-  height: 1px;
-  background: var(--line);
-  margin: 28px 0 20px;
-}
-
-.telemetry {
-  display: grid;
-  gap: 15px;
-}
-
-.metric {
-  cursor: pointer;
-}
-
-.metric-head {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  margin-bottom: 7px;
-}
-
-.metric-name {
-  color: var(--muted);
-  letter-spacing: 0.14em;
-}
-
-.metric-value {
-  color: var(--ink);
-}
-
-.bar {
-  height: 4px;
-  background: #1d2221;
-  overflow: hidden;
-}
-
-.bar i {
-  display: block;
-  height: 100%;
-  background: var(--accent);
-  transition: width 0.7s;
-}
-
-.metric.hot .bar i {
-  background: var(--danger);
-}
-
-.metric.hot .metric-value {
-  color: var(--danger);
-}
-
 .meta {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -384,25 +337,6 @@ h1 {
   display: block;
   color: var(--ink);
   font-weight: 400;
-}
-
-.chart-wrap {
-  margin-top: 24px;
-  border-top: 1px solid var(--line);
-  padding-top: 16px;
-}
-
-.chart-title {
-  color: var(--muted);
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  margin-bottom: 10px;
-}
-
-#chart {
-  width: 100%;
-  height: 90px;
-  display: block;
 }
 
 .commands {
@@ -497,9 +431,13 @@ button.command:hover {
   }
 }
 
+.panel .status {
+  margin: 6px 0 10px;
+}
+
 .log {
-  min-height: 40px;
-  margin-top: 18px;
+  min-height: 0;
+  margin-top: 8px;
   color: var(--muted);
   font-size: 11px;
   line-height: 1.6;
@@ -547,10 +485,6 @@ button.command:hover {
   opacity: 0;
   background: linear-gradient(270deg, rgba(255, 214, 150, 0.16), rgba(255, 214, 150, 0) 42%);
   transition: opacity 1.2s;
-}
-
-.panel.fleet .sat-only {
-  display: none;
 }
 
 .alert.emergency {
@@ -620,8 +554,8 @@ button.command:hover {
   }
 
   .panel {
-    padding-left: 24px;
-    padding-right: 24px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }
 
@@ -1034,14 +968,15 @@ button.command:hover {
     z-index: 1;
   }
 
-  /* the side panel covers the alerts instead of the other way round */
-  /* On phones the panel scrolls as one page: it is as tall as the visible screen (iPhone Safari counts the area behind its
-     toolbar in 100%), keeps its scrolling to itself, and leaves room for the home bar. */
+  /* On phones the uplink window is a sheet across the bottom, at most about two thirds of the screen. It scrolls as one
+     page, keeps its scrolling to itself, and leaves room for the home bar. */
   .panel {
-    z-index: 16;
-    top: 76px;
-    height: calc(100% - 76px);
-    height: calc(100dvh - 76px);
+    left: 0;
+    width: 100%;
+    max-height: 64%;
+    max-height: 64dvh;
+    border-right: 0;
+    border-radius: 14px 14px 0 0;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     padding-bottom: calc(32px + env(safe-area-inset-bottom));

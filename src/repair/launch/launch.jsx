@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { brackets, hudText, report } from '../science/common.js';
 
-// A rideshare launch to replace lost satellites, in four phases: the first stage climbs through max-Q (the player
+// A rideshare launch to replace lost satellites. It opens over the pad at Vandenberg, seen from above as the main
+// screen's dive arrives, fades to the rocket on the pad for the countdown, then plays in four phases: the first stage climbs through max-Q (the player
 // throttles down to keep the dynamic pressure out of the red), stages separate, the second stage climbs out of the air
 // (the player drops the fairing once aerodynamic heating is low enough), and the satellites deploy. A mistake recycles
 // that phase; nothing is lost.
@@ -27,7 +28,9 @@ const G = 9.81,
   HEAT_LIMIT = 1135, // W/m²
   WARP_ASCENT = 12, // mission seconds per real second
   WARP_COAST = 5;
-const COUNTDOWN = 3, // real seconds
+const PAD_TIME = 3, // real seconds over the pad from above, the last FADE of it fading to black
+  FADE = 0.45,
+  COUNTDOWN = 3,
   SEP_TIME = 2.6,
   DEPLOY_GAP = 0.7,
   FLASH_TIME = 2;
@@ -55,6 +58,72 @@ function sky(h) {
 }
 const STARS = Array.from({ length: 70 }, () => [Math.floor(Math.random() * BW), Math.floor(Math.random() * BH), Math.random()]),
   CLOUDS = Array.from({ length: 7 }, (_, i) => ({ alt: 1500 + i * 900 + Math.random() * 500, x: Math.random() * BW, w: 18 + Math.random() * 26 }));
+// The launch complex from above, as the dive arrives: the Pacific to the west, surf and sand, chaparral, roads, the pad
+// with its flame trench, tower and lightning masts, and the rocket on it, a white dot casting a shadow.
+const PAD_AT = [99.5, 59.5];
+function makeAerial() {
+  const c = document.createElement('canvas');
+  c.width = BW;
+  c.height = BH;
+  const g = c.getContext('2d'),
+    img = g.createImageData(BW, BH),
+    d = img.data,
+    hash = (x, y) => {
+      const v = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+      return v - Math.floor(v);
+    };
+  for (let y = 0; y < BH; y++)
+    for (let x = 0; x < BW; x++) {
+      const coast = 34 + Math.sin(y * 0.06) * 6 + Math.sin(y * 0.17 + 1) * 2,
+        n = hash(x >> 1, y >> 1);
+      let col;
+      if (x < coast - 2) col = hash(x, y) < 0.06 ? [70, 120, 190] : x > coast - 8 ? [52, 104, 170] : [36, 82, 150];
+      else if (x < coast - 1) col = [214, 228, 238];
+      else if (x < coast) col = [205, 186, 140];
+      else if (hash(x, y) < 0.06) col = [80, 92, 58];
+      else col = n < 0.33 ? [122, 124, 78] : n < 0.66 ? [138, 136, 88] : [104, 112, 70];
+      const i = (y * BW + x) * 4;
+      d[i] = col[0];
+      d[i + 1] = col[1];
+      d[i + 2] = col[2];
+      d[i + 3] = 255;
+    }
+  g.putImageData(img, 0, 0);
+  const shadowed = (x, y, w, h, fill) => {
+    g.fillStyle = 'rgba(0,0,0,.35)';
+    g.fillRect(x + 2, y + 1, w, h);
+    g.fillStyle = fill;
+    g.fillRect(x, y, w, h);
+  };
+  g.fillStyle = '#6e6c64';
+  g.fillRect(116, 62, BW - 116, 2);
+  g.fillRect(130, 0, 2, BH);
+  g.fillStyle = '#9d988c';
+  g.fillRect(84, 48, 32, 28);
+  g.fillStyle = '#bdb8ac';
+  g.fillRect(85, 49, 30, 26);
+  g.fillStyle = '#3b3a35';
+  g.fillRect(97, 62, 5, 16);
+  shadowed(104, 55, 3, 9, '#5b6266');
+  [
+    [86, 50],
+    [113, 50],
+    [86, 73],
+    [113, 73],
+  ].forEach(([x, y]) => shadowed(x, y, 1, 1, '#4a4f52'));
+  [
+    [121, 67, 8, 5],
+    [136, 40, 6, 4],
+    [140, 70, 5, 6],
+  ].forEach(([x, y, w, h]) => shadowed(x, y, w, h, '#d6d3cb'));
+  g.fillStyle = 'rgba(0,0,0,.4)';
+  g.fillRect(100, 59, 6, 2);
+  g.fillStyle = '#e8ecef';
+  g.fillRect(98, 58, 3, 3);
+  g.fillStyle = '#b3bcc4';
+  g.fillRect(100, 59, 1, 2);
+  return c;
+}
 const WHITE = '#e8ecef',
   SHADE = '#b3bcc4',
   BLACK = '#15181a';
@@ -95,9 +164,9 @@ function satellite(c, x, y, open) {
 
 export function Launch() {
   const canvasRef = useRef(null);
-  const [phase, setPhase] = useState('count'); // count → ascent → sep → coast → deploy → done
+  const [phase, setPhase] = useState('pad'); // pad → count → ascent → sep → coast → deploy → done
   const [flash, setFlash] = useState(null); // a failed phase, shown before it recycles
-  const live = useRef({ phase: 'count', flash: null });
+  const live = useRef({ phase: 'pad', flash: null });
   live.current.phase = phase;
   live.current.flash = flash;
   const sim = useRef(fresh()),
@@ -122,7 +191,8 @@ export function Launch() {
   useEffect(() => {
     const ctx = canvasRef.current.getContext('2d'),
       buf = document.createElement('canvas'),
-      rocket = document.createElement('canvas');
+      rocket = document.createElement('canvas'),
+      aerial = makeAerial();
     buf.width = BW;
     buf.height = BH;
     rocket.width = RW;
@@ -143,7 +213,8 @@ export function Launch() {
 
       // ---- the physics ----
       if (!flash) {
-        if (phase === 'count' && since >= COUNTDOWN) go('ascent');
+        if (phase === 'pad' && since >= PAD_TIME) go('count');
+        else if (phase === 'count' && since >= COUNTDOWN) go('ascent');
         else if (phase === 'ascent') {
           for (let k = 0, n = Math.ceil((dt * WARP_ASCENT) / 0.05); k < n; k++) {
             const d = (dt * WARP_ASCENT) / n;
@@ -185,6 +256,24 @@ export function Launch() {
       }
 
       // ---- the picture ----
+      if (phase === 'pad') {
+        // over the pad, easing in on the rocket, then fading to black
+        const k = clamp(since / PAD_TIME, 0, 1),
+          z = 1 + 0.45 * k * k * (3 - 2 * k),
+          sw = BW / z,
+          sh = BH / z;
+        b.imageSmoothingEnabled = false;
+        b.drawImage(aerial, clamp(PAD_AT[0] - sw / 2, 0, BW - sw), clamp(PAD_AT[1] - sh / 2, 0, BH - sh), sw, sh, 0, 0, BW, BH);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(buf, 0, 0, ctx.canvas.width, ctx.canvas.height);
+        hudText(ctx, 'ACQUIRING · 34.6°N 120.6°W', 'left', 'top');
+        hudText(ctx, 'PAD 1', 'right', 'top');
+        brackets(ctx);
+        ctx.fillStyle = `rgba(0,0,0,${clamp((since - (PAD_TIME - FADE)) / FADE, 0, 1)})`;
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        raf = requestAnimationFrame(loop);
+        return;
+      }
       const h = s.h,
         tilt = (Math.min(30, (90 - s.gam) * 0.5) * Math.PI) / 180;
       b.fillStyle = sky(h);
@@ -317,7 +406,7 @@ export function Launch() {
       hudText(
         ctx,
         {
-          count: 'COUNTDOWN',
+          count: 'T-MINUS',
           ascent: 'STAGE 1 · MAX-Q',
           sep: since < SEP_TIME * 0.25 ? 'MECO' : since < SEP_TIME * 0.6 ? 'STAGE SEPARATION' : 'STAGE 2 IGNITION',
           coast: 'STAGE 2 · FAIRING',
@@ -370,7 +459,31 @@ export function Launch() {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = 'rgba(201,255,77,.9)';
-        ctx.fillText(String(Math.max(1, Math.ceil(COUNTDOWN - since))), W / 2, H / 2 - 40);
+        // in the sky above the rocket, on a dark backing so it reads against the blue
+        const n = Math.max(1, Math.ceil(COUNTDOWN - since)),
+          msg = n === 3 ? 'LIFTOFF IN 3' : String(n),
+          w = ctx.measureText(msg).width;
+        ctx.fillStyle = 'rgba(2,4,6,.7)';
+        ctx.fillRect(W / 2 - w / 2 - 18, 96, w + 36, 64);
+        ctx.fillStyle = 'rgba(201,255,77,.95)';
+        ctx.fillText(msg, W / 2, 128);
+        // fading in from the view over the pad
+        if (since < FADE) {
+          ctx.fillStyle = `rgba(0,0,0,${1 - since / FADE})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+      if (phase === 'done') {
+        // the payoff, big in the middle once the last one is out
+        const msg = COUNT === 1 ? 'SATELLITE DEPLOYED' : 'ALL SATELLITES DEPLOYED';
+        ctx.font = '30px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const w = ctx.measureText(msg).width;
+        ctx.fillStyle = 'rgba(2,4,6,.75)';
+        ctx.fillRect(W / 2 - w / 2 - 18, 100, w + 36, 52);
+        ctx.fillStyle = '#c9ff4d';
+        ctx.fillText(msg, W / 2, 126);
       }
       if (flash) {
         ctx.font = '18px "Courier New", monospace';
@@ -441,13 +554,13 @@ export function Launch() {
       <div className="actions" style={{ alignItems: 'center' }}>
         {phase === 'done' ? (
           <>
-            <span className="eyebrow">ALL SATELLITES DEPLOYED</span>
+            <span className="eyebrow">{COUNT === 1 ? 'SATELLITE DEPLOYED' : 'ALL SATELLITES DEPLOYED'}</span>
             <span style={{ flex: 1 }} />
             <button className="action" onClick={() => report({ type: 'launch-close' })}>
               DONE
             </button>
           </>
-        ) : phase === 'coast' || phase === 'deploy' || phase === 'sep' ? (
+        ) : phase === 'deploy' ? null : phase === 'coast' || phase === 'sep' ? (
           <button className="action" disabled={phase !== 'coast'} style={{ ...press, opacity: phase === 'coast' ? 1 : 0.4 }} onClick={jettison}>
             JETTISON FAIRING
           </button>
