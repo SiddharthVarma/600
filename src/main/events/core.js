@@ -84,8 +84,7 @@ export const EVENTS = {
     title: 'FERMI · GAMMA-RAY BURST DETECTED',
   },
 };
-export const EVENT_TYPES = ['debris', 'flare', 'bitflip', 'kraken'],
-  NOMINAL_VALUES = () => ({ RSSI: 82, TEMPERATURE: 56, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 });
+export const EVENT_TYPES = ['debris', 'flare', 'bitflip', 'kraken'];
 const planeTag = ev => String(ev.sats[0].ring + 1).padStart(2, '0');
 export function eventTicketBody(ev) {
   if (ev.phase === 'running') return 'Response in progress.';
@@ -244,8 +243,7 @@ export function resolveEvent(saved) {
     s.anomaly = false;
     s.anomalyType = null;
     s.countdown = 0;
-    if (saved.has(s.id)) s.values = NOMINAL_VALUES();
-    else s.lost = true;
+    if (!saved.has(s.id)) s.lost = true;
   });
   const n = ev.sats.length,
     k = ev.sats.filter(s => saved.has(s.id)).length,

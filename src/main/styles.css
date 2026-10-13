@@ -376,12 +376,6 @@ h1 {
   font-weight: 400;
 }
 
-.commands {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
 button.command {
   border: 1px solid #303735;
   color: var(--muted);

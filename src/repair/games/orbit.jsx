@@ -5,10 +5,10 @@ export function Orbit() {
   const cx = 150,
     cy = 150;
   const [cfg] = useState(() => {
-    const raiseMode = Math.random() < 0.5;
+    // the fault is always decay: the satellite has sunk, and the burn raises it back to its home orbit
     let r2 = 60 + Math.random() * 20,
       delta = 20 + Math.random() * 12;
-    let r1 = raiseMode ? Math.max(26, r2 - delta) : r2 + delta;
+    let r1 = Math.max(26, r2 - delta);
     // Normalize so the larger orbit always fills the frame consistently -- otherwise a small random
     // draw renders as a tiny cluster lost in empty space instead of using the available canvas.
     const scale = 120 / Math.max(r1, r2);
@@ -16,7 +16,7 @@ export function Orbit() {
     r2 *= scale;
     const startAngle = Math.random() * 360,
       windowCenter = (startAngle + 130 + Math.random() * 100) % 360;
-    return { raiseMode, r1, r2, minSafeR: 40, radiusTol: 9, startAngle, windowCenter, windowWidth: 50 };
+    return { r1, r2, minSafeR: 40, radiusTol: 9, startAngle, windowCenter, windowWidth: 50 };
   });
   const [stage, setStage] = useState('plot'); // plot -> approach -> coast -> success
   const [drag, setDrag] = useState(null),
@@ -36,7 +36,7 @@ export function Orbit() {
     const [ex, ey] = polar(end.angle, end.dist);
     const da = (end.angle - cfg.startAngle + 360) % 360,
       midAngle = cfg.startAngle + da / 2;
-    const midR = Math.max(20, Math.max(cfg.r1, end.dist) + (cfg.raiseMode ? 26 : -16));
+    const midR = Math.max(20, Math.max(cfg.r1, end.dist) + 26);
     const [mx, my] = polar(midAngle, midR);
     return [satStart, [mx, my], [ex, ey]];
   };
@@ -243,7 +243,7 @@ export function Orbit() {
 
   return (
     <>
-      <Header title="ORBITAL BURN" sub={`ORBIT ${cfg.raiseMode ? 'DECAYING' : 'OVER-BOOSTED'} · TWO-BURN TRANSFER REQUIRED`} />
+      <Header title="ORBITAL BURN" sub="ORBIT DECAYING · TWO-BURN TRANSFER REQUIRED" />
       <p className="instructions">
         Drag to plot a transfer burn: not too hot, not too weak. Ignite, then fire the circularization burn once inside the insertion
         window (it narrows as you approach). Miss it and you'll have to replot.
@@ -365,7 +365,7 @@ export function Orbit() {
         </div>
       )}
       {stage === 'success' ? (
-        <div className="success">CIRCULARIZATION ACCURATE · ORBIT {cfg.raiseMode ? 'RAISED' : 'LOWERED'} INTO HOME PLANE</div>
+        <div className="success">CIRCULARIZATION ACCURATE · ORBIT RAISED INTO HOME PLANE</div>
       ) : error && stage === 'plot' ? (
         <div className="failure">{error}</div>
       ) : null}

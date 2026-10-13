@@ -22,7 +22,6 @@ export const satellites = Array.from({ length: 600 }, (_, i) => ({
   lost: false,
   rejoining: false,
   rejoinProgress: 0,
-  values: { RSSI: 82, TEMPERATURE: 71, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 },
 }));
 export function updateNetwork() {
   const active = satellites.filter(s => !s.lost).length;
