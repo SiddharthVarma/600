@@ -147,7 +147,7 @@ export function Contact() {
     <>
       <Header title="MISSED CONTACT" sub="STALE EPHEMERIS · BLIND ACQUISITION" />
       <p className="instructions">
-        The predicted pass is plotted, but the prediction is stale — the satellite is ahead of or behind it along the track. Drag to point
+        The predicted pass is plotted, but the prediction is stale: the satellite is ahead of or behind it along the track. Drag to point
         the antenna crosshair, search along the track, then hold on the signal to lock before the LOS.
       </p>
       <div style={{ display: 'flex', gap: 24, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', margin: '12px 0' }}>

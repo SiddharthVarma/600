@@ -1,3 +1,32 @@
+/* Type: Departure Mono, a pixel font, for display (the name, titles, big moments, text drawn on pixel scenes); IBM Plex
+   Mono for everything else, with tabular figures so numbers don't jiggle as they change. Both are hosted in public/fonts. */
+@font-face {
+  font-family: 'Departure Mono';
+  src: url('/fonts/DepartureMono-Regular.woff2') format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-weight: 400;
+  src: url('/fonts/IBMPlexMono-Regular.woff2') format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-weight: 500;
+  src: url('/fonts/IBMPlexMono-Medium.woff2') format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-weight: 600;
+  src: url('/fonts/IBMPlexMono-SemiBold.woff2') format('woff2');
+  font-display: swap;
+}
+
 :root {
   --bg: #050607;
   --ink: #e6e7e4;
@@ -8,6 +37,8 @@
   --warn: #ffd166;
   --danger: #ff5964;
   --science: #55b6ff;
+  --font-ui: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  --font-pixel: 'Departure Mono', 'IBM Plex Mono', monospace;
 }
 
 * {
@@ -20,7 +51,8 @@ body {
   min-height: 100%;
   background: var(--bg);
   color: var(--ink);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
 }
 
 body {
@@ -49,23 +81,25 @@ canvas {
   align-items: center;
   color: var(--muted);
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   pointer-events: none;
 }
 
 .brand {
   color: var(--ink);
-  font-size: 30px;
-  letter-spacing: 0.22em;
+  font-family: var(--font-pixel);
+  font-size: 33px;
+  letter-spacing: 0.14em;
 }
 
 /* the satellite count, beside the name */
 .count {
   margin-left: 16px;
   color: var(--muted);
+  font-family: var(--font-ui);
   font-size: 13px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.08em;
   vertical-align: middle;
 }
 
@@ -188,7 +222,7 @@ canvas {
   gap: 8px;
   color: var(--muted);
   font-size: 11px;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
 }
 
 .alert-icon {
@@ -198,7 +232,7 @@ canvas {
   background: #1c2321;
   display: grid;
   place-items: center;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .alert-app {
@@ -208,7 +242,8 @@ canvas {
 .alert-title {
   margin-top: 8px;
   font-size: 13px;
-  letter-spacing: 0.06em;
+  font-weight: 500;
+  letter-spacing: 0.08em;
 }
 
 .alert.crit .alert-title {
@@ -218,7 +253,7 @@ canvas {
 .alert-body {
   margin-top: 3px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -298,21 +333,23 @@ canvas {
 .eyebrow {
   color: var(--muted);
   font-size: 11px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
 h1 {
   margin: 9px 0 4px;
-  font-size: 25px;
+  font-family: var(--font-pixel);
+  font-size: 22px;
   font-weight: 400;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .status {
   color: var(--warn);
-  font-size: 11px;
-  letter-spacing: 0.18em;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -369,7 +406,7 @@ button.command:hover {
   border: 1px solid #262d2b;
   background: #070909;
   color: #b9c0bb;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.65;
 }
 
@@ -439,7 +476,7 @@ button.command:hover {
   min-height: 0;
   margin-top: 8px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.6;
 }
 
@@ -579,8 +616,8 @@ button.command:hover {
     0 10px 30px rgba(0, 0, 0, 0.6),
     0 0 18px rgba(201, 255, 77, 0.1);
   color: var(--ink);
-  font-size: 14px;
-  line-height: 1.55;
+  font-size: 15px;
+  line-height: 1.6;
   opacity: 0;
   pointer-events: none;
   transition:
@@ -600,8 +637,9 @@ button.command:hover {
   align-items: center;
   margin-bottom: 8px;
   color: var(--accent);
+  font-family: var(--font-pixel);
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
 }
 
 .sudo-skip {
@@ -828,8 +866,8 @@ button.command:hover {
   border-radius: 999px;
   background: rgba(14, 17, 16, 0.96);
   color: var(--science);
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  font-size: 12px;
+  letter-spacing: 0.08em;
 }
 
 /* ---- Phones (portrait) ----
@@ -846,13 +884,13 @@ button.command:hover {
   }
 
   .brand {
-    font-size: 20px;
-    letter-spacing: 0.18em;
+    font-size: 22px;
+    letter-spacing: 0.12em;
   }
 
   .count {
     margin-left: 10px;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .purse {
@@ -862,7 +900,7 @@ button.command:hover {
 
   .launch {
     padding: 4px 10px;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .alerts {
@@ -925,7 +963,7 @@ button.command:hover {
   .science .alert-body {
     display: block;
     margin-top: 2px;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .alerts-more.show {
@@ -938,7 +976,7 @@ button.command:hover {
     background: rgba(14, 17, 16, 0.96);
     color: var(--muted);
     font: inherit;
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.12em;
     cursor: pointer;
   }

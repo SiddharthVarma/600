@@ -104,7 +104,7 @@ export function Thermal() {
     <>
       <Header title="THERMAL ROUTING" sub={`CORE ${temp}°C · COOLANT ${pressure} kPa`} />
       <p className="instructions">
-        Drag from the core through the pump, routing the cooler valve at each of the {junctions} junctions — the hot side flashes in the
+        Drag from the core through the pump, routing the cooler valve at each of the {junctions} junctions. The hot side flashes in the
         bypass. The purge line is a dead end.
       </p>
       <svg

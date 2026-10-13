@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Header } from '../shared/ui.jsx';
+import { pixelFont } from '../science/common.js';
 
 export function Flare() {
   const NB = 160,
@@ -201,7 +202,7 @@ export function Flare() {
         g.lineTo(w, y(LIMIT_DB));
         g.stroke();
         g.setLineDash([]);
-        g.font = '9px "Courier New", monospace';
+        g.font = pixelFont(11);
         g.fillStyle = '#ffd166';
         g.fillText('NOISE THRESHOLD', 4, y(LIMIT_DB) - 3);
         g.fillStyle = ok ? '#c9ff4d' : '#ff5964';

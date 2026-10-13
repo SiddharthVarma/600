@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, hudText, report } from './common.js';
+import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, fitWidth, hudText, pixelFont, report } from './common.js';
 import { BH, BW, ZOOM_TIME, drawZoom, makeSurvey, placeText } from './scenes.js';
 
 // Earth-observation request (penguins, whales, wildfires): the camera dives in, the player taps what they're asked to
 // find, and downlinks the survey. No timer; a wrong survey costs nothing.
 // the view never grows taller than the window leaves room for: header and instructions above, buttons and result below
-const FIT = `min(${BW * 4}px, calc((100vh - 340px) * ${BW / BH}))`;
+const FIT = fitWidth(BW * 4, BH * 4);
 const SCALE = 4,
   MATCH = 7; // a mark within this many scene pixels of a target counts as finding it
 // after the main screen's dive the window opens inside the clouds, so its own zoom skips the Earth
@@ -118,7 +118,7 @@ export function Survey({ kind }) {
           ctx.strokeRect(x0, y0, 180, 136);
           refBuf.getContext('2d').putImageData(ref.img, 0, 0);
           ctx.drawImage(refBuf, x0 + 30, y0 + 22, 120, 90);
-          ctx.font = '13px "Courier New", monospace';
+          ctx.font = pixelFont(16);
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
           ctx.fillStyle = 'rgba(201,255,77,.85)';
@@ -132,7 +132,7 @@ export function Survey({ kind }) {
         if (below && Math.floor(t * 9) % 7 !== 0) {
           const W = ctx.canvas.width,
             msg = 'UNKNOWN CONTACT BELOW THE SURFACE';
-          ctx.font = '18px "Courier New", monospace';
+          ctx.font = pixelFont(22);
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
           const w = ctx.measureText(msg).width;
@@ -224,12 +224,10 @@ export function Survey({ kind }) {
         )}
       </div>
       {phase === 'done' && (
-        <div className={perfect ? 'success' : 'failure'} style={perfect ? {} : { color: 'var(--yellow)', borderColor: 'var(--yellow)' }}>
-          {info.uni.toUpperCase()} RECEIVED YOUR DATA ·{' '}
-          {perfect
-            ? `ALL ${plural(total, scene.noun || info.noun).toUpperCase()} FOUND`
-            : `YOU FOUND ${found} OF ${plural(total, scene.noun || info.noun).toUpperCase()}`}
-          {wrong > 0 && ` · ${wrong} ${wrong === 1 ? 'MARK WAS' : 'MARKS WERE'} ON NOTHING`}
+        <div className={perfect ? 'success' : 'failure'} style={perfect ? {} : { color: 'var(--yellow)' }}>
+          {info.uni} received your data ·{' '}
+          {perfect ? `all ${plural(total, scene.noun || info.noun)} found` : `you found ${found} of ${plural(total, scene.noun || info.noun)}`}
+          {wrong > 0 && ` · ${wrong} ${wrong === 1 ? 'mark was' : 'marks were'} on nothing`}
         </div>
       )}
     </>

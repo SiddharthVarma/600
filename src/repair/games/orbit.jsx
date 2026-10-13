@@ -244,7 +244,7 @@ export function Orbit() {
     <>
       <Header title="ORBITAL BURN" sub={`ORBIT ${cfg.raiseMode ? 'DECAYING' : 'OVER-BOOSTED'} · TWO-BURN TRANSFER REQUIRED`} />
       <p className="instructions">
-        Drag to plot a transfer burn — not too hot, not too weak. Ignite, then fire the circularization burn once inside the insertion
+        Drag to plot a transfer burn: not too hot, not too weak. Ignite, then fire the circularization burn once inside the insertion
         window (it narrows as you approach). Miss it and you'll have to replot.
       </p>
       <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>

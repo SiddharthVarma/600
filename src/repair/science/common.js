@@ -97,12 +97,19 @@ export const SCIENCE = {
     coords: sky,
   },
 };
+// how wide a minigame's view can be: its full size, or less if the window is short, leaving room above it for the header
+// and instructions (up to four lines) and below it for the buttons and a two-line result
+export const fitWidth = (w, h) => `min(${w}px, calc((100vh - 420px) * ${w / h}))`;
+// text drawn on the pixel scenes is in the pixel font; asked for up front, since drawing on a canvas doesn't make the
+// browser download it
+export const pixelFont = px => `${px}px "Departure Mono", monospace`;
+document.fonts?.load(pixelFont(22));
 export const report = data => window.parent !== window && window.parent.postMessage(data, '*');
 
 export function hudText(ctx, s, ax, ay, color = 'rgba(201,255,77,.85)') {
   const W = ctx.canvas.width,
     H = ctx.canvas.height;
-  ctx.font = '18px "Courier New", monospace';
+  ctx.font = pixelFont(22);
   ctx.textAlign = ax;
   ctx.textBaseline = ay;
   const x = ax === 'left' ? 16 : W - 16,
@@ -110,7 +117,7 @@ export function hudText(ctx, s, ax, ay, color = 'rgba(201,255,77,.85)') {
     w = ctx.measureText(s).width;
   // a dark backing so the readout stays legible on white ice
   ctx.fillStyle = 'rgba(2,4,6,.62)';
-  ctx.fillRect(ax === 'left' ? x - 6 : x - w - 6, ay === 'top' ? y - 4 : y - 22, w + 12, 26);
+  ctx.fillRect(ax === 'left' ? x - 6 : x - w - 6, ay === 'top' ? y - 4 : y - 26, w + 12, 30);
   ctx.fillStyle = color;
   ctx.fillText(s, x, y);
 }
@@ -148,7 +155,7 @@ export function drawDownlink(ctx, d) {
     p = Math.min(1, d / (DOWNLINK_TIME - 0.3));
   ctx.fillStyle = 'rgba(2,4,6,.74)';
   ctx.fillRect(0, 0, W, H);
-  ctx.font = '18px "Courier New", monospace';
+  ctx.font = pixelFont(22);
   ctx.textBaseline = 'top';
   ctx.textAlign = 'center';
   const bw = 300,

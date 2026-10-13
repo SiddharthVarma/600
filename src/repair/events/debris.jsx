@@ -160,7 +160,7 @@ export function Debris() {
     <>
       <Header title="DEBRIS FIELD" sub={`COLLISION AVOIDANCE · ${timeLeft}s REMAINING · ${hits}/${HIT_LIMIT} IMPACTS`} />
       <p className="instructions">
-        A rival satellite broke apart — wreckage is crossing our plane, risking a cascade across nearby satellites. Use ← → to dodge debris.
+        A rival satellite broke apart, and its wreckage is crossing our plane, risking a cascade across nearby satellites. Use ← → to dodge debris.
       </p>
       <div style={{ display: 'grid', placeItems: 'center', margin: '10px 0', position: 'relative' }}>
         <svg

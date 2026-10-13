@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, hudText, report } from './common.js';
+import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, fitWidth, hudText, pixelFont, report } from './common.js';
 import { BH, BW, bay, makeBuffer, rng } from './scenes.js';
 
 // Interstellar object: keep a tumbling object from another star inside the reticle (which sits right on the pointer)
 // until all its data is recorded. It streaks across the field along one gentle curve; if it gets away before you're
 // done, the next sweep picks it up crossing back the other way, with the data so far kept. No timer, no fail.
 // the view never grows taller than the window leaves room for: header and instructions above, buttons and result below
-const FIT = `min(${BW * 4}px, calc((100vh - 340px) * ${BW / BH}))`;
+const FIT = fitWidth(BW * 4, BH * 4);
 const SCALE = 4,
   PASS = 18, // seconds for one streak across the field
   RECORD = 7, // % of the data recorded per second while locked
@@ -183,7 +183,7 @@ export function Tracking() {
       ctx.strokeRect(bx, by, bw, 16);
       ctx.fillStyle = '#55b6ff';
       ctx.fillRect(bx + 3, by + 3, ((bw - 6) * data) / 100, 10);
-      ctx.font = '16px "Courier New", monospace';
+      ctx.font = pixelFont(16);
       ctx.fillStyle = '#c9ccc8';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'bottom';
@@ -246,7 +246,7 @@ export function Tracking() {
       />
       {phase === 'done' && (
         <>
-          <div className="success">{info.uni.toUpperCase()} RECEIVED THE OBSERVATION · LIGHT CURVE RECORDED</div>
+          <div className="success">{info.uni} received the observation · light curve recorded</div>
           <div className="actions">
             <button className="action" onClick={() => report({ type: 'science-close' })}>
               DONE

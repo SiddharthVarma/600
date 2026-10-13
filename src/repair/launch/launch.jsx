@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { brackets, hudText, report } from '../science/common.js';
+import { brackets, fitWidth, hudText, pixelFont, report } from '../science/common.js';
 
 // A rideshare launch to replace lost satellites. It opens over the pad at Vandenberg, seen from above as the main
 // screen's dive arrives, fades to the rocket on the pad for the countdown, then plays in four phases: the first stage climbs through max-Q (the player
@@ -14,7 +14,7 @@ import { brackets, hudText, report } from '../science/common.js';
 const BW = 160,
   BH = 120,
   SCALE = 4,
-  FIT = `min(${BW * SCALE}px, calc((100vh - 340px) * ${BW / BH}))`;
+  FIT = fitWidth(BW * SCALE, BH * SCALE);
 const COUNT = Math.max(1, Math.min(4, parseInt(new URLSearchParams(location.search).get('count'), 10) || 1));
 const G = 9.81,
   THRUST = 15.5, // stage 1 thrust per unit lift-off mass, m/s²
@@ -445,7 +445,7 @@ export function Launch() {
         ctx.moveTo(gx - 6, gy + gh * (1 - limit));
         ctx.lineTo(gx + gw + 6, gy + gh * (1 - limit));
         ctx.stroke();
-        ctx.font = '14px "Courier New", monospace';
+        ctx.font = pixelFont(16);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
         ctx.fillStyle = 'rgba(201,255,77,.85)';
@@ -455,7 +455,7 @@ export function Launch() {
       }
       brackets(ctx);
       if (phase === 'count') {
-        ctx.font = '48px "Courier New", monospace';
+        ctx.font = pixelFont(44);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = 'rgba(201,255,77,.9)';
@@ -476,7 +476,7 @@ export function Launch() {
       if (phase === 'done') {
         // the payoff, big in the middle once the last one is out
         const msg = COUNT === 1 ? 'SATELLITE DEPLOYED' : 'ALL SATELLITES DEPLOYED';
-        ctx.font = '30px "Courier New", monospace';
+        ctx.font = pixelFont(33);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const w = ctx.measureText(msg).width;
@@ -486,7 +486,7 @@ export function Launch() {
         ctx.fillText(msg, W / 2, 126);
       }
       if (flash) {
-        ctx.font = '18px "Courier New", monospace';
+        ctx.font = pixelFont(22);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const w = ctx.measureText(flash).width;

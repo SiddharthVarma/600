@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, hudText, report } from './common.js';
+import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, fitWidth, hudText, pixelFont, report } from './common.js';
 import { BH, BW, rng } from './scenes.js';
 
 // Supernova search, the way transients are found: tonight's image of a patch of sky is blinked against an archive
@@ -7,7 +7,7 @@ import { BH, BW, rng } from './scenes.js';
 // galaxy, off its core, and has the same blurred shape as every star (the telescope's point-spread function). The
 // decoys are the classic false positives: an asteroid that moved between the frames, cosmic-ray hits (sharp specks in
 // one frame only, no blur), and a variable star that was there all along and just brightened.
-const FIT = `min(${BW * 4}px, calc((100vh - 340px) * ${BW / BH}))`;
+const FIT = fitWidth(BW * 4, BH * 4);
 const SCALE = 4,
   BLINK = 0.6, // seconds per frame while blinking
   NEAR = 6, // how close (scene pixels) a mark must be to count as that thing
@@ -123,10 +123,10 @@ function makeField(seed) {
   };
 }
 const VERDICT = {
-  asteroid: 'THAT WAS AN ASTEROID · IT MOVED BETWEEN THE TWO IMAGES',
-  cosmic: 'THAT WAS A COSMIC RAY HIT · A SHARP SPECK IN ONE IMAGE ONLY, NOT STAR-SHAPED',
-  variable: 'THAT STAR WAS ALREADY THERE · IT JUST BRIGHTENED (A VARIABLE STAR)',
-  none: 'NOTHING NEW THERE',
+  asteroid: 'that was an asteroid · it moved between the two images',
+  cosmic: 'that was a cosmic ray hit · a sharp speck in one image only, not star-shaped',
+  variable: 'that star was already there · it just brightened (a variable star)',
+  none: 'nothing new there',
 };
 const LABEL = { sn: 'SUPERNOVA', asteroid: 'ASTEROID', cosmic: 'COSMIC RAY', variable: 'VARIABLE STAR' };
 
@@ -166,7 +166,7 @@ export function Blink() {
       }
       if (phase === 'done') {
         // show what everything was
-        ctx.font = '14px "Courier New", monospace';
+        ctx.font = pixelFont(16);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
         field.things.forEach(th => {
@@ -285,12 +285,12 @@ export function Blink() {
       {phase === 'done' &&
         (verdict === 'sn' ? (
           <div className="success">
-            {info.uni.toUpperCase()} CONFIRMS A SUPERNOVA · HOST GALAXY AT REDSHIFT z ≈ {field.z.toFixed(3)}, ABOUT{' '}
-            {mly.toLocaleString('en-GB')} MILLION LIGHT-YEARS AWAY
+            {info.uni} confirms a supernova · host galaxy at redshift z ≈ {field.z.toFixed(3)}, about{' '}
+            {mly.toLocaleString('en-GB')} million light-years away
           </div>
         ) : (
-          <div className="failure" style={{ color: 'var(--yellow)', borderColor: 'var(--yellow)' }}>
-            {info.uni.toUpperCase()} RECEIVED YOUR CANDIDATE · {VERDICT[verdict]}
+          <div className="failure" style={{ color: 'var(--yellow)' }}>
+            {info.uni} received your candidate · {VERDICT[verdict]}
           </div>
         ))}
     </>

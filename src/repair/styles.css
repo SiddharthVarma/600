@@ -1,5 +1,37 @@
+/* Type: Departure Mono, a pixel font, for display (the name, titles, big moments, text drawn on pixel scenes); IBM Plex
+   Mono for everything else, with tabular figures so numbers don't jiggle as they change. Both are hosted in public/fonts. */
+@font-face {
+  font-family: 'Departure Mono';
+  src: url('/fonts/DepartureMono-Regular.woff2') format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-weight: 400;
+  src: url('/fonts/IBMPlexMono-Regular.woff2') format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-weight: 500;
+  src: url('/fonts/IBMPlexMono-Medium.woff2') format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-weight: 600;
+  src: url('/fonts/IBMPlexMono-SemiBold.woff2') format('woff2');
+  font-display: swap;
+}
+
 :root {
-  font-family: 'Courier New', monospace;
+  --font-ui: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  --font-pixel: 'Departure Mono', 'IBM Plex Mono', monospace;
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
   color: #f4f7ef;
   background: #050607;
   --green: #c9ff4d;
@@ -41,8 +73,9 @@ input {
 }
 
 .brand {
-  letter-spacing: 0.28em;
-  font-size: 13px;
+  font-family: var(--font-pixel);
+  letter-spacing: 0.16em;
+  font-size: 14px;
 }
 
 .eyebrow {
@@ -90,21 +123,23 @@ input {
 }
 
 .board h1 {
+  font-family: var(--font-pixel);
   font-weight: 400;
-  font-size: 24px;
-  letter-spacing: 0.1em;
+  font-size: 33px;
+  letter-spacing: 0.04em;
   margin: 8px 0 5px;
 }
 
 .signal {
   color: var(--red);
-  letter-spacing: 0.15em;
-  font-size: 11px;
+  letter-spacing: 0.12em;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .instructions {
   color: #98a19b;
-  line-height: 1.5;
+  line-height: 1.65;
   font-size: 14px;
   max-width: 650px;
   margin: 8px 0 12px;
@@ -261,18 +296,33 @@ input {
   color: #070809;
 }
 
+/* results sit in corner brackets, like the HUD on the minigame screens, drawn in the result's own colour */
+.success,
+.failure {
+  width: fit-content;
+  max-width: 100%;
+  padding: 9px 14px;
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  background:
+    linear-gradient(currentColor, currentColor) top left / 10px 2px,
+    linear-gradient(currentColor, currentColor) top left / 2px 10px,
+    linear-gradient(currentColor, currentColor) top right / 10px 2px,
+    linear-gradient(currentColor, currentColor) top right / 2px 10px,
+    linear-gradient(currentColor, currentColor) bottom left / 10px 2px,
+    linear-gradient(currentColor, currentColor) bottom left / 2px 10px,
+    linear-gradient(currentColor, currentColor) bottom right / 10px 2px,
+    linear-gradient(currentColor, currentColor) bottom right / 2px 10px;
+  background-repeat: no-repeat;
+}
+
 .success {
   color: var(--green);
-  border-left: 3px solid var(--green);
-  padding: 9px 12px;
-  margin-top: 10px;
 }
 
 .failure {
   color: var(--red);
-  border-left: 3px solid var(--red);
-  padding: 9px 12px;
-  margin-top: 10px;
 }
 
 .legend {
@@ -415,12 +465,12 @@ input {
   }
 
   .top .brand {
-    font-size: 10px;
-    letter-spacing: 0.18em;
+    font-size: 11px;
+    letter-spacing: 0.12em;
   }
 
   .top .eyebrow {
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.1em;
   }
 
@@ -433,17 +483,17 @@ input {
   }
 
   .board h1 {
-    font-size: 19px;
+    font-size: 22px;
     margin: 2px 0;
   }
 
   .signal {
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .instructions {
-    font-size: 12px;
-    line-height: 1.45;
+    font-size: 13px;
+    line-height: 1.5;
     margin: 6px 0 8px;
   }
 
@@ -455,7 +505,7 @@ input {
   .legend {
     flex-wrap: wrap;
     gap: 6px 12px;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .actions,

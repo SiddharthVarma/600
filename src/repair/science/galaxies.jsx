@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, hudText, report } from './common.js';
+import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, fitWidth, hudText, pixelFont, report } from './common.js';
 import { BH, BW, bay, rng } from './scenes.js';
 
 // Galaxy classification, the way volunteers sort galaxies by eye: each one is spiral, irregular, elliptical or an
@@ -9,7 +9,7 @@ import { BH, BW, bay, rng } from './scenes.js';
 // - irregular: lumpy blue star clouds with no symmetry, like the Magellanic Clouds;
 // - elliptical: a smooth oval glow following the de Vaucouleurs profile, I ∝ exp(−7.67((r/rₑ)^¼ − 1)), yellowish;
 // - disk: a disc seen edge-on, exponential along it and sech² through it, usually split by a dark dust lane.
-const FIT = `min(${BW * 4}px, calc((100vh - 340px) * ${BW / BH}))`;
+const FIT = fitWidth(BW * 4, BH * 4);
 const SCALE = 4,
   COUNT = 12,
   KINDS = ['spiral', 'irregular', 'elliptical', 'disk'],
@@ -33,12 +33,12 @@ function elliptical(r, ox = 0, oy = 0, size = 1) {
     return [I * 1.05, I * 0.9, I * 0.7];
   };
 }
-function spiral(r, ox = 0, oy = 0, size = 1) {
+function spiral(r, ox = 0, oy = 0, size = 1, faceOn = false) {
   const rd = (8 + r() * 4) * size, // disc scale length
     arms = r() < 0.7 ? 2 : 3,
     pitch = ((14 + r() * 14) * Math.PI) / 180,
     phase = r() * Math.PI * 2,
-    incl = Math.acos(0.45 + r() * 0.55), // tilt: 0 = face on
+    incl = Math.acos((faceOn ? 0.85 : 0.45) + r() * (faceOn ? 0.15 : 0.55)), // tilt: 0 = face on
     pa = r() * Math.PI,
     ca = Math.cos(pa),
     sa = Math.sin(pa),
@@ -163,23 +163,44 @@ function render(seed, makeLight) {
   return img;
 }
 
-// The thing that isn't a galaxy. A big spiral glows behind it, and in front the creature's silhouette blots out the
-// light: a dark body and tentacles reaching across the frame. They slowly writhe, the starlight catches their edges in
-// a thin purple rim, and every few seconds, near the middle, something blinks.
+// The thing that isn't a galaxy, or not only one. A big spiral, nearly face on, and behind it something large: its body
+// is hidden behind the disc and five tentacles reach out from behind one edge, slowly writhing. It gives off no light,
+// so all that shows is where it blots out the stars and faint far-off galaxies behind, and a thin purple rim where
+// starlight catches its edge. The spiral's own light lies over it.
 function makeThing(seed) {
   const r = rng(seed),
-    bg = render(seed, rr => spiral(rr, 0, 0, 1.7)).data,
-    body = { x: BW / 2 + (r() - 0.5) * 30, y: BH / 2 + (r() - 0.5) * 16, rad: 9 + r() * 4 },
-    arms = Array.from({ length: 7 }, (_, k) => ({
-      a: (k / 7) * Math.PI * 2 + (r() - 0.5) * 0.6,
-      len: 45 + r() * 40,
+    spin = spiral(rng(seed + 1), 0, 0, 1.8, true),
+    gal = new Float32Array(BW * BH * 3),
+    sky = new Float32Array(BW * BH * 3),
+    // the side it hides behind, and its body tucked in behind the disc on that side
+    side = r() * Math.PI * 2,
+    body = { x: BW / 2 + Math.cos(side) * 26, y: BH / 2 + Math.sin(side) * 16, rad: 9 + r() * 4 },
+    // five tentacles reaching outward, away from the galaxy
+    arms = Array.from({ length: 5 }, (_, k) => ({
+      a: side - 1.4 + (k / 4) * 2.8 + (r() - 0.5) * 0.6,
+      len: 55 + r() * 35,
       curl: (r() - 0.5) * 0.09,
       ph: r() * 9,
-      wig: 0.6 + r() * 0.6,
+      wig: 0.9 + r() * 0.7,
     })),
+    noise = Float32Array.from({ length: BW * BH }, rng(seed + 2)),
     img = new ImageData(BW, BH),
     d = img.data,
     mask = new Uint8Array(BW * BH);
+  // the light, baked once: the spiral in front, and the deep field behind (stars, and faint galaxies much further off)
+  const glow = (cx, cy, sd, b, col) => {
+    for (let y = Math.max(0, Math.floor(cy - 3 * sd)); y <= Math.min(BH - 1, cy + 3 * sd); y++)
+      for (let x = Math.max(0, Math.floor(cx - 3 * sd)); x <= Math.min(BW - 1, cx + 3 * sd); x++) {
+        const k = b * Math.exp(-((x - cx) ** 2 + (y - cy) ** 2) / (2 * sd * sd)),
+          i = (y * BW + x) * 3;
+        sky[i] += k * col[0];
+        sky[i + 1] += k * col[1];
+        sky[i + 2] += k * col[2];
+      }
+  };
+  for (let k = 0; k < 60; k++) glow(r() * BW, r() * BH, 0.55, 0.3 + Math.pow(r(), 4) * 2.5, [1, 1, 1.05]);
+  for (let k = 0; k < 25; k++) glow(r() * BW, r() * BH, 0.9 + r() * 0.8, 0.12 + r() * 0.12, r() < 0.5 ? [1, 0.85, 0.7] : [0.75, 0.85, 1.1]);
+  for (let i = 0; i < BW * BH; i++) gal.set(spin((i % BW) - BW / 2, ((i / BW) | 0) - BH / 2), i * 3);
   const stamp = (cx, cy, rad) => {
     for (let y = Math.floor(cy - rad); y <= cy + rad; y++)
       for (let x = Math.floor(cx - rad); x <= cx + rad; x++)
@@ -196,7 +217,7 @@ function makeThing(seed) {
         y = body.y;
       for (let s = 0; s < arm.len; s++) {
         const f = s / arm.len;
-        a += Math.sin(t * 0.7 + f * 6 + arm.ph) * 0.03 * arm.wig + arm.curl * f;
+        a += Math.sin(t * 1.1 + f * 6 + arm.ph) * 0.045 * arm.wig + arm.curl * f;
         x += Math.cos(a);
         y += Math.sin(a);
         stamp(x, y, Math.max(0.6, (1 - f) * 4.2));
@@ -204,35 +225,20 @@ function makeThing(seed) {
     });
     for (let i = 0, p = 0; i < mask.length; i++, p += 4) {
       const x = i % BW,
-        y = (i / BW) | 0;
+        y = (i / BW) | 0,
+        behind = mask[i] ? 0 : 1,
+        rim = !mask[i] && ((x > 0 && mask[i - 1]) || (x < BW - 1 && mask[i + 1]) || (y > 0 && mask[i - BW]) || (y < BH - 1 && mask[i + BW])) ? 0.11 : 0,
+        n = (noise[i] - 0.5) * 0.04,
+        dith = (bay(x, y) - 0.5) / 10;
+      // the light that reaches us: the deep field where it isn't blocked, the rim, and the spiral over the top, tone
+      // mapped and dithered the same way as every other galaxy
+      const lin = [sky[i * 3] * behind + rim * 0.55, sky[i * 3 + 1] * behind + rim * 0.22, sky[i * 3 + 2] * behind + rim * 0.85];
+      for (let k = 0; k < 3; k++) {
+        const v = 1 - Math.exp(-(lin[k] + gal[i * 3 + k] + n + 0.02) * 2.2);
+        d[p + k] = Math.round(Math.max(0, Math.min(1, Math.round(v * 10 + dith * 10) / 10)) * 255);
+      }
       d[p + 3] = 255;
-      if (mask[i]) {
-        d[p] = 4;
-        d[p + 1] = 2;
-        d[p + 2] = 8;
-        continue;
-      }
-      // the rim: starlight catching the edge, purple, brighter where the galaxy behind is brighter
-      const edge = (x > 0 && mask[i - 1]) || (x < BW - 1 && mask[i + 1]) || (y > 0 && mask[i - BW]) || (y < BH - 1 && mask[i + BW]);
-      if (edge) {
-        const k = Math.min(1, 0.25 + ((bg[p] + bg[p + 1] + bg[p + 2]) / 765) * 1.6);
-        d[p] = 118 * k;
-        d[p + 1] = 58 * k;
-        d[p + 2] = 168 * k;
-      } else {
-        d[p] = bg[p];
-        d[p + 1] = bg[p + 1];
-        d[p + 2] = bg[p + 2];
-      }
     }
-    // the blink
-    if (t % 7 < 0.35)
-      for (const ex of [-2, 2]) {
-        const p = (Math.round(body.y - 1) * BW + Math.round(body.x + ex)) * 4;
-        d[p] = 176;
-        d[p + 1] = 110;
-        d[p + 2] = 224;
-      }
     return img;
   };
 }
@@ -278,7 +284,7 @@ export function Galaxies() {
       hudText(ctx, thing ? `GALAXY ?? OF ${COUNT}` : `GALAXY ${Math.min(index + 1, COUNT)} OF ${COUNT}`, 'left', 'top');
       hudText(ctx, thing ? 'RA ??h ??m · DEC ??°' : coords, 'right', 'top');
       if (flash) {
-        ctx.font = '22px "Courier New", monospace';
+        ctx.font = pixelFont(22);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
         const msg =
@@ -320,7 +326,8 @@ export function Galaxies() {
     setAnswers([...answers, ok]);
     setStreak(ok ? streak + 1 : 0);
     setFlash({ ok, kind: truth, chose: kind });
-    // a moment to see whether you were right, then the next galaxy
+    // a moment to see whether you were right, then the next galaxy. The thing behind the galaxy lingers, still writhing,
+    // so there's time to see what was there.
     setTimeout(
       () => {
         setFlash(null);
@@ -329,7 +336,7 @@ export function Galaxies() {
           setPhase('downlink');
         } else setIndex(index + 1);
       },
-      ok ? 650 : 1300,
+      truth === 'unknown' ? 3500 : 2000,
     );
   };
   // keys 1–5
@@ -389,10 +396,10 @@ export function Galaxies() {
       {phase === 'done' && (
         <div
           className={correct >= COUNT - 2 ? 'success' : 'failure'}
-          style={correct >= COUNT - 2 ? {} : { color: 'var(--yellow)', borderColor: 'var(--yellow)' }}
+          style={correct >= COUNT - 2 ? {} : { color: 'var(--yellow)' }}
         >
-          {info.uni.toUpperCase()} RECEIVED YOUR CLASSIFICATIONS · {correct} OF {COUNT} CORRECT
-          {deck.some(g => g.kind === 'unknown') && ' · 1 IMAGE WITHHELD FROM THE ARCHIVE'}
+          {info.uni} received your classifications · {correct} of {COUNT} correct
+          {deck.some(g => g.kind === 'unknown') && ' · 1 image withheld from the archive'}
         </div>
       )}
     </>

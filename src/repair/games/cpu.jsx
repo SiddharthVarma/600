@@ -146,8 +146,8 @@ export function Process() {
     <>
       <Header title="CPU OVERLOAD" sub={`CLUSTER LOAD ${load}% · ${purgedRunaways}/${RUNAWAY} RUNAWAYS PURGED`} />
       <p className="instructions">
-        Some satellites in this cluster have runaway processes maxing out their CPU. Purge them — but heavy load from a task in schedule.cfg
-        is expected, so leave those running. Click lines or type IDs, then purge.
+        Some satellites in this cluster have runaway processes maxing out their CPU. Purge them, but leave heavy load from tasks in schedule.cfg
+        running. That's expected. Click lines or type IDs, then purge.
       </p>
       <div
         style={{
