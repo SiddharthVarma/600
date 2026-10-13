@@ -156,22 +156,23 @@ export function Orbit() {
   // animation targets the true circular radius (same angle) rather than the player's imprecise value,
   // otherwise the handoff into the coast phase (which assumes you're exactly on r2) visibly snaps.
   const approachPts = locked ? points({ angle: locked.angle, dist: cfg.r2 }) : null;
-  const currentAngle = stage === 'coast' && locked ? (locked.angle + sweepDeg * sweepT) % 360 : null;
+  // after the circularization burn everything stays where it was when you fired (sweepT stops there): the satellite,
+  // its trail, and the window at the width it had narrowed to
+  const flown = (stage === 'coast' || stage === 'success') && locked;
+  const currentAngle = flown ? (locked.angle + sweepDeg * sweepT) % 360 : null;
   const inWindow = currentAngle != null && angDelta(currentAngle, cfg.windowCenter) <= cfg.windowWidth / 2;
   const nearWindow = !inWindow && currentAngle != null && angDelta(currentAngle, cfg.windowCenter) <= cfg.windowWidth / 2 + 18;
   const trail =
-    stage === 'coast' && locked ? Array.from({ length: 25 }, (_, i) => polar(locked.angle + (sweepDeg * sweepT * i) / 24, cfg.r2)) : [];
+    flown ? Array.from({ length: 25 }, (_, i) => polar(locked.angle + (sweepDeg * sweepT * i) / 24, cfg.r2)) : [];
   const satNow =
     stage === 'approach' && approachPts
       ? bezierAt(approachPts, t)
-      : stage === 'coast' && currentAngle != null
+      : currentAngle != null
         ? polar(currentAngle, cfg.r2)
-        : stage === 'success'
-          ? polar(cfg.windowCenter, cfg.r2)
-          : satStart;
+        : satStart;
   // The insertion window shows only a broad, vague sector at first and narrows to its true size as the
   // coast phase progresses -- you don't get precise timing info until you're actually getting close.
-  const revealT = stage === 'coast' ? Math.min(1, sweepT / 0.65) : 0;
+  const revealT = flown ? Math.min(1, sweepT / 0.65) : 0;
   const displayWidth = cfg.windowWidth * 3 - (cfg.windowWidth * 3 - cfg.windowWidth) * revealT;
   const arcPts = Array.from({ length: 9 }, (_, i) => polar(cfg.windowCenter - displayWidth / 2 + (displayWidth * i) / 8, cfg.r2));
   const sectorPath = `M ${cx} ${cy} L ${arcPts.map(p => p.join(',')).join(' L ')} Z`;
@@ -283,7 +284,8 @@ export function Orbit() {
               style={locked ? { filter: 'drop-shadow(0 0 6px #c9ff4d)' } : {}}
             />
           )}
-          {stage === 'approach' && approachPts && (
+          {/* the transfer arc draws itself during the burn, then stays: the path flown so far doesn't vanish */}
+          {stage !== 'plot' && approachPts && (
             <path
               d={pathD(approachPts)}
               fill="none"
@@ -291,11 +293,11 @@ export function Orbit() {
               strokeWidth="3"
               pathLength="1"
               strokeDasharray="1"
-              strokeDashoffset={1 - t}
+              strokeDashoffset={stage === 'approach' ? 1 - t : 0}
               style={{ filter: 'drop-shadow(0 0 8px #c9ff4d)' }}
             />
           )}
-          {stage === 'coast' && (
+          {flown && (
             <polyline
               points={trail.map(p => p.join(',')).join(' ')}
               fill="none"
@@ -307,7 +309,7 @@ export function Orbit() {
           <circle
             cx={satNow[0]}
             cy={satNow[1]}
-            r={stage === 'plot' ? 7 : 5}
+            r="6"
             fill={locked || stage !== 'plot' ? '#c9ff4d' : '#eef4eb'}
             style={locked || stage !== 'plot' ? { filter: 'drop-shadow(0 0 8px #c9ff4d)' } : {}}
           />
@@ -335,7 +337,7 @@ export function Orbit() {
       {stage === 'plot' && locked && (
         <div className="actions">
           <button className="action" onClick={() => setStage('approach')}>
-            ORBIT RAISING MANEUVER
+            EXECUTE BURN
           </button>
           <button
             className="action"

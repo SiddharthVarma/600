@@ -18,6 +18,18 @@ import { state } from './state.js';
 import { touchScroll } from '../shared/touchscroll.js';
 import { promptEl, term, termNote, termRunFile, UPLINK_STATIONS } from './terminal.js';
 
+// phones: the same test as the phone CSS
+const PHONE = matchMedia('(max-width: 600px) and (pointer: coarse)');
+// After a repair the uplink gets out of the way, so nothing behind it (tickets, a flare) stays hidden, but not at once:
+// the repair window fades first, then the outcome (STATUS, the terminal's last line, the crosshair) holds long enough
+// to read. If another satellite or an emergency has been opened by then, it stays open.
+const READ_TIME = 1800;
+function closeWhenRead(s) {
+  setTimeout(() => {
+    if (state.selected === s && panel.classList.contains('open')) closePanel();
+  }, READ_TIME);
+}
+
 document.getElementById('restartAll').onclick = () => {
   satellites.forEach(s => {
     s.anomaly = false;
@@ -132,6 +144,7 @@ window.addEventListener('message', e => {
     termNote('procedure complete · telemetry nominal', 'term-ok');
     closeRepair();
     renderSat(state.selected);
+    closeWhenRead(state.selected);
   } else if (e.data?.type === 'repair-failed') {
     state.selected.anomaly = false;
     state.selected.anomalyType = null;
@@ -144,6 +157,7 @@ window.addEventListener('message', e => {
     updateAlerts();
     termNote('link lost · satellite unrecoverable', 'term-err');
     closeRepair();
+    closeWhenRead(state.selected);
   }
 });
 // SUDO's walkthrough opens every visit; once it hands over (or is skipped), pacing.js ramps the game up
@@ -225,4 +239,4 @@ Object.defineProperties(window, {
 });
 
 // Phones only (same test as the phone CSS): the side panel scrolls itself, because iPhone Safari won't scroll it by swiping.
-if (matchMedia('(max-width: 600px) and (pointer: coarse)').matches) touchScroll(panel);
+if (PHONE.matches) touchScroll(panel);
