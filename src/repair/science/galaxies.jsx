@@ -163,31 +163,56 @@ function render(seed, makeLight) {
   return img;
 }
 
-// The thing that isn't a galaxy, or not only one. A big spiral, nearly face on, and behind it something large: its body
-// is hidden behind the disc and five tentacles reach out from behind one edge, slowly writhing. It gives off no light,
-// so all that shows is where it blots out the stars and faint far-off galaxies behind, and a thin purple rim where
-// starlight catches its edge. The spiral's own light lies over it.
+// The thing that isn't a galaxy, or not only one. A galaxy, and behind it something large, slowly writhing. It hides
+// behind one of two:
+// - an edge-on disc with a dark dust lane: its body behind the bright bulge, tentacles reaching up over the disc and
+//   hanging down below it;
+// - a big spiral, nearly face on: its body tucked behind one edge of the disc, five tentacles reaching out from there.
+// It gives off no light, so all that shows is where it blots out the stars and faint far-off galaxies behind, and a thin
+// purple rim where starlight catches its edge. The galaxy's own light lies over it.
 function makeThing(seed) {
   const r = rng(seed),
-    spin = spiral(rng(seed + 1), 0, 0, 1.8, true),
-    gal = new Float32Array(BW * BH * 3),
+    // tentacles in a fan, reaching out around a direction
+    fan = (n, side) =>
+      Array.from({ length: n }, (_, k) => ({
+        a: side - 1.4 + (k / (n - 1)) * 2.8 + (r() - 0.5) * 0.6,
+        len: 55 + r() * 35,
+        curl: (r() - 0.5) * 0.09,
+        ph: r() * 9,
+        wig: 0.9 + r() * 0.7,
+      }));
+  let light, body, arms;
+  if (r() < 0.5) {
+    // the edge-on disc (exponential along it, sech² through it, a bulge, and a dust lane along the midplane), tilted a
+    // little
+    const pa = (r() - 0.5) * 0.4,
+      ca = Math.cos(pa),
+      sa = Math.sin(pa);
+    light = (x, y) => {
+      const u = x * ca + y * sa,
+        v = -x * sa + y * ca,
+        sech = 1 / Math.cosh(v / 1.4),
+        along = 1.3 * Math.exp(-Math.abs(u) / 15) * sech * sech,
+        bulge = 1.4 * Math.exp(-Math.hypot(u, v * 1.4) / 3.6),
+        lane = Math.abs(u) < 36 ? 1 - 0.8 * Math.exp(-((v / 0.6) ** 2)) : 1;
+      return [(bulge * 1.05 + along * 0.75) * lane, (bulge * 0.92 + along * 0.85) * lane, (bulge * 0.72 + along * 1.05) * lane];
+    };
+    body = { x: BW / 2, y: BH / 2, rad: 9 + r() * 4 };
+    arms = [...fan(6, -Math.PI / 2 + pa), ...fan(4, Math.PI / 2 + pa)];
+  } else {
+    // the spiral, and the side it hides behind
+    const side = r() * Math.PI * 2;
+    light = spiral(rng(seed + 1), 0, 0, 1.8, true);
+    body = { x: BW / 2 + Math.cos(side) * 26, y: BH / 2 + Math.sin(side) * 16, rad: 9 + r() * 4 };
+    arms = fan(5, side);
+  }
+  const gal = new Float32Array(BW * BH * 3),
     sky = new Float32Array(BW * BH * 3),
-    // the side it hides behind, and its body tucked in behind the disc on that side
-    side = r() * Math.PI * 2,
-    body = { x: BW / 2 + Math.cos(side) * 26, y: BH / 2 + Math.sin(side) * 16, rad: 9 + r() * 4 },
-    // five tentacles reaching outward, away from the galaxy
-    arms = Array.from({ length: 5 }, (_, k) => ({
-      a: side - 1.4 + (k / 4) * 2.8 + (r() - 0.5) * 0.6,
-      len: 55 + r() * 35,
-      curl: (r() - 0.5) * 0.09,
-      ph: r() * 9,
-      wig: 0.9 + r() * 0.7,
-    })),
     noise = Float32Array.from({ length: BW * BH }, rng(seed + 2)),
     img = new ImageData(BW, BH),
     d = img.data,
     mask = new Uint8Array(BW * BH);
-  // the light, baked once: the spiral in front, and the deep field behind (stars, and faint galaxies much further off)
+  // the light, baked once: the galaxy in front, and the deep field behind (stars, and faint galaxies much further off)
   const glow = (cx, cy, sd, b, col) => {
     for (let y = Math.max(0, Math.floor(cy - 3 * sd)); y <= Math.min(BH - 1, cy + 3 * sd); y++)
       for (let x = Math.max(0, Math.floor(cx - 3 * sd)); x <= Math.min(BW - 1, cx + 3 * sd); x++) {
@@ -200,7 +225,7 @@ function makeThing(seed) {
   };
   for (let k = 0; k < 60; k++) glow(r() * BW, r() * BH, 0.55, 0.3 + Math.pow(r(), 4) * 2.5, [1, 1, 1.05]);
   for (let k = 0; k < 25; k++) glow(r() * BW, r() * BH, 0.9 + r() * 0.8, 0.12 + r() * 0.12, r() < 0.5 ? [1, 0.85, 0.7] : [0.75, 0.85, 1.1]);
-  for (let i = 0; i < BW * BH; i++) gal.set(spin((i % BW) - BW / 2, ((i / BW) | 0) - BH / 2), i * 3);
+  for (let i = 0; i < BW * BH; i++) gal.set(light((i % BW) - BW / 2, ((i / BW) | 0) - BH / 2), i * 3);
   const stamp = (cx, cy, rad) => {
     for (let y = Math.floor(cy - rad); y <= cy + rad; y++)
       for (let x = Math.floor(cx - rad); x <= cx + rad; x++)
@@ -336,7 +361,7 @@ export function Galaxies() {
           setPhase('downlink');
         } else setIndex(index + 1);
       },
-      truth === 'unknown' ? 3500 : 2000,
+      truth === 'unknown' ? 3500 : ok ? 1500 : 2000,
     );
   };
   // keys 1–5
