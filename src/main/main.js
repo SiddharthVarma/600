@@ -41,7 +41,6 @@ document.getElementById('restartAll').onclick = () => {
     s.flarePending = false;
     s.burst = false;
     s.taken = false;
-    s.values = { RSSI: 82, TEMPERATURE: 71, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 };
   });
   resetAnomalies();
   state.selected = null;
@@ -131,7 +130,6 @@ window.addEventListener('message', e => {
     state.selected.lost = false;
     state.selected.rejoining = wasOrbit;
     state.selected.rejoinProgress = wasOrbit ? 0 : 1;
-    state.selected.values = { RSSI: 82, TEMPERATURE: 56, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 };
     document.getElementById('log').textContent = wasOrbit
       ? 'SUCCESSFUL EXECUTION · REJOINING ORBIT'
       : 'SUCCESSFUL EXECUTION · TELEMETRY NOMINAL';

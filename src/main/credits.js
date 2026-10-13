@@ -96,7 +96,6 @@ export function launchMessage(data) {
           flarePending: false,
           rejoining: true,
           rejoinProgress: 0,
-          values: { RSSI: 82, TEMPERATURE: 56, POWER: 68, BATTERY: 91, CPU: 63, TORQUE: 89 },
         }),
       );
     updateNetwork();

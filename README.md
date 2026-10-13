@@ -37,12 +37,17 @@ public/                    images, copied to the site as-is (paths in code are r
 src/main/                  the constellation page
   main.js                  entry point: wires modules to the page, clocks, messages from minigame windows
   constellation.js         satellites, orbits, drawing the rings
-  panel.js                 side panel: telemetry and history chart
+  earth.js                 the spinning pixel-art Earth
+  panel.js                 the uplink window: a satellite's STATUS and its terminal, docked bottom right
   terminal.js              ssh sessions, procedures/, emergency/ scripts
   launcher.js              minigame windows: load hidden, reveal, start
   alerts.js                SCID-UI alerts and crosshairs
   science.js               science requests: the bottom-left card and their window
+  dive.js                  the camera dive into the Earth (or out to space) before a science or launch window
+  credits.js               credits from science, the LAUNCH button, replacing lost satellites
   anomalies.js             spawning everyday faults
+  pacing.js                how a visit ramps up: the opening, the first event, the calm, the warm-up
+  intro.js                 SUDO: the walkthrough, and its lines on launches and celestial events
   state.js                 the few values several modules share
   events/                  core.js (tickets, emergency scripts, results) + flare, debris, grb, creature
   styles.css
@@ -51,7 +56,10 @@ src/repair/                the repair lab (React)
   shared/                  frame, header, result, helpers, game catalog
   games/                   thermal, power, solar, contact, wheel, cpu, orbit, startracker
   events/                  bitflip (GRB), debris, flare
-  science/                 science requests: pixel-art scenes, Earth-observation survey, interstellar tracking
+  science/                 science requests: pixel-art scenes, Earth-observation surveys, supernova, exoplanet,
+                           galaxies, interstellar tracking
+  launch/                  the replacement launch: pad, max-Q, staging, fairing, deploy
+public/fonts/              Departure Mono and IBM Plex Mono, with their licences
 scripts/check_assets.py    CI check that referenced images exist
 LESSONS_LEARNT.md          problems found while testing, and how they were fixed
 ```

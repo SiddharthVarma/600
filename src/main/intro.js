@@ -23,9 +23,8 @@ const STEPS = {
     line: 'Ah. SCID-UI has alerted that something IS on fire. Click the red ticket, top left.',
     nudge: "The red one. Top left. I'll wait.",
   },
-  sat: { line: "That's the one under the crosshair. Click it. Gently.", nudge: 'The satellite in the crosshair. The one that blinks.' },
   terminal: {
-    line: 'Look up top: STATUS: SOLAR ARRAY MISALIGNED. Click its matching .py procedure file in the terminal. No pressure. Well, some pressure.',
+    line: 'See the STATUS line: SOLAR ARRAY MISALIGNED. Click its matching .py procedure file in the terminal. No pressure. Well, some pressure.',
     nudge: "The array's misaligned… align_array.py looks like the right procedure to fix this anomaly.",
   },
   playing: {},
@@ -138,9 +137,6 @@ function place() {
     const r = spot.getBoundingClientRect();
     x = r.right + 16;
     y = step === 'science' ? r.bottom - bh : r.top;
-  } else if (step === 'sat' && sat?.sx != null) {
-    x = sat.sx + 34;
-    y = sat.sy - 20;
   } else if (step === 'terminal' || step === 'aborted') {
     x = innerWidth - panel.offsetWidth - bw - 18;
     y = document.getElementById('term').getBoundingClientRect().top;
@@ -158,9 +154,7 @@ function tick() {
   }
   if (step === 'ticket') {
     spotlight(alertElFor(sat) || null);
-    if (satOpen()) go('terminal');
-    else if (state.highlighted.includes(sat)) go('sat');
-  } else if (step === 'sat') {
+    // the ticket opens its terminal straight away
     if (satOpen()) go('terminal');
   } else if (step === 'terminal' || step === 'aborted') {
     spotlight(document.getElementById('term'));

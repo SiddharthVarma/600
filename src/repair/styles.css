@@ -145,16 +145,8 @@ input {
   margin: 8px 0 12px;
 }
 
-.pixel-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin: 26px 0;
-}
-
 .node,
 .valve,
-.cell,
 .module {
   border: 1px solid #39453f;
   background: #0d1211;
@@ -167,7 +159,6 @@ input {
 
 .node:hover,
 .valve:hover,
-.cell:hover,
 .module:hover {
   border-color: var(--green);
   transform: translateY(-2px);
@@ -175,7 +166,6 @@ input {
 
 .node.done,
 .valve.done,
-.cell.done,
 .module.done {
   background: var(--green);
   color: #070809;
@@ -213,14 +203,6 @@ input {
   color: var(--yellow);
 }
 
-.wire-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
-  align-items: center;
-  margin: 22px 0;
-}
-
 .terminal {
   width: 92px;
   padding: 13px 7px;
@@ -252,28 +234,6 @@ input {
   color: #070809 !important;
   border-color: #fff !important;
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
-}
-
-.wire {
-  height: 3px;
-  flex: 1;
-  background: var(--line);
-}
-
-.wire.live {
-  background: #fff;
-  box-shadow: 0 0 10px var(--green);
-  position: relative;
-}
-
-.wire.live:after {
-  content: '✓';
-  position: absolute;
-  left: 50%;
-  top: -11px;
-  transform: translateX(-50%);
-  color: var(--green);
-  font-size: 13px;
 }
 
 .actions {

@@ -34,15 +34,6 @@ export function spawnAnomaly(s, type) {
   s.anomalyType = type;
   lastAnomalyType = s.anomalyType;
   s.countdown = ANOMALY_FAIL_WINDOW;
-  if (s.anomalyType === 'thermal') {
-    s.values.TEMPERATURE = 78;
-    s.values.POWER = 82;
-  }
-  if (s.anomalyType === 'contact') s.values.RSSI = 52;
-  if (s.anomalyType === 'power') s.values.POWER = 32;
-  if (s.anomalyType === 'solar') s.values.BATTERY = 31;
-  if (s.anomalyType === 'wheel') s.values.TORQUE = 34;
-  if (s.anomalyType === 'process') s.values.CPU = 98;
   pushAnomalyAlert(s);
 }
 export function scheduleAnomaly() {
