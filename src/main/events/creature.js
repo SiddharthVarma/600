@@ -6,7 +6,7 @@ import { activeEvent, eventBusy, holdForScience, pulse, resolveEvent, startEvent
 // tentacle to zap it back (it returns angrier and takes more hits); if one grabs a satellite, click the satellite fast
 // to fire its thrusters and break free before it's dragged off-screen. Drawn as chunky pixel art in a low-res buffer.
 const KPIX = 4,
-  KRAKEN_PREY = 5;
+  KRAKEN_PREY = 7;
 const K_OUTLINE = [24, 10, 34],
   K_DARK = [74, 32, 110],
   K_BODY = [118, 58, 168],
@@ -115,13 +115,13 @@ function spawnTentacle(now) {
     hunted = kraken.tentacles.filter(tn => tn.state !== 'retreat').map(tn => tn.prey);
   const free = ev.sats.filter(s => !s.lost && !hunted.includes(s));
   if (!free.length) return;
-  // keep tentacles apart: skip prey within 55° of a satellite another tentacle is already after
+  // keep tentacles apart: skip prey within 45° of a satellite another tentacle is already after
   const ang = sat => {
     const o = point(sat, now);
     return Math.atan2(o.y - H / 2, o.x - W / 2);
   };
   const apart = free.filter(sat =>
-    hunted.every(h => Math.abs(((((ang(sat) - ang(h)) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI) > (55 * Math.PI) / 180),
+    hunted.every(h => Math.abs(((((ang(sat) - ang(h)) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI) > (45 * Math.PI) / 180),
   );
   if (!apart.length) return;
   const prey = apart[Math.floor(Math.random() * apart.length)];
@@ -192,7 +192,7 @@ function updateTentacle(tn, now, dt) {
     tn.reach = Math.min(1, tn.reach + tn.speed * dt);
     if (tn.reach >= 1) setTentacleState(tn, 'grab', now);
   } else if (tn.state === 'grab') {
-    if (age > 0.45) setTentacleState(tn, 'drag', now);
+    if (age > 1.3) setTentacleState(tn, 'drag', now);
   } else if (tn.state === 'drag') {
     tn.reach -= 0.07 * dt;
     tn.tug = Math.max(0, tn.tug - 0.1 * dt);
@@ -203,7 +203,10 @@ function updateTentacle(tn, now, dt) {
   } else if (tn.state === 'retreat') tn.reach -= dt * 0.35;
   const holding = tn.state === 'grab' || tn.state === 'drag';
   tn.wig += ((tn.state === 'recoil' ? 3.2 : holding ? 1.15 : 1) - tn.wig) * Math.min(1, dt * 6);
-  tn.curl += ((holding || tn.carrying ? 1.35 : 0.25) - tn.curl) * Math.min(1, dt * 4);
+  // on the grab the tip whips into a tight coil, wrapping the satellite; then, as it drags, it loosens to a hook (about
+  // 130° of bend down its length), short of looping
+  const coiling = tn.state === 'grab';
+  tn.curl += ((coiling ? 1.1 : holding || tn.carrying ? 0.6 : 0.25) - tn.curl) * Math.min(1, dt * (coiling ? 5 : 3));
 }
 export const krakenLive = () => !!activeEvent && activeEvent.kind === 'kraken'; // while it lasts, everyday anomalies stop: none spawn and their timers pause
 export function krakenClick(x, y) {
@@ -229,7 +232,7 @@ export function drawKraken(t) {
   const dt = Math.min(0.05, (t - (kraken.last || t)) / 1000);
   kraken.last = t;
   if (live && t >= kraken.nextSpawn) {
-    if (kraken.tentacles.filter(tn => tn.state !== 'retreat').length < 3) spawnTentacle(t);
+    if (kraken.tentacles.filter(tn => tn.state !== 'retreat').length < 5) spawnTentacle(t);
     kraken.nextSpawn = t + 3000 + Math.random() * 2500;
   }
   kBuffer();

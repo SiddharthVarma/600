@@ -631,6 +631,37 @@ button.command:hover {
   pointer-events: auto;
 }
 
+/* SUDO corrupted by the creature: its purple, a nervous jitter, and no button, so clicks go through to the tentacles */
+.sudo.on.sudo-corrupt {
+  border-color: rgba(176, 108, 224, 0.75);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.6),
+    0 0 22px rgba(176, 108, 224, 0.25);
+  color: #d9bdf3;
+  pointer-events: none;
+  animation: sudo-jitter 0.3s steps(2) infinite;
+}
+
+.sudo-corrupt .sudo-head {
+  color: #b06ce0;
+}
+
+.sudo-corrupt .sudo-text {
+  white-space: pre-line;
+}
+
+@keyframes sudo-jitter {
+  0% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(1px, -1px);
+  }
+  100% {
+    transform: translate(-1px, 1px);
+  }
+}
+
 .sudo-head {
   display: flex;
   justify-content: space-between;

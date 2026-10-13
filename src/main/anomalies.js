@@ -21,7 +21,7 @@ export const MAX_CONCURRENT_ANOMALIES = 2,
 // everyday faults under way (event satellites don't count, so faults keep coming while an event ticket waits)
 export const activeFaults = () => satellites.filter(s => s.anomaly && !EVENT_TYPES.includes(s.anomalyType));
 export function trySpawnAnomaly(max = MAX_CONCURRENT_ANOMALIES) {
-  if (eventActive() || krakenLive() || state.intro) return;
+  if (eventActive() || krakenLive() || state.intro || performance.now() < state.faultsAfter) return;
   if (activeFaults().length < max) {
     const available = satellites.filter(s => !s.lost && !s.anomaly && !s.rejoining),
       s = available[Math.floor(Math.random() * available.length)];

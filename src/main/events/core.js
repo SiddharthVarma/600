@@ -72,7 +72,7 @@ export const EVENTS = {
     name: 'SOLAR FLARE',
     title: 'PARKER SOLAR PROBE · SOLAR FLARE DETECTED',
   },
-  kraken: { window: 30, script: null, name: 'UNIDENTIFIED CONTACT', title: 'SETI · UNIDENTIFIED.... CREATURE???' }, // played on the main screen, no procedure
+  kraken: { window: 45, script: null, name: 'UNIDENTIFIED CONTACT', title: 'SETI · UNIDENTIFIED.... CREATURE???' }, // played on the main screen, no procedure
   grb: {
     window: 60,
     script: 'grb_scrub.py',
@@ -228,6 +228,8 @@ export function resolveEvent(saved) {
   if (!ev) return;
   if (ev.kind === 'kraken') {
     const now = performance.now();
+    // a breather once it's gone: no new fault for 10 s
+    state.faultsAfter = now + 10000;
     kraken.tentacles.forEach(tn => {
       tn.carrying = !!tn.prey.heldAt && !saved.has(tn.prey.id);
       setTentacleState(tn, 'retreat', now);

@@ -116,6 +116,8 @@ export function updateAlerts() {
 }
 // the ticket element showing a satellite's fault, if there is one
 export const alertElFor = s => alerts.find(a => a.sat === s)?.el;
+// and the EMERGENCY ticket for a celestial event
+export const alertElForEvent = ev => alerts.find(a => a.event === ev)?.el;
 export function drawHighlight(t) {
   state.highlighted = state.highlighted.filter(s => !s.lost);
   state.highlighted.forEach(s => s.sx != null && drawCrosshair(s, t));
