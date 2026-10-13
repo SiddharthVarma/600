@@ -1,4 +1,5 @@
 import { satellites } from './constellation.js';
+import { COIN, earn, payFor } from './credits.js';
 import { dive, diving } from './dive.js';
 import { releaseHeldEvent } from './events/core.js';
 import { state } from './state.js';
@@ -9,17 +10,84 @@ const PHONE = matchMedia('(max-width: 600px) and (pointer: coarse)');
 
 // Science requests: universities' hosted-payload proposals that arrive now and then. They wait, folded into one card in
 // the bottom left, until the player opens them; each opens its own window (a survey or a tracking job) and is done once
-// its data is downlinked. Nothing is lost by ignoring them or getting one wrong.
-// want: the kind of spot on the spinning Earth the camera dives at (ice, ocean or land); the space ones look away
+// its data is downlinked. They pay in credits (see credits.js); nothing is lost by ignoring them or getting one wrong.
+// area: where on Earth the request is ([latitudes], [longitudes]); the camera dives at a spot picked inside it, and the
+// window shows that same spot. Aircraft bases come in three climates, each with its own area. The space ones look away.
 const REQUESTS = {
-  penguins: { what: 'Penguin Colony Tracking', uni: 'British Antarctic Survey', to: 'earth', want: 'ice' },
-  whales: { what: 'Whale Population Tracking', uni: 'British Antarctic Survey', to: 'earth', want: 'ocean' },
-  wildfire: { what: 'Wildfire Hotspot Tracking', uni: 'Brazilian Fire Research Center', to: 'earth', want: 'land' },
+  penguins: {
+    what: 'Penguin Colony Tracking',
+    uni: 'British Antarctic Survey',
+    to: 'earth',
+    area: [
+      [-78, -65],
+      [-180, 180],
+    ],
+  }, // the Antarctic coast
+  whales: {
+    what: 'Whale Population Tracking',
+    uni: 'British Antarctic Survey',
+    to: 'earth',
+    area: [
+      [-52, -42],
+      [-50, 10],
+    ],
+  }, // the South Atlantic
+  wildfire: {
+    what: 'Wildfire Hotspot Tracking',
+    uni: 'Brazilian Fire Research Center',
+    to: 'earth',
+    area: [
+      [-14, -2],
+      [-70, -50],
+    ],
+  }, // the Amazon
   interstellar: { what: 'Interstellar Object Tracking', uni: 'Instituto de Astrofísica de Canarias', to: 'space' },
-  flamingos: { what: 'Flamingo Flock Tracking', uni: 'University of Nairobi', to: 'earth', want: 'land' },
-  aircraft: { what: 'Aircraft Recognition', uni: 'Ministry of Defence', to: 'earth', want: 'land' },
-  oil: { what: 'Oil Spill Tracking', uni: 'University College Dublin', to: 'earth', want: 'ocean' },
-  darkships: { what: 'Dark Ship Tracking', uni: 'Global Fishing Watch', to: 'earth', want: 'ocean' },
+  flamingos: {
+    what: 'Flamingo Flock Tracking',
+    uni: 'University of Nairobi',
+    to: 'earth',
+    area: [
+      [-3, 1],
+      [35.5, 36.5],
+    ],
+  }, // the Rift Valley lakes
+  aircraft: {
+    what: 'Aircraft Recognition',
+    uni: 'Ministry of Defence',
+    to: 'earth',
+    areas: {
+      temperate: [
+        [46, 54],
+        [0, 20],
+      ],
+      desert: [
+        [20, 30],
+        [40, 56],
+      ],
+      arctic: [
+        [64, 70],
+        [10, 30],
+      ],
+    },
+  },
+  oil: {
+    what: 'Oil Spill Tracking',
+    uni: 'University College Dublin',
+    to: 'earth',
+    area: [
+      [25.5, 29],
+      [-89.5, -86],
+    ],
+  }, // the Gulf of Mexico
+  darkships: {
+    what: 'Dark Ship Tracking',
+    uni: 'Global Fishing Watch',
+    to: 'earth',
+    area: [
+      [-5, 2],
+      [-95, -82],
+    ],
+  }, // off the Galápagos
   supernova: { what: 'Supernova Search', uni: 'University of Surrey', to: 'space' },
   exoplanet: { what: 'Exoplanet Transit Search', uni: 'University of Hawaiʻi', to: 'space' },
   galaxies: { what: 'Galaxy Classification', uni: 'Instituto de Astrofísica de Canarias', to: 'space' },
@@ -52,7 +120,7 @@ export function scheduleScience() {
       pushScience();
       scheduleScience();
     },
-    40000 + Math.random() * 40000,
+    30000 + Math.random() * 30000,
   );
 }
 function openRequest(r) {
@@ -62,9 +130,21 @@ function openRequest(r) {
   expanded = false;
   state.science = true; // from the dive on, celestial events wait for this window to close
   render();
+  // pick the place: a spot inside the request's area (for aircraft, first which kind of base), shared by the dive and
+  // the window so they always agree
+  const where = { to: r.to };
+  let place = '';
+  if (r.to === 'earth') {
+    const kinds = r.areas && Object.keys(r.areas),
+      biome = kinds && kinds[Math.floor(Math.random() * kinds.length)],
+      [lat, lon] = biome ? r.areas[biome] : r.area;
+    where.lat = lat[0] + Math.random() * (lat[1] - lat[0]);
+    where.lon = lon[0] + Math.random() * (lon[1] - lon[0]);
+    place = `&lat=${where.lat.toFixed(2)}&lon=${where.lon.toFixed(2)}` + (biome ? `&biome=${biome}` : '');
+  }
   // the window loads hidden during the dive and opens once the screen is covered; ?dive tells it to start in the clouds
-  preload(L, `react.html?type=${r.kind}&sat=${r.sat.id}&dive=1`);
-  dive(r, () => reveal(L));
+  preload(L, `react.html?type=${r.kind}&sat=${r.sat.id}&dive=1${place}`);
+  dive(where, () => reveal(L));
 }
 export function closeScience() {
   if (!L.shown) return;
@@ -79,7 +159,9 @@ export function closeScience() {
 export function scienceMessage(data) {
   if (data.type === 'science-complete' && opened) {
     waiting = waiting.filter(r => r !== opened);
-    note = `DATA RECEIVED · ${opened.uni.toUpperCase()}`;
+    const pay = payFor(data);
+    earn(pay);
+    note = { text: `DATA RECEIVED · ${opened.uni.toUpperCase()}`, pay };
     clearTimeout(noteTimer);
     noteTimer = setTimeout(() => {
       note = null;
@@ -130,7 +212,8 @@ function render(arrived = false) {
   if (note) {
     const n = document.createElement('div');
     n.className = 'science-note';
-    n.textContent = note;
+    n.textContent = note.text;
+    if (note.pay) n.insertAdjacentHTML('beforeend', ` · +${note.pay} ${COIN}`);
     el.append(n);
   }
   const n = waiting.length,

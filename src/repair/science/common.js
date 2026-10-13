@@ -22,7 +22,7 @@ export const SCIENCE = {
     uni: 'British Antarctic Survey',
     noun: ['whale', 'whales'],
     earthAt: [150, 150],
-    coords: earth([-60, -35], [-180, 180]), // the Southern Ocean
+    coords: earth([-52, -42], [-50, 10]), // the South Atlantic
   },
   wildfire: {
     title: 'WILDFIRE HOTSPOT TRACKING',
@@ -49,7 +49,7 @@ export const SCIENCE = {
     uni: 'Ministry of Defence',
     noun: ['fighter jet', 'fighter jets'],
     earthAt: [80, 185],
-    coords: earth([48, 58], [-5, 20]), // fallback: each airbase sets its own, by climate
+    coords: earth([46, 54], [0, 20]), // fallback: each airbase sets its own, by climate
   },
   oil: {
     title: 'OIL SPILL TRACKING',
@@ -58,7 +58,7 @@ export const SCIENCE = {
     uni: 'University College Dublin',
     noun: ['slick', 'slicks'],
     earthAt: [140, 190],
-    coords: earth([24, 29], [-95, -85]), // the Gulf of Mexico
+    coords: earth([25.5, 29], [-89.5, -86]), // the Gulf of Mexico
   },
   darkships: {
     title: 'DARK SHIP TRACKING',
@@ -97,12 +97,19 @@ export const SCIENCE = {
     coords: sky,
   },
 };
+// how wide a minigame's view can be: its full size, or less if the window is short, leaving room above it for the header
+// and instructions (up to four lines) and below it for the buttons and a two-line result
+export const fitWidth = (w, h) => `min(${w}px, calc((100vh - 420px) * ${w / h}))`;
+// text drawn on the pixel scenes is in the pixel font; asked for up front, since drawing on a canvas doesn't make the
+// browser download it
+export const pixelFont = px => `${px}px "Departure Mono", monospace`;
+document.fonts?.load(pixelFont(22));
 export const report = data => window.parent !== window && window.parent.postMessage(data, '*');
 
 export function hudText(ctx, s, ax, ay, color = 'rgba(201,255,77,.85)') {
   const W = ctx.canvas.width,
     H = ctx.canvas.height;
-  ctx.font = '18px "Courier New", monospace';
+  ctx.font = pixelFont(22);
   ctx.textAlign = ax;
   ctx.textBaseline = ay;
   const x = ax === 'left' ? 16 : W - 16,
@@ -110,7 +117,7 @@ export function hudText(ctx, s, ax, ay, color = 'rgba(201,255,77,.85)') {
     w = ctx.measureText(s).width;
   // a dark backing so the readout stays legible on white ice
   ctx.fillStyle = 'rgba(2,4,6,.62)';
-  ctx.fillRect(ax === 'left' ? x - 6 : x - w - 6, ay === 'top' ? y - 4 : y - 22, w + 12, 26);
+  ctx.fillRect(ax === 'left' ? x - 6 : x - w - 6, ay === 'top' ? y - 4 : y - 26, w + 12, 30);
   ctx.fillStyle = color;
   ctx.fillText(s, x, y);
 }
@@ -148,7 +155,7 @@ export function drawDownlink(ctx, d) {
     p = Math.min(1, d / (DOWNLINK_TIME - 0.3));
   ctx.fillStyle = 'rgba(2,4,6,.74)';
   ctx.fillRect(0, 0, W, H);
-  ctx.font = '18px "Courier New", monospace';
+  ctx.font = pixelFont(22);
   ctx.textBaseline = 'top';
   ctx.textAlign = 'center';
   const bw = 300,

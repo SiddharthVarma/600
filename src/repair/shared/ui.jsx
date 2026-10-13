@@ -6,8 +6,11 @@ export function Frame({ type, setType, children, remaining, timedOut }) {
   const embedded = Boolean(params.get('type'));
   const multi = Boolean(params.get('sats'));
   const satId = params.get('sat');
-  const science = SCIENCE_TYPES.has(type);
-  const satLabel = science
+  const science = SCIENCE_TYPES.has(type),
+    launch = type === 'launch';
+  const satLabel = launch
+    ? 'PAD 1 · RIDESHARE'
+    : science
     ? `SAT ${String(satId || 214).padStart(3, '0')} · HOSTED PAYLOAD`
     : multi
       ? 'MULTIPLE SATELLITES · EMERGENCY OVERRIDE'
@@ -17,7 +20,7 @@ export function Frame({ type, setType, children, remaining, timedOut }) {
   return (
     <div className="app">
       <header className="top">
-        <span className="brand">SIX HUNDRED / {science ? 'SCIENCE' : 'REPAIR'} LAB</span>
+        <span className="brand">SIX HUNDRED / {launch ? 'LAUNCH CONTROL' : science ? 'SCIENCE LAB' : 'REPAIR LAB'}</span>
         <span className="eyebrow">
           {satLabel}
           {remaining != null && !timedOut && (

@@ -1,20 +1,34 @@
 // Entry point for the constellation page: wires the modules to the page, starts the clocks, and handles
 // messages from the minigame windows. Each feature lives in its own module next to this one.
 import { clearAlerts, pushAlert, pushAnomalyAlert, satTag, updateAlerts } from './alerts.js';
-import { ANOMALY_FAIL_WINDOW, resetAnomalies, scheduleAnomaly, trySpawnAnomaly } from './anomalies.js';
+import { ANOMALY_FAIL_WINDOW, resetAnomalies, trySpawnAnomaly } from './anomalies.js';
 import { canvas, draw, H, point, resize, ringProgress, satellites, updateNetwork, W } from './constellation.js';
 import { abortEvent, activeEvent, eventActive, pulses, renderFleetStatus, resetEvents, resolveEvent, tickEvent } from './events/core.js';
-import { kraken, krakenClick, krakenLive, resetCreature, scheduleKraken, triggerKraken } from './events/creature.js';
-import { scheduleDebris, triggerDebris } from './events/debris.js';
-import { scheduleFlare, triggerFlare } from './events/flare.js';
-import { scheduleGRB, triggerGRB } from './events/grb.js';
+import { kraken, krakenClick, krakenLive, resetCreature, triggerKraken } from './events/creature.js';
+import { triggerDebris } from './events/debris.js';
+import { triggerFlare } from './events/flare.js';
+import { triggerGRB } from './events/grb.js';
+import { pacingStage } from './pacing.js';
 import { closeRepair, launchers, startIfReady } from './launcher.js';
-import { maybeStartIntro, replayIntro } from './intro.js';
-import { panel, renderSat } from './panel.js';
+import { replayIntro, startIntro } from './intro.js';
+import { closePanel, openSat, panel, renderCountdown, renderSat } from './panel.js';
+import { closeLaunch, earn, launchMessage, resetCredits } from './credits.js';
 import { closeScience, pushScience, resetScience, scheduleScience, scienceMessage } from './science.js';
 import { state } from './state.js';
 import { touchScroll } from '../shared/touchscroll.js';
 import { promptEl, term, termNote, termRunFile, UPLINK_STATIONS } from './terminal.js';
+
+// phones: the same test as the phone CSS
+const PHONE = matchMedia('(max-width: 600px) and (pointer: coarse)');
+// After a repair the uplink gets out of the way, so nothing behind it (tickets, a flare) stays hidden, but not at once:
+// the repair window fades first, then the outcome (STATUS, the terminal's last line, the crosshair) holds long enough
+// to read. If another satellite or an emergency has been opened by then, it stays open.
+const READ_TIME = 1800;
+function closeWhenRead(s) {
+  setTimeout(() => {
+    if (state.selected === s && panel.classList.contains('open')) closePanel();
+  }, READ_TIME);
+}
 
 document.getElementById('restartAll').onclick = () => {
   satellites.forEach(s => {
@@ -34,6 +48,8 @@ document.getElementById('restartAll').onclick = () => {
   state.highlighted = [];
   clearAlerts();
   resetScience();
+  closeLaunch();
+  resetCredits();
   resetEvents();
   resetCreature();
   document.getElementById('gameOver').classList.remove('show');
@@ -68,17 +84,9 @@ canvas.addEventListener('click', e => {
       best = s;
     }
   });
-  if (best) {
-    state.selected = best;
-    state.highlighted = [];
-    renderSat(best);
-    panel.classList.add('open');
-  }
+  if (best) openSat(best);
 });
-document.getElementById('close').onclick = () => {
-  panel.classList.remove('open');
-  state.selected = null;
-};
+document.getElementById('close').onclick = closePanel;
 term.addEventListener('click', e => {
   const f = e.target.closest('.term-file');
   if (f) termRunFile(f.dataset.file);
@@ -96,6 +104,10 @@ window.addEventListener('message', e => {
       L.loaded = true;
       startIfReady(L);
     }
+    return;
+  }
+  if (e.data?.type === 'launch-complete' || e.data?.type === 'launch-close') {
+    launchMessage(e.data);
     return;
   }
   if (e.data?.type === 'science-complete' || e.data?.type === 'science-close') {
@@ -132,6 +144,7 @@ window.addEventListener('message', e => {
     termNote('procedure complete · telemetry nominal', 'term-ok');
     closeRepair();
     renderSat(state.selected);
+    closeWhenRead(state.selected);
   } else if (e.data?.type === 'repair-failed') {
     state.selected.anomaly = false;
     state.selected.anomalyType = null;
@@ -144,19 +157,15 @@ window.addEventListener('message', e => {
     updateAlerts();
     termNote('link lost · satellite unrecoverable', 'term-err');
     closeRepair();
+    closeWhenRead(state.selected);
   }
 });
-// a first-time player gets SUDO's walkthrough; random faults start a few seconds in either way (they wait while it runs)
-maybeStartIntro();
-setTimeout(() => {
-  trySpawnAnomaly();
-  scheduleAnomaly();
-}, 4000);
+// SUDO's walkthrough opens every visit; once it hands over (or is skipped), pacing.js ramps the game up
+startIntro();
 document.querySelectorAll('[data-abort]').forEach(b => {
   b.onclick = abortEvent;
 });
-// The first of each celestial event comes early enough to keep a new player hooked (somewhere in the given window, in
-// seconds); after that each repeats on its own interval.
+// the first science request comes somewhere in the given window, in seconds; after that on its own interval
 const firstEvent = (trigger, schedule, from, to) =>
   setTimeout(
     () => {
@@ -165,11 +174,6 @@ const firstEvent = (trigger, schedule, from, to) =>
     },
     (from + Math.random() * (to - from)) * 1000,
   );
-firstEvent(triggerGRB, scheduleGRB, 120, 240);
-firstEvent(triggerFlare, scheduleFlare, 120, 240);
-firstEvent(triggerDebris, scheduleDebris, 120, 240);
-firstEvent(triggerKraken, scheduleKraken, 240, 360);
-// the first science request comes within a minute or so; more follow every couple of minutes
 firstEvent(pushScience, scheduleScience, 30, 50);
 setInterval(() => {
   const ticking = krakenLive() ? [] : satellites.filter(s => s.anomaly && s.countdown > 0 && !s.frozen); // frozen: the intro's first fault waits for the player
@@ -191,10 +195,7 @@ setInterval(() => {
         body: wasOrbit ? 'Satellite below recovery altitude.' : 'Satellite unrecoverable.',
         crit: true,
       });
-    } else if (state.selected === s) {
-      document.getElementById('log').textContent =
-        s.anomalyType === 'orbit' ? `ORBIT DECAY · IMPACT IN ${s.countdown}s` : `SATELLITE LOST IN ${s.countdown}s IF UNRESOLVED`;
-    }
+    } else if (state.selected === s) renderCountdown(s);
   });
   tickEvent();
   renderFleetStatus();
@@ -211,6 +212,8 @@ Object.assign(window, {
   trySpawnAnomaly,
   pushAnomalyAlert,
   pushScience,
+  earn,
+  pacingStage,
   replayIntro,
   renderSat,
   eventActive,
@@ -236,4 +239,4 @@ Object.defineProperties(window, {
 });
 
 // Phones only (same test as the phone CSS): the side panel scrolls itself, because iPhone Safari won't scroll it by swiping.
-if (matchMedia('(max-width: 600px) and (pointer: coarse)').matches) touchScroll(panel);
+if (PHONE.matches) touchScroll(panel);

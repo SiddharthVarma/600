@@ -14,6 +14,7 @@ import { Blink } from './science/blink.jsx';
 import { Survey } from './science/survey.jsx';
 import { Transit } from './science/transit.jsx';
 import { Galaxies } from './science/galaxies.jsx';
+import { Launch } from './launch/launch.jsx';
 import { Tracking } from './science/tracking.jsx';
 import { games } from './shared/catalog.js';
 import { Frame } from './shared/ui.jsx';
@@ -82,6 +83,7 @@ export function App() {
     supernova: Blink,
     exoplanet: Transit,
     galaxies: Galaxies,
+    launch: Launch,
   }[type];
   return (
     <Frame type={type} setType={setType} remaining={remaining} timedOut={timedOut}>

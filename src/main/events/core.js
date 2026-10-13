@@ -33,8 +33,9 @@ export function setEventIncoming(v) {
 // as usual. A relaunch cancels it.
 let held = null,
   heldGen = 0;
+export const eventHeld = () => !!held;
 export function holdForScience(trigger) {
-  if (!state.science) return false;
+  if (!state.science && !state.launch) return false;
   held ||= trigger;
   return true;
 }
@@ -71,7 +72,7 @@ export const EVENTS = {
     name: 'SOLAR FLARE',
     title: 'PARKER SOLAR PROBE · SOLAR FLARE DETECTED',
   },
-  kraken: { window: 30, script: null, name: 'UNIDENTIFIED CONTACT', title: 'SETI · UNIDENTIFIED.... CREATURE???' }, // played on the main screen, no procedure
+  kraken: { window: 45, script: null, name: 'UNIDENTIFIED CONTACT', title: 'SETI · UNIDENTIFIED.... CREATURE???' }, // played on the main screen, no procedure
   grb: {
     window: 60,
     script: 'grb_scrub.py',
@@ -126,8 +127,7 @@ export function openEventTicket(ev) {
   state.highlightAt = performance.now();
   state.selected = null;
   panel.classList.add('open', 'fleet');
-  document.getElementById('panelEyebrow').textContent = 'Emergency / Fleet operations';
-  document.getElementById('satName').textContent = EVENTS[ev.kind].name;
+  document.getElementById('satName').textContent = `${EVENTS[ev.kind].name} · FLEET OPERATIONS`;
   document.getElementById('log').textContent = '';
   renderFleetStatus();
   // a new emergency gets a fresh session; the same one (e.g. after an abort) keeps its history but lists the scripts again
@@ -228,6 +228,8 @@ export function resolveEvent(saved) {
   if (!ev) return;
   if (ev.kind === 'kraken') {
     const now = performance.now();
+    // a breather once it's gone: no new fault for 10 s
+    state.faultsAfter = now + 10000;
     kraken.tentacles.forEach(tn => {
       tn.carrying = !!tn.prey.heldAt && !saved.has(tn.prey.id);
       setTentacleState(tn, 'retreat', now);

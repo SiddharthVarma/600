@@ -1,3 +1,32 @@
+/* Type: Departure Mono, a pixel font, for display (the name, titles, big moments, text drawn on pixel scenes); IBM Plex
+   Mono for everything else, with tabular figures so numbers don't jiggle as they change. Both are hosted in public/fonts. */
+@font-face {
+  font-family: 'Departure Mono';
+  src: url('/fonts/DepartureMono-Regular.woff2') format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-weight: 400;
+  src: url('/fonts/IBMPlexMono-Regular.woff2') format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-weight: 500;
+  src: url('/fonts/IBMPlexMono-Medium.woff2') format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-weight: 600;
+  src: url('/fonts/IBMPlexMono-SemiBold.woff2') format('woff2');
+  font-display: swap;
+}
+
 :root {
   --bg: #050607;
   --ink: #e6e7e4;
@@ -8,6 +37,8 @@
   --warn: #ffd166;
   --danger: #ff5964;
   --science: #55b6ff;
+  --font-ui: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  --font-pixel: 'Departure Mono', 'IBM Plex Mono', monospace;
 }
 
 * {
@@ -20,7 +51,8 @@ body {
   min-height: 100%;
   background: var(--bg);
   color: var(--ink);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
 }
 
 body {
@@ -49,30 +81,107 @@ canvas {
   align-items: center;
   color: var(--muted);
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   pointer-events: none;
 }
 
 .brand {
   color: var(--ink);
-  font-size: 30px;
-  letter-spacing: 0.22em;
+  font-family: var(--font-pixel);
+  font-size: 33px;
+  letter-spacing: 0.14em;
 }
 
-.signal {
+/* the satellite count, beside the name */
+.count {
+  margin-left: 16px;
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  vertical-align: middle;
+}
+
+/* credits and the launch button, top right: always in view, the side panel opens below them */
+.purse {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 16px;
+  color: var(--ink);
   font-size: 13px;
 }
 
-.pulse {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 12px var(--accent);
+.credits {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coin {
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.2em;
+}
+
+/* a payment floats up off the coin count */
+.gain {
+  position: absolute;
+  right: 0;
+  top: 0;
+  color: var(--warn);
+  animation: gain 1.6s ease-out forwards;
+}
+
+@keyframes gain {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-22px);
+  }
+}
+
+.launch {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  pointer-events: auto;
+  padding: 6px 14px;
+  border: 1px solid var(--warn);
+  border-radius: 6px;
+  background: rgba(14, 17, 16, 0.96);
+  color: var(--warn);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  animation: launch-ready 1.6s ease-in-out infinite;
+}
+
+.launch[hidden] {
+  display: none;
+}
+
+.launch:hover:not(:disabled) {
+  background: var(--warn);
+  color: #070809;
+}
+
+/* during a celestial event it waits */
+.launch:disabled {
+  opacity: 0.4;
+  cursor: default;
+  animation: none;
+}
+
+@keyframes launch-ready {
+  50% {
+    box-shadow: 0 0 14px rgba(255, 209, 102, 0.45);
+  }
 }
 
 .alerts {
@@ -113,7 +222,7 @@ canvas {
   gap: 8px;
   color: var(--muted);
   font-size: 11px;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
 }
 
 .alert-icon {
@@ -123,7 +232,7 @@ canvas {
   background: #1c2321;
   display: grid;
   place-items: center;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .alert-app {
@@ -133,7 +242,8 @@ canvas {
 .alert-title {
   margin-top: 8px;
   font-size: 13px;
-  letter-spacing: 0.06em;
+  font-weight: 500;
+  letter-spacing: 0.08em;
 }
 
 .alert.crit .alert-title {
@@ -143,7 +253,7 @@ canvas {
 .alert-body {
   margin-top: 3px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -184,15 +294,21 @@ canvas {
   }
 }
 
+/* the uplink window: docked in the bottom-right corner, small enough that events on screen stay in view */
 .panel {
   position: fixed;
-  top: 0;
   right: 0;
-  width: min(410px, 100vw);
-  height: 100%;
-  padding: 92px 34px 32px;
+  bottom: 0;
+  z-index: 16;
+  width: min(430px, 100vw);
+  max-height: calc(100% - 68px);
+  padding: 16px 20px 14px;
   background: rgba(7, 9, 9, 0.94);
-  border-left: 1px solid var(--line);
+  border: 1px solid var(--line);
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 10px 0 0 0;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
   transform: translateX(102%);
   transition: transform 0.55s cubic-bezier(0.22, 0.8, 0.2, 1);
   overflow: auto;
@@ -204,8 +320,8 @@ canvas {
 
 .close {
   position: absolute;
-  top: 28px;
-  right: 30px;
+  top: 10px;
+  right: 16px;
   border: 0;
   background: none;
   color: var(--muted);
@@ -217,21 +333,23 @@ canvas {
 .eyebrow {
   color: var(--muted);
   font-size: 11px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
 h1 {
   margin: 9px 0 4px;
-  font-size: 25px;
+  font-family: var(--font-pixel);
+  font-size: 22px;
   font-weight: 400;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .status {
   color: var(--warn);
-  font-size: 11px;
-  letter-spacing: 0.18em;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -241,58 +359,6 @@ h1 {
 
 .status.ok {
   color: var(--accent);
-}
-
-.rule {
-  height: 1px;
-  background: var(--line);
-  margin: 28px 0 20px;
-}
-
-.telemetry {
-  display: grid;
-  gap: 15px;
-}
-
-.metric {
-  cursor: pointer;
-}
-
-.metric-head {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  margin-bottom: 7px;
-}
-
-.metric-name {
-  color: var(--muted);
-  letter-spacing: 0.14em;
-}
-
-.metric-value {
-  color: var(--ink);
-}
-
-.bar {
-  height: 4px;
-  background: #1d2221;
-  overflow: hidden;
-}
-
-.bar i {
-  display: block;
-  height: 100%;
-  background: var(--accent);
-  transition: width 0.7s;
-}
-
-.metric.hot .bar i {
-  background: var(--danger);
-}
-
-.metric.hot .metric-value {
-  color: var(--danger);
 }
 
 .meta {
@@ -308,25 +374,6 @@ h1 {
   display: block;
   color: var(--ink);
   font-weight: 400;
-}
-
-.chart-wrap {
-  margin-top: 24px;
-  border-top: 1px solid var(--line);
-  padding-top: 16px;
-}
-
-.chart-title {
-  color: var(--muted);
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  margin-bottom: 10px;
-}
-
-#chart {
-  width: 100%;
-  height: 90px;
-  display: block;
 }
 
 .commands {
@@ -359,7 +406,7 @@ button.command:hover {
   border: 1px solid #262d2b;
   background: #070909;
   color: #b9c0bb;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.65;
 }
 
@@ -421,11 +468,15 @@ button.command:hover {
   }
 }
 
+.panel .status {
+  margin: 6px 0 10px;
+}
+
 .log {
-  min-height: 40px;
-  margin-top: 18px;
+  min-height: 0;
+  margin-top: 8px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.6;
 }
 
@@ -471,10 +522,6 @@ button.command:hover {
   opacity: 0;
   background: linear-gradient(270deg, rgba(255, 214, 150, 0.16), rgba(255, 214, 150, 0) 42%);
   transition: opacity 1.2s;
-}
-
-.panel.fleet .sat-only {
-  display: none;
 }
 
 .alert.emergency {
@@ -544,8 +591,8 @@ button.command:hover {
   }
 
   .panel {
-    padding-left: 24px;
-    padding-right: 24px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }
 
@@ -569,8 +616,8 @@ button.command:hover {
     0 10px 30px rgba(0, 0, 0, 0.6),
     0 0 18px rgba(201, 255, 77, 0.1);
   color: var(--ink);
-  font-size: 14px;
-  line-height: 1.55;
+  font-size: 15px;
+  line-height: 1.6;
   opacity: 0;
   pointer-events: none;
   transition:
@@ -584,14 +631,46 @@ button.command:hover {
   pointer-events: auto;
 }
 
+/* SUDO corrupted by the creature: its purple, a nervous jitter, and no button, so clicks go through to the tentacles */
+.sudo.on.sudo-corrupt {
+  border-color: rgba(176, 108, 224, 0.75);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.6),
+    0 0 22px rgba(176, 108, 224, 0.25);
+  color: #d9bdf3;
+  pointer-events: none;
+  animation: sudo-jitter 0.3s steps(2) infinite;
+}
+
+.sudo-corrupt .sudo-head {
+  color: #b06ce0;
+}
+
+.sudo-corrupt .sudo-text {
+  white-space: pre-line;
+}
+
+@keyframes sudo-jitter {
+  0% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(1px, -1px);
+  }
+  100% {
+    transform: translate(-1px, 1px);
+  }
+}
+
 .sudo-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
   color: var(--accent);
+  font-family: var(--font-pixel);
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
 }
 
 .sudo-skip {
@@ -818,8 +897,8 @@ button.command:hover {
   border-radius: 999px;
   background: rgba(14, 17, 16, 0.96);
   color: var(--science);
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  font-size: 12px;
+  letter-spacing: 0.08em;
 }
 
 /* ---- Phones (portrait) ----
@@ -836,17 +915,27 @@ button.command:hover {
   }
 
   .brand {
-    font-size: 20px;
-    letter-spacing: 0.18em;
+    font-size: 22px;
+    letter-spacing: 0.12em;
   }
 
-  .signal {
-    font-size: 10px;
-    gap: 7px;
+  .count {
+    margin-left: 10px;
+    font-size: 11px;
+  }
+
+  .purse {
+    gap: 12px;
+    font-size: 11px;
+  }
+
+  .launch {
+    padding: 4px 10px;
+    font-size: 11px;
   }
 
   .alerts {
-    top: 74px;
+    top: 82px;
     left: 12px;
     right: 12px;
     width: auto;
@@ -905,7 +994,7 @@ button.command:hover {
   .science .alert-body {
     display: block;
     margin-top: 2px;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .alerts-more.show {
@@ -918,7 +1007,7 @@ button.command:hover {
     background: rgba(14, 17, 16, 0.96);
     color: var(--muted);
     font: inherit;
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.12em;
     cursor: pointer;
   }
@@ -948,13 +1037,15 @@ button.command:hover {
     z-index: 1;
   }
 
-  /* the side panel covers the alerts instead of the other way round */
-  /* On phones the panel scrolls as one page: it is as tall as the visible screen (iPhone Safari counts the area behind its
-     toolbar in 100%), keeps its scrolling to itself, and leaves room for the home bar. */
+  /* On phones the uplink window is a sheet across the bottom, at most about two thirds of the screen. It scrolls as one
+     page, keeps its scrolling to itself, and leaves room for the home bar. */
   .panel {
-    z-index: 16;
-    height: 100%;
-    height: 100dvh;
+    left: 0;
+    width: 100%;
+    max-height: 64%;
+    max-height: 64dvh;
+    border-right: 0;
+    border-radius: 14px 14px 0 0;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     padding-bottom: calc(32px + env(safe-area-inset-bottom));

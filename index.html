@@ -4,9 +4,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Six Hundred — Mission Control</title>
+  <title>Six Hundred · Mission Control</title>
   <meta name="description" content="Six Hundred: a 600-satellite constellation ops simulator. Real-time anomalies, physics-grounded repair minigames, and fleet-wide celestial events." />
-  <meta property="og:title" content="Six Hundred — Mission Control" />
+  <meta property="og:title" content="Six Hundred · Mission Control" />
   <meta property="og:description" content="A 600-satellite constellation ops simulator with real-time anomalies and physics-grounded repair minigames." />
   <meta property="og:type" content="website" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛰️</text></svg>" />
@@ -16,22 +16,14 @@
 <body>
   <main id="stage"><canvas id="constellation" aria-label="A constellation of 600 satellites"></canvas></main>
   <div class="sun-glow" id="sunGlow"></div>
-  <div class="topline"><span class="brand">SIX HUNDRED</span><span class="signal"><i class="pulse"></i><span
-        id="network">CONSTELLATION NOMINAL · 600/600</span></span></div>
+  <div class="topline"><span class="brand">SIX HUNDRED<span class="count">· <span id="network">600/600</span></span></span>
+    <span class="purse"><span class="credits" id="credits"></span><button class="launch" id="launch" hidden></button></span></div>
   <aside class="panel" id="panel">
     <button class="close" id="close" aria-label="Close">×</button>
-    <div class="eyebrow" id="panelEyebrow">Investigation / Orbital relay</div>
-    <h1 id="satName">SATELLITE 421</h1>
+    <div class="eyebrow" id="satName">SAT 421 · COMMAND UPLINK</div>
     <div class="status" id="status">STATUS: DEGRADED</div>
-    <div class="rule"></div>
-    <div class="eyebrow" style="margin-bottom:12px">Command uplink</div>
     <div class="term" id="term" aria-label="Command terminal"></div>
-    <div class="log" id="log">something is wrong</div>
-    <div class="rule sat-only"></div>
-    <div class="telemetry sat-only" id="telemetry"></div>
-    <div class="chart-wrap sat-only">
-      <div class="chart-title" id="chartTitle">TEMPERATURE / HISTORY</div><canvas id="chart"></canvas>
-    </div>
+    <div class="log" id="log"></div>
   </aside>
   <div class="alerts" id="alerts" aria-live="polite"></div>
   <div class="science" id="science" aria-live="polite"></div>
@@ -42,6 +34,9 @@
   <div class="repair-modal" id="scienceModal"><button class="repair-close" id="scienceClose"
       aria-label="Close science request">×</button><iframe class="repair-frame" id="scienceFrame"
       title="Science request"></iframe></div>
+  <div class="repair-modal" id="launchModal"><button class="repair-close" id="launchClose"
+      aria-label="Close launch control">×</button><iframe class="repair-frame" id="launchFrame"
+      title="Replacement launch"></iframe></div>
   <div class="repair-modal" id="grbModal"><button class="repair-close" data-abort aria-label="Abort procedure">×</button><iframe class="repair-frame" id="grbFrame"
       title="Gamma ray burst emergency response"></iframe></div>
   </div>

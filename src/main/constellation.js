@@ -4,7 +4,6 @@ import { drawEarth } from './earth.js';
 import { drawEventFx, flareFlicker } from './events/core.js';
 import { drawKraken } from './events/creature.js';
 import { drawSun, drawSunFlash } from './events/sun.js';
-import { cctx, chart } from './panel.js';
 import { state } from './state.js';
 
 export const canvas = document.getElementById('constellation'),
@@ -28,7 +27,7 @@ export const satellites = Array.from({ length: 600 }, (_, i) => ({
 export function updateNetwork() {
   const active = satellites.filter(s => !s.lost).length;
   const network = document.getElementById('network');
-  network.textContent = `CONSTELLATION ${active === 600 ? 'NOMINAL' : 'DEGRADED'} · ${active}/600`;
+  network.textContent = `${active}/600`;
   if (active === 0) document.getElementById('gameOver').classList.add('show');
 }
 export function resize() {
@@ -38,9 +37,6 @@ export function resize() {
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  chart.width = chart.clientWidth * dpr;
-  chart.height = 90 * dpr;
-  cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 export function point(s, t) {
   const rr = s.r * Math.min(W, H),

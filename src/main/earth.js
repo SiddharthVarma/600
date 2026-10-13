@@ -222,80 +222,67 @@ const ROWS = 36,
 const OCEAN = [63, 81, 181],
   GROUND = [76, 175, 80],
   ICE = [228, 236, 244];
-// what each block of the latest frame shows, so a camera dive can aim at the right kind of spot
-export const SURFACE = { none: 0, outline: 1, ocean: 2, land: 3, ice: 4 };
-const kinds = new Uint8Array(N * N);
-const canvas = document.createElement('canvas'),
-  gctx = canvas.getContext('2d'),
-  img = gctx.createImageData(N, N);
-canvas.width = canvas.height = N;
 
 function landAt(lat, lon) {
   const r = Math.min(ROWS - 1, Math.max(0, Math.floor((90 - lat) / 5))),
     c = ((Math.floor((lon + 180) / 5) % COLS) + COLS) % COLS;
   return map[r][c];
 }
-function render(spin) {
-  const d = img.data;
-  for (let j = 0; j < N; j++)
-    for (let i = 0; i < N; i++) {
-      const x = ((i + 0.5) / N) * 2 - 1,
-        y = ((j + 0.5) / N) * 2 - 1,
-        r2 = x * x + y * y,
-        k = j * N + i,
-        p = k * 4;
-      if (r2 > 1) {
-        d[p + 3] = 0;
-        kinds[k] = SURFACE.none;
-        continue;
-      }
-      if (Math.sqrt(r2) > OUTLINE) {
-        d[p] = d[p + 1] = d[p + 2] = 0;
+// a canvas of N × N blocks, and a way to paint the globe into it turned to any angle (spin: the longitude facing us)
+function globe() {
+  const canvas = document.createElement('canvas'),
+    gctx = canvas.getContext('2d'),
+    img = gctx.createImageData(N, N),
+    d = img.data;
+  canvas.width = canvas.height = N;
+  canvas.paint = spin => {
+    for (let j = 0; j < N; j++)
+      for (let i = 0; i < N; i++) {
+        const x = ((i + 0.5) / N) * 2 - 1,
+          y = ((j + 0.5) / N) * 2 - 1,
+          r2 = x * x + y * y,
+          p = (j * N + i) * 4;
+        if (r2 > 1) {
+          d[p + 3] = 0;
+          continue;
+        }
+        if (Math.sqrt(r2) > OUTLINE) {
+          d[p] = d[p + 1] = d[p + 2] = 0;
+          d[p + 3] = 255;
+          continue;
+        }
+        const z = Math.sqrt(1 - r2),
+          lat = (Math.asin(-y) * 180) / Math.PI,
+          lon = (Math.atan2(x, z) * 180) / Math.PI + spin,
+          lon360 = ((lon % 360) + 360) % 360,
+          land = landAt(lat, lon),
+          // ice caps are bands of latitude, so they stay in view as it turns; Greenland's ice sheet comes and goes
+          ice = lat > 62 || lat < -55 || (land && lat > 60 && lon360 > 290 && lon360 < 340),
+          c = ice ? ICE : land ? GROUND : OCEAN;
+        d[p] = c[0];
+        d[p + 1] = c[1];
+        d[p + 2] = c[2];
         d[p + 3] = 255;
-        kinds[k] = SURFACE.outline;
-        continue;
       }
-      const z = Math.sqrt(1 - r2),
-        lat = (Math.asin(-y) * 180) / Math.PI,
-        lon = (Math.atan2(x, z) * 180) / Math.PI + spin,
-        lon360 = ((lon % 360) + 360) % 360,
-        land = landAt(lat, lon),
-        // ice caps are bands of latitude, so they stay in view as it turns; Greenland's ice sheet comes and goes
-        ice = lat > 62 || lat < -55 || (land && lat > 60 && lon360 > 290 && lon360 < 340),
-        c = ice ? ICE : land ? GROUND : OCEAN;
-      d[p] = c[0];
-      d[p + 1] = c[1];
-      d[p + 2] = c[2];
-      d[p + 3] = 255;
-      kinds[k] = ice ? SURFACE.ice : land ? SURFACE.land : SURFACE.ocean;
-    }
-  gctx.putImageData(img, 0, 0);
+    gctx.putImageData(img, 0, 0);
+    return canvas;
+  };
+  return canvas;
 }
+const main = globe();
+// which longitude faces us at a given moment, as it turns
+export const spinAt = now => ((now / 1000) * 360) / TURN;
 // draw the Earth for this moment, centred at (cx, cy) with radius r
 export function drawEarth(ctx, cx, cy, r, now) {
-  render(((now / 1000) * 360) / TURN);
+  main.paint(spinAt(now));
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(canvas, cx - r, cy - r, r * 2, r * 2);
+  ctx.drawImage(main, cx - r, cy - r, r * 2, r * 2);
   ctx.imageSmoothingEnabled = true;
 }
-// a copy of the Earth as it looks right now, and a spot on it (0..1 across and down) of the wanted kind, away from the
-// edge, for a camera dive to aim at
-export function snapshotEarth(want) {
-  const copy = document.createElement('canvas');
-  copy.width = copy.height = N;
-  copy.getContext('2d').drawImage(canvas, 0, 0);
-  const spots = [];
-  for (let j = 0; j < N; j++)
-    for (let i = 0; i < N; i++) {
-      const x = ((i + 0.5) / N) * 2 - 1,
-        y = ((j + 0.5) / N) * 2 - 1;
-      if (kinds[j * N + i] === SURFACE[want] && x * x + y * y < 0.6) spots.push([(i + 0.5) / N, (j + 0.5) / N]);
-    }
-  // ice sits at the poles, past the inner area: take the nearest ice to the centre instead
-  if (!spots.length)
-    for (let j = 0; j < N; j++)
-      for (let i = 0; i < N; i++) if (kinds[j * N + i] === SURFACE[want]) spots.push([(i + 0.5) / N, (j + 0.5) / N]);
-  spots.sort((a, b) => Math.hypot(a[0] - 0.5, a[1] - 0.5) - Math.hypot(b[0] - 0.5, b[1] - 0.5));
-  const pool = spots.slice(0, Math.max(1, Math.ceil(spots.length / 3)));
-  return { image: copy, at: pool[Math.floor(Math.random() * pool.length)] || [0.5, 0.5] };
+// a separate globe the science dive can turn to face its destination; facing(lon) paints it with that longitude centred
+export function makeFacingGlobe() {
+  const g = globe();
+  return lon => g.paint(lon);
 }
+// where a latitude sits on the disc when its longitude faces us: 0.5 across, and this far down (0 top, 1 bottom)
+export const downFor = lat => (1 - Math.sin((lat * Math.PI) / 180)) / 2;

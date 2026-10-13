@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { DOWNLINK_TIME, SCIENCE, brackets, drawDownlink, hudText, report } from './common.js';
+import { DOWNLINK_TIME, SCIENCE, brackets, drawDownlink, fitWidth, hudText, pixelFont, report } from './common.js';
 import { BH, BW, rng } from './scenes.js';
 
 // Exoplanet transit search. One star's brightness streams in; when its planet crosses in front, it dims by the
@@ -7,7 +7,7 @@ import { BH, BW, rng } from './scenes.js';
 // size from the period and the star's mass). The player taps each dip as it scrolls past; three pin down the period.
 // Starspots make the star wander slowly and flares spike it; neither is a transit. The result is worked out from the
 // player's own marks and the data, then the light curve is folded on that period.
-const FIT = `min(${BW * 4}px, calc((100vh - 340px) * ${BW / BH}))`;
+const FIT = fitWidth(BW * 4, BH * 4);
 const W = BW * 4,
   H = BH * 4,
   STAR_H = 150, // star-field strip at the top of the view
@@ -87,17 +87,17 @@ function describe(sys, marks, data) {
     teq = sys.star.T * Math.sqrt((sys.star.R * R_SUN_AU) / (2 * a)) * Math.pow(0.7, 0.25); // albedo 0.3
   const kind =
     rEarth < 1.25
-      ? 'A ROCKY PLANET'
+      ? 'a rocky planet'
       : rEarth < 2
-        ? 'A SUPER-EARTH'
+        ? 'a super-Earth'
         : rEarth < 4
-          ? 'A SUB-NEPTUNE'
+          ? 'a sub-Neptune'
           : rEarth < 8
-            ? 'A NEPTUNE-SIZED PLANET'
+            ? 'a Neptune-sized planet'
             : P < 10
-              ? 'A HOT JUPITER'
-              : 'A GAS GIANT';
-  const size = rEarth >= 8 ? `${(rEarth / R_EARTH_PER_JUP).toFixed(1)} × JUPITER'S RADIUS` : `${rEarth.toFixed(1)} × EARTH'S RADIUS`;
+              ? 'a hot Jupiter'
+              : 'a gas giant';
+  const size = rEarth >= 8 ? `${(rEarth / R_EARTH_PER_JUP).toFixed(1)} × Jupiter's radius` : `${rEarth.toFixed(1)} × Earth's radius`;
   return { P, kind, size, a, teq };
 }
 
@@ -167,7 +167,7 @@ export function Transit() {
       const lo = 1 - sys.depth * 1.6 - 0.004,
         hi = 1 + 0.008,
         yOf = f => cy0 + ch - ((Math.min(hi, Math.max(lo, f)) - lo) / (hi - lo)) * ch;
-      ctx.font = '14px "Courier New", monospace';
+      ctx.font = pixelFont(16);
       ctx.fillStyle = '#7b8580';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'bottom';
@@ -298,8 +298,8 @@ export function Transit() {
       </div>
       {phase === 'done' && result && (
         <div className="success">
-          {info.uni.toUpperCase()} CONFIRMS {result.kind} · PERIOD {result.P.toFixed(2)} DAYS · {result.size} · ORBIT {result.a.toFixed(3)}{' '}
-          AU · ABOUT {Math.round(result.teq / 10) * 10} K
+          {info.uni} confirms {result.kind} · period {result.P.toFixed(2)} days · {result.size} · orbit {result.a.toFixed(3)} AU · about{' '}
+          {Math.round(result.teq / 10) * 10} K
         </div>
       )}
     </>

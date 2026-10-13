@@ -1,5 +1,5 @@
 import { H, W } from './constellation.js';
-import { snapshotEarth } from './earth.js';
+import { downFor, makeFacingGlobe, spinAt } from './earth.js';
 
 // The camera move from the main screen into a science request. For Earth observation the constellation fades, the Earth
 // in the middle of the screen swells around the target spot until its pixels are huge, and clouds rush in; once they
@@ -47,13 +47,17 @@ const ctx = canvas.getContext('2d'),
 let running = false;
 export const diving = () => running;
 
-// to: 'earth' (with want: the kind of spot to dive at, 'land', 'ocean' or 'ice') or 'space'. covered() runs once the
-// screen is covered, to open the window underneath.
-export function dive({ to, want = 'land' }, covered) {
+// to: 'earth' (with lat, lon: the place to dive at) or 'space'. covered() runs once the screen is covered, to open the
+// window underneath.
+const facing = makeFacingGlobe(),
+  TURN_IN = 0.55; // seconds for the Earth to swing round to face the destination
+export function dive({ to, lat = 0, lon = 0 }, covered) {
   if (running) return;
   running = true;
-  // the spinning Earth, held as it is right now, and a spot on it of the right kind
-  const { image: earth, at } = to === 'earth' ? snapshotEarth(want) : {};
+  // the Earth turns from where it is now to face the destination (the short way round) as the zoom begins
+  const from = spinAt(performance.now()),
+    swing = ((((lon - from) % 360) + 540) % 360) - 180,
+    down = downFor(lat);
   canvas.width = W;
   canvas.height = H;
   canvas.classList.add('on');
@@ -80,9 +84,10 @@ export function dive({ to, want = 'land' }, covered) {
       if (t < IN) {
         const k = Math.pow(t / IN, 2.2),
           size = earthR * 2 * Math.pow(40, k),
-          [u, v] = at;
+          e = Math.min(1, t / TURN_IN),
+          earth = facing(from + swing * e * e * (3 - 2 * e));
         ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(earth, W / 2 - (u - 0.5) * size * k - size / 2, H / 2 - (v - 0.5) * size * k - size / 2, size, size);
+        ctx.drawImage(earth, W / 2 - size / 2, H / 2 - (down - 0.5) * size * k - size / 2, size, size);
       }
       // clouds: rush outward past the camera, cover everything at IN, then thin away
       const cover = t < IN ? Math.max(0, (t - (IN - 0.55)) / 0.55) : Math.max(0, 1 - (t - IN) / OUT),

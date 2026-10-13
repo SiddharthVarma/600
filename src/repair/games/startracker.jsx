@@ -80,7 +80,7 @@ export function StarTracker() {
     <>
       <Header title="STAR TRACKER LOCK" sub="LOST LOCK · CATALOG MATCH REQUIRED" />
       <p className="instructions">
-        Drag stars from the rack to rebuild the catalog pattern on the left — match brightness and position. Wrong drops cost a strike;
+        Drag stars from the rack to rebuild the catalog pattern on the left. Match brightness and position. Wrong drops cost a strike;
         three clears the grid.
       </p>
       <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'flex-start', marginTop: 18 }}>

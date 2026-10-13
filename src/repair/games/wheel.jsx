@@ -107,7 +107,7 @@ export function ReactionWheel() {
     <>
       <Header title="REACTION WHEEL FAULT" sub={`WHEEL ${setup.failedIdx + 1} OFFLINE · UNCOMMANDED TUMBLE`} />
       <p className="instructions">
-        One wheel has failed. Cycle each working wheel's speed until the combined torque cancels the drift — direction and magnitude both
+        One wheel has failed. Cycle each working wheel's speed until the combined torque cancels the drift. Direction and magnitude both
         matter.
       </p>
       <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>

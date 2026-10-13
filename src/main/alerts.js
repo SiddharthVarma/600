@@ -1,9 +1,10 @@
 import { ctx } from './constellation.js';
 import { activeEvent, eventActive, eventTicketBody, openEventTicket } from './events/core.js';
+import { openSat } from './panel.js';
 import { state } from './state.js';
 
 // SCID-UI alerts: an anomaly alert stays until the anomaly is resolved or the satellite is lost; the rest fade on their own.
-// Clicking an alert highlights that satellite on the rings so the player can find it and click it.
+// Clicking a fault's alert opens that satellite's uplink, with a crosshair on it on the rings.
 const ALERT_LABELS = {
   thermal: 'THERMAL FAULT',
   power: 'POWER INSTABILITY',
@@ -65,7 +66,7 @@ export function pushAlert({ sat = null, event = null, title, body, crit = false,
   el.onclick = e => {
     if (e.target.closest('.alert-x')) dismissAlert(a);
     else if (a.event) openEventTicket(a.event);
-    else if (a.sat) highlightSat(a.sat);
+    else if (a.sat && !eventActive()) openSat(a.sat);
   };
   alertsEl.prepend(el);
   alerts.unshift(a);
@@ -115,11 +116,8 @@ export function updateAlerts() {
 }
 // the ticket element showing a satellite's fault, if there is one
 export const alertElFor = s => alerts.find(a => a.sat === s)?.el;
-function highlightSat(s) {
-  if (eventActive() || s.lost) return;
-  state.highlighted = [s];
-  state.highlightAt = performance.now();
-} // a lost satellite is gone from the rings, so there's nothing to point at
+// and the EMERGENCY ticket for a celestial event
+export const alertElForEvent = ev => alerts.find(a => a.event === ev)?.el;
 export function drawHighlight(t) {
   state.highlighted = state.highlighted.filter(s => !s.lost);
   state.highlighted.forEach(s => s.sx != null && drawCrosshair(s, t));
