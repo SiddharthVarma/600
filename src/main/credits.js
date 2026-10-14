@@ -1,7 +1,6 @@
 import { satellites, updateNetwork } from './constellation.js';
 import { dive, diving } from './dive.js';
-import { eventActive, releaseHeldEvent } from './events/core.js';
-import { krakenLive } from './events/creature.js';
+import { releaseHeldEvent, windowsBlocked } from './events/core.js';
 import { fadeCloseModal, launcher, preload, reveal } from './launcher.js';
 import { state } from './state.js';
 
@@ -55,7 +54,7 @@ const lostSats = () => satellites.filter(s => s.lost),
 function render() {
   amount.textContent = credits;
   launchBtn.hidden = credits < LAUNCH_COST || !lostSats().length;
-  launchBtn.disabled = eventActive() || krakenLive() || state.intro || state.launch;
+  launchBtn.disabled = windowsBlocked() || state.intro || state.launch;
 }
 // LAUNCH dives down to the pad at Vandenberg and opens launch control there, with as many lost satellites as one rocket
 // carries. Nothing is spent until they're deployed, so closing it early costs nothing.
@@ -65,7 +64,9 @@ launchBtn.onclick = () => {
   if (launchBtn.hidden || launchBtn.disabled || diving()) return;
   state.launch = true;
   render();
-  preload(L, `react.html?type=launch&count=${Math.min(RIDESHARE, lostSats().length)}&dive=1`);
+  // the rocket carries as many as were lost when it was ordered, and brings back exactly that many
+  L.count = Math.min(RIDESHARE, lostSats().length);
+  preload(L, `react.html?type=launch&count=${L.count}&dive=1`);
   dive(PAD, () => reveal(L));
 };
 export function closeLaunch() {
@@ -82,7 +83,7 @@ export function launchMessage(data) {
   if (data.type === 'launch-complete' && L.shown) {
     credits -= LAUNCH_COST;
     lostSats()
-      .slice(0, RIDESHARE)
+      .slice(0, L.count)
       .forEach(s =>
         Object.assign(s, {
           lost: false,

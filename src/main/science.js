@@ -1,7 +1,7 @@
 import { satellites } from './constellation.js';
 import { COIN, earn, payFor } from './credits.js';
 import { dive, diving } from './dive.js';
-import { releaseHeldEvent } from './events/core.js';
+import { releaseHeldEvent, windowsBlocked } from './events/core.js';
 import { state } from './state.js';
 import { fadeCloseModal, launcher, preload, reveal } from './launcher.js';
 import { touchScroll } from '../shared/touchscroll.js';
@@ -125,7 +125,7 @@ export function scheduleScience() {
   );
 }
 function openRequest(r) {
-  if (diving()) return;
+  if (diving() || windowsBlocked()) return;
   if (!r.sat || r.sat.lost) r.sat = hostSat();
   opened = r;
   expanded = false;

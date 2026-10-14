@@ -420,8 +420,9 @@ export function Galaxies() {
       </div>
       {phase === 'done' && (
         <div
-          className={correct >= COUNT - 2 ? 'success' : 'failure'}
-          style={correct >= COUNT - 2 ? {} : { color: 'var(--yellow)' }}
+          // green only for a perfect run, the one that pays in full; anything less is amber, like a partial survey
+          className={correct === COUNT ? 'success' : 'failure'}
+          style={correct === COUNT ? {} : { color: 'var(--yellow)' }}
         >
           {info.uni} received your classifications · {correct} of {COUNT} correct
           {deck.some(g => g.kind === 'unknown') && ' · 1 image withheld from the archive'}

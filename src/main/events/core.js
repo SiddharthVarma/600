@@ -23,6 +23,9 @@ export let activeEvent = null,
   pulses = [],
   eventIncoming = false;
 export const eventActive = () => !!activeEvent && activeEvent.phase === 'running'; // a pending event's ticket doesn't lock anything
+// no repair, science or launch window can open: while an event's minigame is running, and for the whole of the
+// creature's attack, which plays out on the main screen (a window over it would hide the tentacles taking satellites)
+export const windowsBlocked = () => eventActive() || (!!activeEvent && activeEvent.kind === 'kraken');
 // no new celestial event while one is live or on its way (a flare builds up for a few seconds before it has a ticket)
 export const eventBusy = () => !!activeEvent || eventIncoming || state.intro;
 export function setEventIncoming(v) {
@@ -272,8 +275,8 @@ export function resolveEvent(saved) {
               all ? 'link held · network nominal' : 'radio blackout · satellites lost',
             ]
           : [
-              `GAMMA RAY BURST RESOLVED · ${k}/${n} SATELLITES RECOVERED`,
-              all ? 'all registers restored · network nominal' : 'gamma ray burst resolved · satellites lost',
+              `GAMMA-RAY BURST RESOLVED · ${k}/${n} SATELLITES RECOVERED`,
+              all ? 'all registers restored · network nominal' : 'gamma-ray burst resolved · satellites lost',
             ];
   updateNetwork();
   document.getElementById('log').textContent = log;

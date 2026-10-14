@@ -1,4 +1,4 @@
-import { EVENTS, eventActive, runEmergency } from './events/core.js';
+import { EVENTS, runEmergency, windowsBlocked } from './events/core.js';
 import { cancelRepairPreload, loadRepair, showRepair } from './launcher.js';
 import { state } from './state.js';
 
@@ -221,7 +221,7 @@ function procedureLog(s, accepted) {
 export async function termRunFile(file) {
   const fleet = termSat === FLEET,
     s = fleet ? null : state.selected;
-  if ((!fleet && !s) || !promptEl || eventActive()) return; // no prompt means a script is still running
+  if ((!fleet && !s) || !promptEl || windowsBlocked()) return; // no prompt means a script is still running
   const run = ++termRun,
     line = promptEl,
     cmd = file.endsWith('.py') ? `python3 ${file}` : `tail ${file}`;
@@ -250,7 +250,7 @@ export async function termRunFile(file) {
     await sleep(450);
     if (run !== termRun) return cancelRepairPreload();
     termPrompt(s);
-    if (eventActive()) cancelRepairPreload();
+    if (windowsBlocked()) cancelRepairPreload();
     else showRepair();
   } else {
     termLs(s);

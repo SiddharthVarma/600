@@ -140,6 +140,12 @@ window.addEventListener('message', e => {
     renderSat(state.selected);
     closeWhenRead(state.selected);
   } else if (e.data?.type === 'repair-failed') {
+    // the fault's own countdown may have got there first (both run out together): it's already lost and announced
+    if (state.selected.lost) {
+      endRepair();
+      closeWhenRead(state.selected);
+      return;
+    }
     state.selected.anomaly = false;
     state.selected.anomalyType = null;
     state.selected.countdown = 0;

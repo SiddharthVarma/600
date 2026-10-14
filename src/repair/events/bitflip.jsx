@@ -155,7 +155,7 @@ export function BitFlip({ startAt }) {
 
   return (
     <>
-      <Header title="GAMMA RAY BURST" sub={`HAMMING CODE ERROR CORRECTION · ${remaining}s REMAINING`} />
+      <Header title="GAMMA-RAY BURST" sub={`HAMMING CODE ERROR CORRECTION · ${remaining}s REMAINING`} />
       <p className="instructions">
         A gamma-ray burst has flipped one bit in each affected satellite's memory register. Each register runs a Hamming code: three
         checksum bits (C1/C2/C3) covering overlapping bit positions. Work out the bad bit from which checks fail, then click to flip it
