@@ -333,19 +333,20 @@ Laptops never run this code, and the pixel audit (#15) confirmed they're unchang
 
 ## 20. Practice: how every change is tested (regression suite, pixel audit, feature checks)
 
-The game has no unit tests. It's a canvas, iframes and timers, and most bugs live in how those interact. So changes are tested from the outside, the way a player uses the game, using three Playwright scripts that drive a real headless browser. They're run locally for now, not yet in the repo or CI.
+The game has no unit tests. It's a canvas, iframes and timers, and most bugs live in how those interact. So changes are tested from the outside, the way a player uses the game, with Playwright scripts that drive a real headless browser.
 
-**1. Behaviour regression (`regress.py`, 51 checks).**
+**1. Behaviour regression ([`scripts/regress.py`](scripts/regress.py), 66 checks).**
 - The script plays the game like a player:
-  - boot, and the console test hooks;
-  - click a satellite and run the procedure in the terminal; the minigame opens and the fix is reported;
-  - every celestial event: right ticket, crosshairs on the right satellites, wrong script rejected, right script accepted, abort and reopen, result and satellite count;
-  - the creature: tentacles out, zap, grab, take, retreat;
-  - relaunch resets everything;
-  - all 11 minigames render, and a bot solves CPU Overload;
+  - SUDO's walkthrough appears, and skip hands the game over;
+  - a fault's ticket opens its terminal; a wrong procedure is refused; the right one opens its repair, and the fix is reported;
+  - every celestial event: its ticket, SUDO's line, the emergency script, abort and reopen, the result and the satellite count;
+  - the creature: tentacles out, SUDO corrupted, and both back to normal when it leaves;
+  - a science request paid out, a replacement launch, and a total loss and relaunch;
+  - every minigame renders;
   - no JavaScript errors anywhere.
 - **The trick is that it runs twice,** against a build of the last commit and against the new build, and compares the two records line by line. Nothing needs hand-written expected values: the old version *is* the expected value. Any line that differs is either an intended change or a regression.
-- Values that are random by design (which satellite, exact timings) are reduced to what matters, e.g. "7 satellites pulsed" rather than which 7.
+- **Randomness is seeded,** so both builds roll the same faults, satellites and requests. Values that still vary by timing (seconds left on a countdown, which satellite) are reduced to what matters before comparing.
+- **It's proven to catch real changes:** run against the commit before the rings stopped being clickable, it flagged exactly that one line and nothing else.
 
 **2. Pixel audit (`pixel_audit.py`, 57 screenshots).** The main screen at 4 window sizes and every minigame at 3, from old and new builds, compared pixel by pixel. It made "the laptop didn't change at all" (#15) provable instead of a feeling. To be repeatable it seeds randomness, pauses the clock, and turns off animations (#17).
 
