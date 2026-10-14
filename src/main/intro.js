@@ -288,7 +288,7 @@ const CORRUPTED = [
   ].join('\n'),
   CORRUPTED_HEADS = ['SUDO · ONBOARD COMPUTER', 'S̷U̷D̷O̷ · ????????', '███ · ██████'],
   GLITCH = '░▒▓█',
-  RECOVERED = '…Sorry. Where was I.';
+  RECOVERED = '…Sorry. Where was I...?';
 const glitchChar = () => GLITCH[Math.floor(Math.random() * GLITCH.length)];
 const seenEvents = new Set();
 let aside = null;
@@ -374,7 +374,7 @@ setInterval(() => {
         aside.el.classList.remove('sudo-corrupt');
         aside.el.querySelector('.sudo-head span').textContent = CORRUPTED_HEADS[0];
         aside.timer = typeInto(aside.el.querySelector('.sudo-text'), RECOVERED);
-        aside.leave = setTimeout(closeAside, 3500);
+        aside.leave = setTimeout(closeAside, 5500); // half a second to type it, then five seconds on screen
       }
     } else if (ev !== aside.ev || ev.phase === 'running') closeAside();
     if (aside) placeAside();

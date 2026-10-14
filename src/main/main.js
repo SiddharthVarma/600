@@ -1,8 +1,8 @@
 // Entry point for the constellation page: wires the modules to the page, starts the clocks, and handles
 // messages from the minigame windows. Each feature lives in its own module next to this one.
 import { clearAlerts, pushAlert, pushAnomalyAlert, satTag, updateAlerts } from './alerts.js';
-import { ANOMALY_FAIL_WINDOW, resetAnomalies, trySpawnAnomaly } from './anomalies.js';
-import { canvas, draw, H, point, resize, ringProgress, satellites, updateNetwork, W } from './constellation.js';
+import { resetAnomalies, trySpawnAnomaly } from './anomalies.js';
+import { canvas, draw, H, point, resize, satellites, updateNetwork, W } from './constellation.js';
 import { abortEvent, activeEvent, eventActive, pulses, renderFleetStatus, resetEvents, resolveEvent, tickEvent } from './events/core.js';
 import { kraken, krakenClick, krakenLive, resetCreature, triggerKraken } from './events/creature.js';
 import { triggerDebris } from './events/debris.js';
@@ -11,7 +11,7 @@ import { triggerGRB } from './events/grb.js';
 import { pacingStage } from './pacing.js';
 import { closeRepair, launchers, startIfReady } from './launcher.js';
 import { replayIntro, startIntro } from './intro.js';
-import { closePanel, openSat, panel, renderCountdown, renderSat } from './panel.js';
+import { closePanel, panel, renderCountdown, renderSat } from './panel.js';
 import { closeLaunch, earn, launchMessage, resetCredits } from './credits.js';
 import { closeScience, pushScience, resetScience, scheduleScience, scienceMessage } from './science.js';
 import { state } from './state.js';
@@ -59,32 +59,13 @@ updateNetwork();
 addEventListener('resize', resize);
 resize();
 requestAnimationFrame(draw);
+// The rings aren't clickable: tickets are the one way into a satellite's terminal. Only during the creature's attack
+// do clicks on the rings count (zapping tentacles, freeing satellites), and only then does the cursor say so.
 canvas.addEventListener('click', e => {
-  if (eventActive()) return;
-  const rect = canvas.getBoundingClientRect(),
-    x = e.clientX - rect.left,
-    y = e.clientY - rect.top;
-  if (krakenClick(x, y)) return;
-  const unit = Math.min(W, H),
-    earthR = Math.max(19, unit * 0.052);
-  let best = null,
-    dist = Infinity;
-  satellites.forEach(s => {
-    if (s.lost || ringProgress(s.ring, performance.now()) <= 0) return;
-    const base = point(s, performance.now()),
-      earthRatio = earthR / (unit * s.r),
-      decay = s.anomaly && s.anomalyType === 'orbit' ? Math.max(earthRatio, s.countdown / ANOMALY_FAIL_WINDOW) : 1,
-      px = W * 0.5 + (base.x - W * 0.5) * decay,
-      py = H * 0.5 + (base.y - H * 0.5) * decay,
-      hit = s.anomaly ? 95 : 70,
-      d = Math.hypot(px - x, py - y);
-    if (d < hit && d < dist) {
-      dist = d;
-      best = s;
-    }
-  });
-  if (best) openSat(best);
+  const rect = canvas.getBoundingClientRect();
+  krakenClick(e.clientX - rect.left, e.clientY - rect.top);
 });
+setInterval(() => (canvas.style.cursor = krakenLive() ? 'crosshair' : 'default'), 250);
 document.getElementById('close').onclick = closePanel;
 term.addEventListener('click', e => {
   const f = e.target.closest('.term-file');

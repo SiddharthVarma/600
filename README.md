@@ -25,6 +25,26 @@ npm run check      # build, then verify every image the code references exists
 
 On the main page, open Inspect → Console and call `triggerFlare()`, `triggerDebris()`, `triggerGRB()` or `triggerKraken()` to start an event, or `trySpawnAnomaly()` for an everyday fault. `activeEvent` shows the current event; `activeEvent.left = 5` fast-forwards its countdown.
 
+## Regression test
+
+`scripts/regress.py` plays the game in a headless browser and records what happens, about 66 checks:
+
+- SUDO's walkthrough;
+- a fault fixed through its ticket and terminal, and a wrong procedure refused;
+- every celestial event (ticket, emergency script, abort, reopen, result) and the creature;
+- a science request paid out, and a replacement launch;
+- a total loss and relaunch;
+- every minigame rendering, and any JavaScript error anywhere.
+
+It builds and plays both your last commit and your working copy, then prints the differences. The last commit is the expected result, so there's nothing to keep up to date by hand. Run it before merging anything that touches shared code (events, alerts, the terminal, the window launcher).
+
+```
+pip install playwright
+python3 scripts/regress.py                # last commit vs your working copy (about 3 minutes)
+python3 scripts/regress.py --base main    # compare against another commit or branch
+python3 scripts/regress.py --only         # just your working copy, printing every check
+```
+
 ## Deploying
 
 Cloudflare Pages builds and deploys on every push: build command `npm run build`, output directory `dist`. Every branch gets its own preview URL.

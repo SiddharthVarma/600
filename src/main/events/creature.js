@@ -46,27 +46,44 @@ function kdisc(cx, cy, r, c) {
   for (let y = -R; y <= R; y++) for (let x = -R; x <= R; x++) if (x * x + y * y <= r * r + r * 0.6) kpx(cx + x, cy + y, c);
 }
 // The arm is a chain whose shape is a wave travelling down it plus a curl toward the tip; the chain is then rotated and
-// stretched so the tip lands on the target at reach = 1.
-function tentacleChain(base, target, t, reach, wig, curl) {
+// stretched so its hold point lands on the target at reach = 1. Reaching, the hold point is the tip. Gripping (grip
+// 0 → 1), the end of the arm wraps round (up to about 230°) into a coil, and the hold point moves to the coil's
+// centre: the satellite sits inside the curled tip, and the rest of the arm keeps its shape instead of swinging to
+// make room. The coil is sized on screen, not in the arm's own units: a long arm is stretched more, so its coil is
+// made tighter and shorter to match, and every arm grips the same snug circle. Returns the points and the hold point.
+const COIL_R = 3.5, // the coil's radius, in buffer pixels: just round a satellite and its ring
+  WRAP = 4;
+function tentacleChain(base, target, t, reach, wig, curl, grip = 0) {
   const N = 36,
-    pts = [[0, 0]];
+    pts = [[0, 0]],
+    stretch = Math.max(0.5, (Math.hypot(target[0] - base[0], target[1] - base[1]) * reach) / (N * 0.92)), // roughly how much the arm is scaled
+    coilLength = Math.min(N * 0.4, Math.max(3, (WRAP * COIL_R) / stretch)), // segments needed to wrap that radius
+    at = Math.floor(N - coilLength), // where the coil starts
+    turn = (grip * WRAP) / (N - at); // how much each segment of the coil turns
   let a = 0,
     x = 0,
-    y = 0;
+    y = 0,
+    coilFrom = null;
   for (let i = 0; i < N; i++) {
     const s = i / (N - 1);
     a += Math.sin(t * 2.4 - s * 7) * 0.06 * wig * (0.25 + s) + curl * s * s * 0.32;
+    if (i === at) coilFrom = { x, y, a };
+    if (i >= at) a += turn;
     x += Math.cos(a);
     y += Math.sin(a);
     pts.push([x, y]);
   }
-  const end = pts[N],
-    rot = Math.atan2(target[1] - base[1], target[0] - base[0]) - Math.atan2(end[1], end[0]);
-  const k = Math.max(3, Math.hypot(target[0] - base[0], target[1] - base[1]) * reach) / Math.hypot(end[0], end[1]);
-  return pts.map(([u, v]) => [
-    base[0] + (u * Math.cos(rot) - v * Math.sin(rot)) * k,
-    base[1] + (u * Math.sin(rot) + v * Math.cos(rot)) * k,
-  ]);
+  // the coil is (nearly) a circle of radius 1/turn, centred off to the side it turns towards; blend from the tip to
+  // that centre as the grip tightens, so a loose grip doesn't throw the satellite to a far-off centre
+  const tip = pts[N],
+    r = 1 / Math.max(turn, 0.15),
+    centre = [coilFrom.x + Math.cos(coilFrom.a + Math.PI / 2) * r, coilFrom.y + Math.sin(coilFrom.a + Math.PI / 2) * r],
+    g = grip * grip * (3 - 2 * grip),
+    hold = [tip[0] + (centre[0] - tip[0]) * g, tip[1] + (centre[1] - tip[1]) * g],
+    rot = Math.atan2(target[1] - base[1], target[0] - base[0]) - Math.atan2(hold[1], hold[0]);
+  const k = Math.max(3, Math.hypot(target[0] - base[0], target[1] - base[1]) * reach) / Math.hypot(hold[0], hold[1]);
+  const place = ([u, v]) => [base[0] + (u * Math.cos(rot) - v * Math.sin(rot)) * k, base[1] + (u * Math.sin(rot) + v * Math.cos(rot)) * k];
+  return { pts: pts.map(place), hold: place(hold) };
 }
 function drawTentacle(pts) {
   const dense = []; // resample so neighbouring discs always overlap, even near the thin tip
@@ -135,6 +152,7 @@ function spawnTentacle(now) {
     stateT: now,
     wig: 1,
     curl: 0.25,
+    grip: 0,
     tug: 0,
     pts: [],
     tip: null,
@@ -203,10 +221,10 @@ function updateTentacle(tn, now, dt) {
   } else if (tn.state === 'retreat') tn.reach -= dt * 0.35;
   const holding = tn.state === 'grab' || tn.state === 'drag';
   tn.wig += ((tn.state === 'recoil' ? 3.2 : holding ? 1.15 : 1) - tn.wig) * Math.min(1, dt * 6);
-  // on the grab the tip whips into a tight coil, wrapping the satellite; then, as it drags, it loosens to a hook (about
-  // 130° of bend down its length), short of looping
-  const coiling = tn.state === 'grab';
-  tn.curl += ((coiling ? 1.1 : holding || tn.carrying ? 0.6 : 0.25) - tn.curl) * Math.min(1, dt * (coiling ? 5 : 3));
+  // the arm keeps the same gentle curl throughout; holding a satellite, its tip wraps round it (grip), easing in over
+  // about half a second and staying wrapped while it drags the satellite away
+  tn.curl += (0.25 - tn.curl) * Math.min(1, dt * 3);
+  tn.grip += ((holding || tn.carrying ? 1 : 0) - tn.grip) * Math.min(1, dt * 4);
 }
 export const krakenLive = () => !!activeEvent && activeEvent.kind === 'kraken'; // while it lasts, everyday anomalies stop: none spawn and their timers pause
 export function krakenClick(x, y) {
@@ -254,18 +272,19 @@ export function drawKraken(t) {
       f = Math.max(-0.2, tn.reach);
     const tipAt = [bx + (tx - bx) * f, by + (ty - by) * f],
       rootAt = [tipAt[0] - (tx - bx), tipAt[1] - (ty - by)];
-    const pts = tentacleChain(
+    const { pts, hold } = tentacleChain(
       [rootAt[0] / KPIX, rootAt[1] / KPIX],
       [tipAt[0] / KPIX, tipAt[1] / KPIX],
       t / 1000 + tn.phase,
       1,
       tn.wig,
       tn.curl,
+      tn.grip,
     );
-    const dense = drawTentacle(pts),
-      tip = pts[pts.length - 1];
+    const dense = drawTentacle(pts);
     tn.pts = dense.filter((_, i) => i % 3 === 0).map(p => [p.x * KPIX, p.y * KPIX, p.r * KPIX]);
-    tn.tip = [tip[0] * KPIX, tip[1] * KPIX];
+    // where it holds a satellite: the tip while reaching, the grip point inside the coil once it has one
+    tn.tip = [hold[0] * KPIX, hold[1] * KPIX];
     if ((tn.state === 'grab' || tn.state === 'drag' || tn.carrying) && !tn.prey.lost) tn.prey.heldAt = tn.tip;
     if (tn.carrying && tn.reach <= -0.08) {
       tn.carrying = false;
