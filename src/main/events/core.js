@@ -28,14 +28,16 @@ export const eventBusy = () => !!activeEvent || eventIncoming || state.intro;
 export function setEventIncoming(v) {
   eventIncoming = v;
 }
-// A celestial event that comes due while a science window is open waits, and starts as soon as the window closes, so its
-// arrival is never missed and no countdown runs unseen. Only the first waits; any others that come due skip their turn
-// as usual. A relaunch cancels it.
+// A celestial event that comes due while a window is open (a repair, a science request, launch control) waits, and
+// starts as soon as the window closes, so its arrival is never missed, no countdown runs unseen, and nothing lands on
+// top of a minigame in progress. Only the first waits; any others that come due skip their turn as usual. A relaunch
+// cancels it.
 let held = null,
   heldGen = 0;
 export const eventHeld = () => !!held;
-export function holdForScience(trigger) {
-  if (!state.science && !state.launch) return false;
+const repairOpen = () => document.getElementById('repairModal').classList.contains('show');
+export function holdForWindow(trigger) {
+  if (!state.science && !state.launch && !repairOpen()) return false;
   held ||= trigger;
   return true;
 }
@@ -74,7 +76,7 @@ export const EVENTS = {
   },
   kraken: { window: 45, script: null, name: 'UNIDENTIFIED CONTACT', title: 'SETI · UNIDENTIFIED.... CREATURE???' }, // played on the main screen, no procedure
   grb: {
-    window: 60,
+    window: 100, // the same 100 s its minigame gives, as one countdown from ticket to fix
     script: 'grb_scrub.py',
     verb: 'scrub',
     game: 'bitflip',
@@ -175,6 +177,8 @@ export async function runEmergency(file, run) {
   const ev = activeEvent,
     accepted = !!ev && ev.phase === 'pending' && EVENTS[ev.kind].script === file;
   const L = accepted && eventLauncher(ev);
+  // the gamma-ray burst's ticket is a deadline, so its minigame carries on the same countdown (the flare's and the
+  // debris field's minigames last as long as the blackout or the pass itself, so they keep their own)
   if (accepted)
     preload(
       L,
@@ -182,6 +186,7 @@ export async function runEmergency(file, run) {
         .filter(s => !s.lost)
         .map(s => s.id)
         .join(',')}`,
+      () => (ev.kind === 'grb' ? ev.left : null),
     );
   for (const [text, cls, sat] of emergencyLog(file, ev, accepted)) {
     await sleep(90 + Math.random() * 140);

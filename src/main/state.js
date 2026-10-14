@@ -4,4 +4,14 @@
 // science / launch: a science window (or its dive) or the launch window is open; a celestial event that comes due waits
 // for it to close.
 // faultsAfter: no new everyday fault before this time (performance.now()), e.g. a breather after the creature leaves.
-export const state = { selected: null, highlighted: [], highlightAt: 0, intro: false, science: false, launch: false, faultsAfter: 0 };
+// sudoScience: SUDO is introducing the first science request, so no other request arrives until it's been opened.
+export const state = {
+  selected: null,
+  highlighted: [],
+  highlightAt: 0,
+  intro: false,
+  science: false,
+  launch: false,
+  faultsAfter: 0,
+  sudoScience: false,
+};

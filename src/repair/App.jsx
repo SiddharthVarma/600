@@ -23,6 +23,7 @@ export function App() {
   const params = new URLSearchParams(location.search);
   const requested = params.get('type');
   const [type, setType] = useState(games.some(g => g[0] === requested) ? requested : 'thermal');
+  const [eventLeft, setEventLeft] = useState(null);
   const [remaining, setRemaining] = useState(() => {
     const n = parseInt(params.get('deadline'), 10);
     return Number.isFinite(n) && n > 0 ? n : null;
@@ -36,7 +37,9 @@ export function App() {
     const onStart = e => {
       if (e.data?.type !== 'repair-start') return;
       const n = parseInt(e.data.deadline, 10);
-      if (Number.isFinite(n) && n > 0) setRemaining(n);
+      // a repair's deadline is the fault's countdown, run here; the gamma-ray burst's is its ticket's, which the
+      // minigame carries on itself
+      if (Number.isFinite(n) && n > 0) (type === 'bitflip' ? setEventLeft : setRemaining)(n);
       setReady(true);
     };
     window.addEventListener('message', onStart);
@@ -69,7 +72,7 @@ export function App() {
     process: Process,
     orbit: Orbit,
     startracker: StarTracker,
-    bitflip: BitFlip,
+    bitflip: () => <BitFlip startAt={eventLeft} />,
     debris: Debris,
     flare: Flare,
     penguins: () => <Survey kind="penguins" />,

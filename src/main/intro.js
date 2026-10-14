@@ -12,7 +12,7 @@ import { state } from './state.js';
 // while it runs, random faults, science requests and celestial events wait, and the tutorial fault's countdown is
 // frozen until its repair is open. It opens every visit (skip ends it); the corner "?" replays it.
 const PHONE = matchMedia('(max-width: 600px) and (pointer: coarse)'),
-  NUDGE_AFTER = 10000,
+  NUDGE_AFTER = 15000, // long enough to read, look around and work it out before SUDO points
   TYPE_SPEED = 45; // characters per second
 const STEPS = {
   welcome: {
@@ -114,10 +114,12 @@ function go(name) {
     aborted: () => (sat.frozen = true),
     science: () => {
       // the walkthrough's done its job: the game carries on from here. SUDO's goodbye waits for the first science
-      // window to be opened and closed.
+      // window to be opened and closed. Until the penguin request is opened, it's the only one: others wait.
       pushScience('penguins', true);
+      state.sudoScience = true;
       release();
     },
+    sciencePlaying: () => (state.sudoScience = false),
   })[name]?.();
 }
 // where the bubble sits: next to whatever it's talking about
@@ -203,6 +205,7 @@ function finish() {
   clearInterval(poll);
   clearInterval(typing);
   release();
+  state.sudoScience = false;
   spotlight(null);
   bubble?.remove();
   bubble = null;

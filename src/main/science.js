@@ -106,7 +106,8 @@ const hostSat = () => {
   return up[Math.floor(Math.random() * up.length)];
 };
 export function pushScience(kind, force = false) {
-  if (state.intro && !force) return;
+  // none while SUDO's walkthrough runs, nor while it's pointing at the first request (so there's only the one it means)
+  if ((state.intro || state.sudoScience) && !force) return;
   // a new kind of request each time, while there's room
   const free = Object.keys(REQUESTS).filter(k => !waiting.some(r => r.kind === k));
   kind = REQUESTS[kind] ? kind : free[Math.floor(Math.random() * free.length)];

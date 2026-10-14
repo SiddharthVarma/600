@@ -76,8 +76,10 @@ function HammingRow({ label, bits, syn, onToggle, disabled, reference, restored 
   );
 }
 
-export function BitFlip() {
-  const TIME = 100;
+// startAt: the seconds left on the event's ticket when the window opened, so the countdown carries on from there
+// rather than starting afresh (100 s when opened on its own)
+export function BitFlip({ startAt }) {
+  const TIME = startAt || 100;
   const [setup] = useState(() => {
     const idsParam = new URLSearchParams(location.search).get('sats');
     const ids = idsParam
