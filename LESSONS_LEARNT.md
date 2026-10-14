@@ -20,21 +20,7 @@ interview.
 
 ---
 
-## 2. One pasted URL blanked every minigame
-
-**Found while testing:** every minigame opened blank at once.
-
-**Root cause:** a URL had been accidentally pasted into the middle of `react-app.jsx`, which is a syntax error. All minigames live in that one file, and it's compiled in the browser by Babel, so one error stops all of them.
-
-**Fix:** removed the stray text. CI on GitHub now runs a syntax check (`esbuild`) on every push, so a broken file fails before it reaches the live site.
-
-**Why it works:** the check finds the error at push time instead of a player finding it at play time.
-
-**Takeaway:** one big file compiled at runtime is a single point of failure, so automated checks need to catch errors before deploy.
-
----
-
-## 3. A minigame took ~10 seconds to appear (or stayed blank)
+## 2. A minigame took ~10 seconds to appear (or stayed blank)
 
 **Found while testing:** after clicking `burn_plan.py` in the terminal, the minigame took about 10 seconds to show. Once, the star tracker window stayed blank.
 
@@ -44,13 +30,13 @@ interview.
 
 **Why it works:** the slow part (download and compile) overlaps with something the player is already watching. The handshake means no repair time ticks away while the game is hidden. Measured with a simulated 4-second CDN delay, 2 of the 4 seconds were hidden. On a normal connection the game appears 0.1 s after the window opens.
 
-**Follow-up:** the JSX is now compiled once at deploy time and React ships as its production build, so Babel's 3.1 MB download is gone entirely (see #17).
+**Follow-up:** the JSX is now compiled once at deploy time and React ships as its production build, so Babel's 3.1 MB download is gone entirely (see #14).
 
 **Takeaway:** hide unavoidable latency behind work the user is already watching, but never let hidden work spend the user's time. Measure before and after.
 
 ---
 
-## 4. Arrow keys did nothing in the Debris minigame
+## 3. Arrow keys did nothing in the Debris minigame
 
 **Found while testing:** Debris opened on its own, but ← → didn't move the ship.
 
@@ -64,7 +50,7 @@ interview.
 
 ---
 
-## 5. The flare timer pauses when you switch tabs
+## 4. The flare timer pauses when you switch tabs
 
 **Found while testing:** a solar flare was running in one tab. After a few minutes in another tab, the flare picked up exactly where it left off.
 
@@ -78,7 +64,7 @@ interview.
 
 ---
 
-## 6. A Missed Contact pass never ended
+## 5. A Missed Contact pass never ended
 
 **Found while testing:** in fast-forwarded test runs, some passes ran forever. The satellite never "set" below the horizon.
 
@@ -92,21 +78,7 @@ interview.
 
 ---
 
-## 7. The antenna crosshair lagged behind the mouse
-
-**Found while testing:** moving the mouse quickly in Missed Contact left the crosshair trailing behind the cursor.
-
-**Root cause:** the antenna had a realistic slew-rate limit (a maximum turning speed), so it chased the cursor instead of following it.
-
-**Fix:** removed the slew limit, so the antenna points exactly where you drag. Bumping `?v=` was also needed before the fix showed up (see #1).
-
-**Why it works:** direct manipulation has to feel one-to-one. Any smoothing between the hand and the pointer reads as lag.
-
-**Takeaway:** realism loses to responsiveness when the player is directly controlling something.
-
----
-
-## 8. The Hamming code puzzle could be brute-forced
+## 6. The Hamming code puzzle could be brute-forced
 
 **Found while testing:** flipping bits left to right without thinking eventually fixed every register.
 
@@ -120,7 +92,7 @@ interview.
 
 ---
 
-## 9. Solar alignment felt unfair: instant failure, then too easy
+## 7. Solar alignment felt unfair: instant failure, then too easy
 
 **Found while testing:**
 - The sun sometimes spawned on the far side of the satellite, so the game failed before you could read the instructions.
@@ -135,11 +107,11 @@ interview.
 
 **Why it works:** the curve matches what looks right on screen, and the player always gets time to read before anything can go wrong.
 
-**Takeaway:** tune physics to what feels fair, and when the same complaint comes back, push the same parameter further instead of inventing a new theory.
+**Takeaway:** tune physics to what feels fair, and give the player time to understand a situation before it can fail them.
 
 ---
 
-## 10. Clicking an older alert didn't show the crosshair
+## 8. Clicking an older alert didn't show the crosshair
 
 **Found while testing:** clicking the newest SCID-UI alert highlighted its satellite, but clicking an older one did nothing.
 
@@ -153,7 +125,7 @@ interview.
 
 ---
 
-## 11. Dismissing an alert lost track of the problem
+## 9. Dismissing an alert lost track of the problem
 
 **Found while testing:** after closing an alert with ×, there were two red satellites and no way to tell what was wrong with either.
 
@@ -167,7 +139,7 @@ interview.
 
 ---
 
-## 12. The flare spectrum contradicted its own instructions
+## 10. The flare spectrum contradicted its own instructions
 
 **Found while testing:** the instructions said "keep the noise under the yellow line", but the line inside your signal's strip always poked above it, even when the link was fine.
 
@@ -181,23 +153,7 @@ interview.
 
 ---
 
-## 13. Git: editor boilerplate in a merge commit, and a stale local `main`
-
-**Found while working:**
-- A `git merge` opened an editor for the commit message. The session got stuck, and finishing it from another command saved git's template comment lines as the commit message.
-- Later, local `main` was behind GitHub, because dev had been merged into main through a pull request on GitHub.
-
-**Fix:**
-- Use `git merge --no-edit` (or `-m "message"`) so no editor opens.
-- Run `git fetch` and branch from `origin/main` rather than the local `main`.
-
-**Why it works:** non-interactive commands can't get stuck waiting for an editor. Pull-request merges happen on the remote, so only a fetch brings them down.
-
-**Takeaway:** script git non-interactively, and fetch before branching from a shared branch.
-
----
-
-## 14. Power Bus got stuck, and CLEAR SELECTION did nothing
+## 11. Power Bus got stuck, and CLEAR SELECTION did nothing
 
 **Found while testing:** Load 1 was committed with 3V + 10V. The two buses left (7V and 12V) couldn't power Load 2 or Load 3 in any combination, and CLEAR SELECTION didn't undo anything.
 
@@ -215,13 +171,13 @@ interview.
 
 ---
 
-## 15. No way back out of an event minigame
+## 12. No way back out of an event minigame
 
 **Found while testing:** once a solar flare's minigame opened, there was no way to back out of it and return later.
 
 **Root cause:** event windows were built as one-way trips: open the minigame, wait for its result. The event only had two states, "waiting" and "running", and nothing could move it from running back to waiting.
 
-**Fix:** event windows got a × that **aborts** the attempt. The event goes back to waiting, its countdown resumes, the CRITICAL ticket shows the countdown again, and clicking it allows a fresh try. The terminal prints "procedure aborted", for satellite repairs too. Event minigames also now load hidden behind the emergency log, using the same load → reveal → start handshake as satellite repairs (#3), so they appear instantly.
+**Fix:** event windows got a × that **aborts** the attempt. The event goes back to waiting, its countdown resumes, the CRITICAL ticket shows the countdown again, and clicking it allows a fresh try. The terminal prints "procedure aborted", for satellite repairs too. Event minigames also now load hidden behind the emergency log, using the same load → reveal → start handshake as satellite repairs (#2), so they appear instantly.
 
 **Why it works:** "abort" is now an explicit transition back to the earlier state, so leaving a window can't strand the event. Sharing one launcher between satellite repairs and events means both get the same loading behaviour and the same exit.
 
@@ -229,7 +185,7 @@ interview.
 
 ---
 
-## 16. A new emergency opened on the previous emergency's terminal
+## 13. A new emergency opened on the previous emergency's terminal
 
 **Found while testing:** clicking the NORAD debris ticket showed the terminal with no scripts to click. It was still showing the log from the gamma-ray burst handled earlier.
 
@@ -243,13 +199,13 @@ interview.
 
 ---
 
-## 17. Splitting two 1,200-line files into modules, with a build step
+## 14. Splitting two 1,200-line files into modules, with a build step
 
 **The starting point:** the whole game lived in two files.
 - `index.html` held about 1,200 lines: the page, all the CSS, and the main script with dozens of one-line functions and ~20 shared variables.
 - `react-app.jsx` held all 13 minigames.
 
-That worked, but every change touched a giant file. A single typo stopped everything: a misplaced `//` comment broke the main script twice in one week. On top of that, every minigame compiled itself in the browser with Babel downloaded from a CDN (#3), and cache busting meant bumping `?v=` by hand (#1).
+That worked, but every change touched a giant file. A single typo stopped everything: a misplaced `//` comment broke the main script twice in one week. On top of that, every minigame compiled itself in the browser with Babel downloaded from a CDN (#2), and cache busting meant bumping `?v=` by hand (#1).
 
 **What was done:**
 - **Vite** builds the site. Cloudflare Pages runs `npm run build` on every push and serves the `dist/` folder.
@@ -279,7 +235,7 @@ That worked, but every change touched a giant file. A single typo stopped everyt
 
 ---
 
-## 18. Making it work on phones without changing the laptop at all
+## 15. Making it work on phones without changing the laptop at all
 
 **The goal:** fix the phone layout, which had alerts covering the screen, 18px tap targets and an unreadable title, with a hard rule that the laptop experience must not change by a single pixel.
 
@@ -291,13 +247,13 @@ That worked, but every change touched a giant file. A single typo stopped everyt
 **How it was proven:**
 - 57 laptop screenshots (4 window sizes, all 11 minigames) were taken from the old and new production builds and compared pixel by pixel. They were identical.
 - The 51-check behaviour test was also run against both builds.
-- To make screenshots comparable at all (see #20), randomness was seeded, the clock was paused and stepped by hand, and CSS animations were turned off.
+- To make screenshots comparable at all (see #17), randomness was seeded, the clock was paused and stepped by hand, and CSS animations were turned off.
 
 **Takeaway:** responsive design is about capabilities, not just screen width. And "I didn't break desktop" is a claim you can prove with deterministic before/after screenshot diffs.
 
 ---
 
-## 19. Two iPhone Safari gotchas
+## 16. Two iPhone Safari gotchas
 
 - **Auto-zoom on text boxes:** iOS Safari zooms the whole page when you tap an input whose font is smaller than 16px. The CPU Overload command box was 12px. **Fix:** 16px on phones only.
 - **`100vh` isn't the visible height:** on iOS Safari, `vh` includes the area behind the browser toolbars, so a window sized to 97vh can sit partly under the toolbar. **Fix:** dynamic viewport units (`97dvh`), with the `vh` line kept as a fallback for older browsers. That wasn't enough: the window was still *centred* in a fixed box that included the toolbar area, so on the phone its bottom stayed out of sight. **Final fix:** on phones the minigame window is pinned to the top and fills exactly the visible screen.
@@ -306,7 +262,7 @@ That worked, but every change touched a giant file. A single typo stopped everyt
 
 ---
 
-## 20. Making automated tests trustworthy (flaky tests)
+## 17. Making automated tests trustworthy (flaky tests)
 
 **Found while testing:** comparisons between two builds kept showing "differences" that weren't real.
 
@@ -328,7 +284,7 @@ That worked, but every change touched a giant file. A single typo stopped everyt
 
 ---
 
-## 21. Security check: secrets, cost exposure, and what was public
+## 18. Security check: secrets, cost exposure, and what was public
 
 **The check:**
 - Scanned every file **and the full git history** for API keys, tokens, passwords and private keys. Found none.
@@ -337,7 +293,7 @@ That worked, but every change touched a giant file. A single typo stopped everyt
 - CI has a $0 spending limit by default.
 - `npm audit` on shipped dependencies: 0 vulnerabilities.
 
-**What was actually exposed:** before the Vite build (#17), Cloudflare published the **whole repository folder**, so the README, this file, `scripts/` and the CI config were all publicly downloadable from the site. Nothing secret, but more than intended. With a build step, only the built `dist/` folder is deployed.
+**What was actually exposed:** before the Vite build (#14), Cloudflare published the **whole repository folder**, so the README, this file, `scripts/` and the CI config were all publicly downloadable from the site. Nothing secret, but more than intended. With a build step, only the built `dist/` folder is deployed.
 
 **Minor, not fixed:** the game accepts `postMessage` results from any window. Someone embedding the site could fake a win, but only in their own browser, since there's no server or shared state.
 
@@ -345,7 +301,7 @@ That worked, but every change touched a giant file. A single typo stopped everyt
 
 ---
 
-## 22. A bug I couldn't reproduce: the side panel wouldn't scroll on an iPhone
+## 19. A bug I couldn't reproduce: the side panel wouldn't scroll on an iPhone
 
 **Found while testing:** on a real iPhone (Safari), the satellite side panel wouldn't scroll, so the terminal at its bottom was unreachable. Every test on the Mac passed, including Chrome's phone emulation and WebKit (Safari's engine) run headless.
 
@@ -369,13 +325,13 @@ So the browser received the swipe, nothing blocked it, the panel could scroll, a
 - A flick keeps gliding, with friction.
 - A touch that moves less than 6px still counts as a tap, so buttons and terminal files keep working.
 
-Laptops never run this code, and the pixel audit (#18) confirmed they're unchanged. The same scroller (now in `src/shared/`) also scrolls the minigame windows on phones. It leaves alone any drag that starts on a game board, so dragging the antenna or the solar array still plays the game.
+Laptops never run this code, and the pixel audit (#15) confirmed they're unchanged. The same scroller (now in `src/shared/`) also scrolls the minigame windows on phones. It leaves alone any drag that starts on a game board, so dragging the antenna or the solar array still plays the game.
 
 **Takeaway:** when a bug only appears on one device, stop guessing after the first miss and **instrument the real device**. Then reduce it by elimination: what works, what doesn't, one variable at a time. If the root cause is in the platform, build a narrow, well-scoped workaround around what you've *proven* works.
 
 ---
 
-## 23. Practice: how every change is tested (regression suite, pixel audit, feature checks)
+## 20. Practice: how every change is tested (regression suite, pixel audit, feature checks)
 
 The game has no unit tests. It's a canvas, iframes and timers, and most bugs live in how those interact. So changes are tested from the outside, the way a player uses the game, using three Playwright scripts that drive a real headless browser. They're run locally for now, not yet in the repo or CI.
 
@@ -391,7 +347,7 @@ The game has no unit tests. It's a canvas, iframes and timers, and most bugs liv
 - **The trick is that it runs twice,** against a build of the last commit and against the new build, and compares the two records line by line. Nothing needs hand-written expected values: the old version *is* the expected value. Any line that differs is either an intended change or a regression.
 - Values that are random by design (which satellite, exact timings) are reduced to what matters, e.g. "7 satellites pulsed" rather than which 7.
 
-**2. Pixel audit (`pixel_audit.py`, 57 screenshots).** The main screen at 4 window sizes and every minigame at 3, from old and new builds, compared pixel by pixel. It made "the laptop didn't change at all" (#18) provable instead of a feeling. To be repeatable it seeds randomness, pauses the clock, and turns off animations (#20).
+**2. Pixel audit (`pixel_audit.py`, 57 screenshots).** The main screen at 4 window sizes and every minigame at 3, from old and new builds, compared pixel by pixel. It made "the laptop didn't change at all" (#15) provable instead of a feeling. To be repeatable it seeds randomness, pauses the clock, and turns off animations (#17).
 
 **3. Feature checks, when old vs new is *supposed* to differ.** Comparing against the old build can't test something new, like the pixel-art sun. So a new feature gets its own checks of the behaviour that matters: the sun is absent before a flare, *creeps* in (its edge measured moving 20 → 60 → 84 → 100 px, never jumping), erupts toward the Earth, survives an abort, creeps out after a win or a loss, and never appears for other events.
 
@@ -403,7 +359,7 @@ The game has no unit tests. It's a canvas, iframes and timers, and most bugs liv
 
 ---
 
-## 24. Practice: procedurally generated scenes (seeded noise, dithering, spaced placement)
+## 21. Practice: procedurally generated scenes (seeded noise, dithering, spaced placement)
 
 Every science request draws a fresh scene: penguin colonies on sea ice, whales, wildfires, flamingo lakes, airbases, oil spills, dark fishing fleets, a supernova field, an exoplanet's light curve. The pixel-art sun during a solar flare uses the same techniques. None of it uses a library. It's about 20 lines of maths, hand-written, plus a renderer per scene.
 
@@ -411,7 +367,7 @@ Every science request draws a fresh scene: penguin colonies on sea ice, whales, 
 > Seeded value noise summed over several octaves (fractal Brownian motion) for the terrain, quantised into a small fixed palette with ordered (Bayer) dithering for the pixel-art look, and rejection sampling with a minimum distance (a cheap version of Poisson-disc sampling) to place things. I chose those because they're deterministic (the same seed gives the same scene, so tests reproduce), dependency-free, fast enough at low resolution to run every frame, and the spacing guarantees a fair puzzle: targets never overlap decoys.
 
 **The pieces, and why each one:**
-- **A seeded random number generator (mulberry32).** A 32-bit generator in a few lines: each call scrambles a counter with multiplies and shifts. `Math.random()` can't be seeded, and a seed means a scene can be regenerated exactly. That made the screenshot and test runs repeatable (#20).
+- **A seeded random number generator (mulberry32).** A 32-bit generator in a few lines: each call scrambles a counter with multiplies and shifts. `Math.random()` can't be seeded, and a seed means a scene can be regenerated exactly. That made the screenshot and test runs repeatable (#17).
 - **Value noise.** A hash gives a pseudo-random value at every integer grid point. The classic shader hash, `fract(sin(x·127.1 + y·311.7) · 43758.5453)`, is used here. Between grid points the value is blended with a smoothstep curve, 3t² − 2t³, so there are no visible creases.
   - **Why value noise rather than Perlin or simplex:** Perlin (gradient) noise is smoother and has fewer grid artefacts, and simplex scales better to 3D and beyond. At 240×150 pixel art the difference is invisible, and value noise is about 15 lines.
 - **Fractal Brownian motion (fBm).** Several layers ("octaves") of noise are summed, each at double the frequency and half the amplitude. Large shapes get small detail on top, the way coastlines, clouds and terrain look in nature.
@@ -444,14 +400,14 @@ Every science request draws a fresh scene: penguin colonies on sea ice, whales, 
 
 ---
 
-## 25. Practice: bots that prove every minigame can be finished
+## 22. Practice: bots that prove every minigame can be finished
 
 A minigame that looks right but can't be completed is the worst kind of bug. Players just think they're bad at it. So new games were checked by **bots that play them through the screen, like a person**: they read pixels and move the mouse, with no access to the game's internals.
 
 - **Exoplanet:** the bot reads the light-curve chart's pixels, finds columns sitting well below the median brightness (a dip), and taps there. It finished on both runs, and the derived numbers checked out against Kepler's law (e.g. a 2.01-day period and 0.029 AU orbit imply a 0.8 solar-mass star, the K-type host it had picked).
 - **Interstellar:** the bot finds the object by its colour, moves the mouse onto it each frame, and waits for the data bar to reach 100%.
 - **Surveys:** a bot marks, downlinks and reads the result line. Play-testing on a 13" laptop showed the survey window cut off at the bottom; measuring the layout at four window sizes confirmed it: the DOWNLINK button sat below the bottom of the window. The view now sizes itself to the window's height, and the same measurement confirmed the fix at every size.
-- **SUDO's walkthrough:** a bot plays the whole tutorial as a newcomer (#26) and found two real bugs: a crash before the first line appeared, and a way for the walkthrough to hang.
+- **SUDO's walkthrough:** a bot plays the whole tutorial as a newcomer (#23) and found two real bugs: a crash before the first line appeared, and a way for the walkthrough to hang.
 
 **When a bot failed, the bot was usually wrong first:**
 - the interstellar bot chased the red reticle and the yellow light curve, because they matched its colour test;
@@ -463,7 +419,7 @@ Each was fixed in the bot, never in the game, and confirmed by running the game 
 
 ---
 
-## 26. Practice: SUDO's walkthrough as a step machine that watches the game
+## 23. Practice: SUDO's walkthrough as a step machine that watches the game
 
 SUDO, the sarcastic onboard computer, walks a first-time player through their first fault, their first science request and a goodbye. It's built as a small state machine.
 
@@ -474,7 +430,7 @@ SUDO, the sarcastic onboard computer, walks a first-time player through their fi
   - **The fix:** move on from durable outcomes (the fault is cleared, or the satellite is lost), not just momentary ones (a window is showing).
   - This is the polling version of the difference between level-triggered and edge-triggered events: when you sample state, trust conditions that persist, not transitions you might miss.
 - **Feedback changed the design.** The first version moved on by itself after a few seconds. Play-testing showed new players need time to read, so the lines you read now wait for NEXT, and only the "do this" steps move on by themselves.
-- **Shown once,** remembered in the browser's storage. Storage can be blocked (private browsing), so every read and write is wrapped and fails safely: the walkthrough just shows again.
+- **Shown every visit** (skippable), after play-testers who left mid-walkthrough couldn't get back into it. One-off hints, like the first time LAUNCH lights up, are remembered in the browser's storage. Storage can be blocked (private browsing), so every read and write is wrapped and fails safely: the hint just shows again.
 
 **Takeaway:** for a tutorial over an existing app, observe state rather than threading hooks through every module, and when you observe by sampling, make transitions depend on states that persist, not on moments you might sample past.
 
@@ -482,11 +438,11 @@ SUDO, the sarcastic onboard computer, walks a first-time player through their fi
 
 ## Checked and fine
 
-- **Events can no longer freeze the game:** this used to be a known issue (an event window that failed to load had no way out). Every event window now has a × that aborts back to the ticket (#15), and a ticket that runs out resolves the event, so an event always ends.
+- **Events can no longer freeze the game:** this used to be a known issue (an event window that failed to load had no way out). Every event window now has a × that aborts back to the ticket (#12), and a ticket that runs out resolves the event, so an event always ends.
 - **Case-sensitive asset paths:** macOS ignores upper/lower case in file names, but Cloudflare's Linux servers don't. Every asset reference was checked against the exact file name on disk, and all of them are committed to git.
-- **Babel 8:** before the build step, `react.html` loaded an unpinned Babel from a CDN, so a future major release would have loaded automatically. Babel 8 was tested against all the minigames and they compiled fine. Since #17 there is no Babel or CDN at runtime, and React's version is pinned in `package.json`.
+- **Babel 8:** before the build step, `react.html` loaded an unpinned Babel from a CDN, so a future major release would have loaded automatically. Babel 8 was tested against all the minigames and they compiled fine. Since #14 there is no Babel or CDN at runtime, and React's version is pinned in `package.json`.
 
 ## Known issues, not fixed yet
 
-- **Debris can be won by switching tabs,** because it uses wall-clock time (see #5).
+- **Debris can be won by switching tabs,** because it uses wall-clock time (see #4).
 - **Thermal and Power don't fit the repair window on small laptop screens,** so EXECUTE can be out of reach.
