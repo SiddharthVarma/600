@@ -123,7 +123,8 @@ export function Solar() {
     <>
       <Header title="SOLAR ALIGNMENT" sub="ARRAY OFFLINE · BATTERY DEPLETED" />
       <p className="instructions">
-        Drag the dial to steer toward the sun. Output peaks dead-on and falls off sharply the further you drift.
+        Drag the dial to point the array at the Sun. Power is highest when the array faces the Sun directly. It falls quickly as the
+        array turns away.
       </p>
       <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
         <svg

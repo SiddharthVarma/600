@@ -245,8 +245,9 @@ export function Orbit() {
     <>
       <Header title="ORBITAL BURN" sub="ORBIT DECAYING · TWO-BURN TRANSFER REQUIRED" />
       <p className="instructions">
-        Drag to plot a transfer burn: not too hot, not too weak. Ignite, then fire the circularization burn once inside the insertion
-        window (it narrows as you approach). Miss it and you'll have to replot.
+        Drag to plot the transfer burn. Too much or too little delta-v misses the target orbit. Click EXECUTE BURN. When the satellite is
+        inside the insertion window, click FIRE CIRCULARIZATION BURN. The window narrows as you approach. If you miss it, plot the burn
+        again.
       </p>
       <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
         <svg

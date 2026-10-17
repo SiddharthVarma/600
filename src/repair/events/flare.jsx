@@ -266,9 +266,8 @@ export function Flare() {
     <>
       <Header title="SOLAR FLARE" sub={`RADIO BLACKOUT · Ku DOWNLINK · ${Math.max(0, Math.ceil(DURATION - view.t))}s REMAINING`} />
       <p className="instructions">
-        The solar flare cut contact with these satellites. Drag your signal (the shaded strip) or hold ← → to where the noise is below the
-        yellow <span style={{ color: 'var(--yellow)' }}>NOISE THRESHOLD</span> line. The satellites reconnect one by one while you stay
-        there.
+        The flare has cut the radio link to these satellites. Drag the shaded strip, or hold ← →, to a band where the noise is below the
+        yellow <span style={{ color: 'var(--yellow)' }}>NOISE THRESHOLD</span> line. Stay there. The satellites reconnect one at a time.
       </p>
       <div style={{ maxWidth: 720, cursor: phase === 'run' ? 'ew-resize' : 'default', touchAction: 'none' }} {...drag}>
         <div style={{ fontSize: 10, letterSpacing: '.14em', color: '#7b8580', marginBottom: 4 }}>SPECTRUM</div>
