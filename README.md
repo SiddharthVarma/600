@@ -10,14 +10,14 @@ Needs Node.js 20.19+ or 22.12+.
 
 ```bash
 npm install        # once
-npm run dev        # local server with live reload, prints the URL (usually http://localhost:5173)
+npm run dev        # local server with live reload, prints the URL (usually http://localhost:5173/sixhundred/)
 ```
 
-Individual minigames can be opened directly, e.g. `http://localhost:5173/react.html?type=thermal`.
+Individual minigames can be opened directly, e.g. `http://localhost:5173/sixhundred/react.html?type=thermal`.
 
 ```bash
-npm run build      # production build into dist/
-npm run preview    # serve dist/ locally to check the build
+npm run build      # production build into dist/sixhundred/
+npm run preview    # serve the build locally to check it
 npm run check      # build, then verify every image the code references exists
 ```
 
@@ -49,11 +49,13 @@ python3 scripts/regress.py --only         # just your working copy, printing eve
 
 Cloudflare Pages builds and deploys on every push: build command `npm run build`, output directory `dist`. Every branch gets its own preview URL.
 
+The game lives at [varmasiddharth.com/sixhundred](https://varmasiddharth.com/sixhundred/). It builds into `dist/sixhundred/`, so on Pages it sits at `sixhundred.pages.dev/sixhundred/`. The Worker in `deploy/worker.js` runs on the route `varmasiddharth.com/sixhundred*` and fetches the same path from Pages, so the domain's other paths stay free for the rest of the site. The root of `sixhundred.pages.dev` redirects to the domain (`dist/_redirects`, written by `npm run build`).
+
 ## Structure
 
 ```
 index.html, react.html     thin page shells; Vite injects the bundles
-public/                    images, copied to the site as-is (paths in code are relative to the site root)
+public/                    images, copied to the site as-is (paths in code are relative to the page, so they work under any prefix)
 src/main/                  the constellation page
   main.js                  entry point: wires modules to the page, clocks, messages from minigame windows
   constellation.js         satellites, orbits, drawing the rings
