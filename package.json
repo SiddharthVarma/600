@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && echo '/ https://varmasiddharth.com/sixhundred/ 302' > dist/_redirects",
     "preview": "vite preview",
     "check": "vite build && python3 scripts/check_assets.py"
   },

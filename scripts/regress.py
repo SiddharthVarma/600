@@ -71,7 +71,8 @@ def file_sel(name):
 # ---- builds and servers ----
 
 def build(src, out):
-    subprocess.run(['npx', 'vite', 'build', '--outDir', out, '--emptyOutDir'], cwd=src, check=True,
+    # --base /: both builds are served from the root here, whatever prefix the site itself is deployed under
+    subprocess.run(['npx', 'vite', 'build', '--base', '/', '--outDir', out, '--emptyOutDir'], cwd=src, check=True,
                    stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
