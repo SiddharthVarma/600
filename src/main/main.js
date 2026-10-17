@@ -3,7 +3,17 @@
 import { clearAlerts, pushAlert, pushAnomalyAlert, satTag, updateAlerts } from './alerts.js';
 import { resetAnomalies, trySpawnAnomaly } from './anomalies.js';
 import { canvas, draw, H, point, resize, satellites, updateNetwork, W } from './constellation.js';
-import { abortEvent, activeEvent, eventActive, pulses, renderFleetStatus, resetEvents, resolveEvent, tickEvent } from './events/core.js';
+import {
+  abortEvent,
+  activeEvent,
+  eventActive,
+  pulses,
+  releaseHeldEvent,
+  renderFleetStatus,
+  resetEvents,
+  resolveEvent,
+  tickEvent,
+} from './events/core.js';
 import { kraken, krakenClick, krakenLive, resetCreature, triggerKraken } from './events/creature.js';
 import { triggerDebris } from './events/debris.js';
 import { triggerFlare } from './events/flare.js';
@@ -24,6 +34,11 @@ const PHONE = matchMedia('(max-width: 600px) and (pointer: coarse)');
 // the repair window fades first, then the outcome (STATUS, the terminal's last line, the crosshair) holds long enough
 // to read. If another satellite or an emergency has been opened by then, it stays open.
 const READ_TIME = 1800;
+// closing a repair window, however it ended: a celestial event that came due meanwhile starts now
+function endRepair() {
+  closeRepair();
+  releaseHeldEvent();
+}
 function closeWhenRead(s) {
   setTimeout(() => {
     if (state.selected === s && panel.classList.contains('open')) closePanel();
@@ -74,7 +89,7 @@ term.addEventListener('click', e => {
 document.getElementById('scienceClose').onclick = closeScience;
 document.getElementById('sudoHelp').onclick = replayIntro;
 document.getElementById('repairClose').onclick = () => {
-  closeRepair();
+  endRepair();
   termNote('procedure aborted', 'term-warn');
 };
 window.addEventListener('message', e => {
@@ -121,10 +136,16 @@ window.addEventListener('message', e => {
     });
     updateAlerts();
     termNote('procedure complete · telemetry nominal', 'term-ok');
-    closeRepair();
+    endRepair();
     renderSat(state.selected);
     closeWhenRead(state.selected);
   } else if (e.data?.type === 'repair-failed') {
+    // the fault's own countdown may have got there first (both run out together): it's already lost and announced
+    if (state.selected.lost) {
+      endRepair();
+      closeWhenRead(state.selected);
+      return;
+    }
     state.selected.anomaly = false;
     state.selected.anomalyType = null;
     state.selected.countdown = 0;
@@ -135,7 +156,7 @@ window.addEventListener('message', e => {
     pushAlert({ sat: state.selected, title: `${satTag(state.selected)} · SIGNAL LOST`, body: 'Commanded too late.', crit: true });
     updateAlerts();
     termNote('link lost · satellite unrecoverable', 'term-err');
-    closeRepair();
+    endRepair();
     closeWhenRead(state.selected);
   }
 });

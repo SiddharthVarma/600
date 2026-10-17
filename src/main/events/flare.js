@@ -1,5 +1,5 @@
 import { W, point, ringProgress, satellites } from '../constellation.js';
-import { eventBusy, holdForScience, pulse, setEventIncoming, setSunGlow, startEvent } from './core.js';
+import { eventBusy, holdForWindow, pulse, setEventIncoming, setSunGlow, startEvent } from './core.js';
 import { sunIn, sunOut } from './sun.js';
 
 const FLARE_SATS = 7;
@@ -23,7 +23,7 @@ const angleGap = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))
 let path = [],
   started = false;
 export function triggerFlare() {
-  if (eventBusy() || holdForScience(triggerFlare) || sunlitSats(performance.now()).length < FLARE_SATS) return;
+  if (eventBusy() || holdForWindow(triggerFlare) || sunlitSats(performance.now()).length < FLARE_SATS) return;
   setEventIncoming(true);
   setSunGlow(0.4);
   path = [];

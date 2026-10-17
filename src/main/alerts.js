@@ -1,5 +1,5 @@
 import { ctx } from './constellation.js';
-import { activeEvent, eventActive, eventTicketBody, openEventTicket } from './events/core.js';
+import { activeEvent, eventTicketBody, openEventTicket, windowsBlocked } from './events/core.js';
 import { openSat } from './panel.js';
 import { state } from './state.js';
 
@@ -66,7 +66,7 @@ export function pushAlert({ sat = null, event = null, title, body, crit = false,
   el.onclick = e => {
     if (e.target.closest('.alert-x')) dismissAlert(a);
     else if (a.event) openEventTicket(a.event);
-    else if (a.sat && !eventActive()) openSat(a.sat);
+    else if (a.sat && !windowsBlocked()) openSat(a.sat);
   };
   alertsEl.prepend(el);
   alerts.unshift(a);

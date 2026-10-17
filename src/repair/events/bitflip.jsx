@@ -76,8 +76,10 @@ function HammingRow({ label, bits, syn, onToggle, disabled, reference, restored 
   );
 }
 
-export function BitFlip() {
-  const TIME = 100;
+// startAt: the seconds left on the event's ticket when the window opened, so the countdown carries on from there
+// rather than starting afresh (100 s when opened on its own)
+export function BitFlip({ startAt }) {
+  const TIME = startAt || 100;
   const [setup] = useState(() => {
     const idsParam = new URLSearchParams(location.search).get('sats');
     const ids = idsParam
@@ -153,7 +155,7 @@ export function BitFlip() {
 
   return (
     <>
-      <Header title="GAMMA RAY BURST" sub={`HAMMING CODE ERROR CORRECTION · ${remaining}s REMAINING`} />
+      <Header title="GAMMA-RAY BURST" sub={`HAMMING CODE ERROR CORRECTION · ${remaining}s REMAINING`} />
       <p className="instructions">
         A gamma-ray burst has flipped one bit in each affected satellite's memory register. Each register runs a Hamming code: three
         checksum bits (C1/C2/C3) covering overlapping bit positions. Work out the bad bit from which checks fail, then click to flip it

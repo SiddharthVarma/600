@@ -1,7 +1,7 @@
 import { satellites } from './constellation.js';
 import { COIN, earn, payFor } from './credits.js';
 import { dive, diving } from './dive.js';
-import { releaseHeldEvent } from './events/core.js';
+import { releaseHeldEvent, windowsBlocked } from './events/core.js';
 import { state } from './state.js';
 import { fadeCloseModal, launcher, preload, reveal } from './launcher.js';
 import { touchScroll } from '../shared/touchscroll.js';
@@ -106,7 +106,8 @@ const hostSat = () => {
   return up[Math.floor(Math.random() * up.length)];
 };
 export function pushScience(kind, force = false) {
-  if (state.intro && !force) return;
+  // none while SUDO's walkthrough runs, nor while it's pointing at the first request (so there's only the one it means)
+  if ((state.intro || state.sudoScience) && !force) return;
   // a new kind of request each time, while there's room
   const free = Object.keys(REQUESTS).filter(k => !waiting.some(r => r.kind === k));
   kind = REQUESTS[kind] ? kind : free[Math.floor(Math.random() * free.length)];
@@ -124,7 +125,7 @@ export function scheduleScience() {
   );
 }
 function openRequest(r) {
-  if (diving()) return;
+  if (diving() || windowsBlocked()) return;
   if (!r.sat || r.sat.lost) r.sat = hostSat();
   opened = r;
   expanded = false;
