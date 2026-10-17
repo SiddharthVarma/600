@@ -535,8 +535,8 @@ export function Launch() {
         RIDESHARE · {COUNT} {COUNT === 1 ? 'SATELLITE' : 'SATELLITES'}
       </div>
       <p className="instructions">
-        Hold THROTTLE DOWN to keep dynamic pressure out of the red through max-Q, then let go. Hold it too long and stage 1 won&apos;t
-        reach the speed it needs. Above the atmosphere, jettison the fairing once aerodynamic heating drops below the line.
+        Hold THROTTLE DOWN through max-Q to keep dynamic pressure out of the red. Release it after max-Q. If you hold it too long, stage
+        1 is too slow at separation. Jettison the fairing when heating falls below the line.
       </p>
       <canvas
         ref={canvasRef}

@@ -16,21 +16,21 @@ const PHONE = matchMedia('(max-width: 600px) and (pointer: coarse)'),
   TYPE_SPEED = 45; // characters per second
 const STEPS = {
   welcome: {
-    line: "Morning. Welcome to your first night shift in mission control. 600 satellites, one sleepy you. Nothing's on fire yet.",
+    line: "Hi! Welcome to your first night shift in mission control. 600 satellites, one sleepy you. Nothing's on fire yet.",
     next: 'ticket',
   },
   ticket: {
-    line: 'Ah. SCID-UI has alerted that something IS on fire. Click the red ticket, top left.',
+    line: 'Ah. Something IS on fire. Click the red ticket, top left.',
     nudge: "The red one. Top left. I'll wait.",
   },
   terminal: {
-    line: 'See the STATUS line: SOLAR ARRAY MISALIGNED. Click its matching .py procedure file in the terminal. No pressure. Well, some pressure.',
-    nudge: "The array's misaligned… align_array.py looks like the right procedure to fix this anomaly.",
+    line: 'The STATUS line says SOLAR ARRAY MISALIGNED. Click the procedure in the terminal that fixes it.',
+    nudge: 'Misaligned array… try align_array.py.',
   },
   playing: {},
-  aborted: { line: "Closed it? Bold. Run the script again when you feel ready. Fix it soon or else we're at risk of losing that scid!" },
+  aborted: { line: 'You closed it. Run the script again before the timer runs out, or we lose that scid.' },
   failed: { line: "And it's gone. Don't worry, there are 599 more.", next: 'science' },
-  done: { line: 'Nice. One down, 599 potential anomalies for 599 potential satellites to go.', next: 'science' },
+  done: { line: 'Nice. One down, 599 to go.', next: 'science' },
   science: {
     line: "Not everything's on fire. Private organizations rent space on your satellites. These are optional. Nobody gets fired for ignoring requests to track penguin colonies.",
     next: 'hide',
