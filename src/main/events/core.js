@@ -233,10 +233,10 @@ export function resolveEvent(saved) {
   // saved: ids of the satellites that came through
   const ev = activeEvent;
   if (!ev) return;
+  // a breather once any event is over: no new fault for 10 s, so the result is read before the next ticket arrives
+  state.faultsAfter = performance.now() + 10000;
   if (ev.kind === 'kraken') {
     const now = performance.now();
-    // a breather once it's gone: no new fault for 10 s
-    state.faultsAfter = now + 10000;
     kraken.tentacles.forEach(tn => {
       tn.carrying = !!tn.prey.heldAt && !saved.has(tn.prey.id);
       setTentacleState(tn, 'retreat', now);
