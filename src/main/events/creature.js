@@ -200,7 +200,7 @@ function takeSatellite(tn, now) {
   s.anomaly = false;
   s.anomalyType = null;
   updateNetwork();
-  pushAlert({ sat: s, title: `${satTag(s)} · TAKEN`, body: 'Dragged out of orbit.', crit: true });
+  pushAlert({ sat: s, title: `${satTag(s)} · TAKEN`, body: 'Dragged out of orbit.', crit: true, stack: 'taken' });
   setTentacleState(tn, 'retreat', now);
   if (activeEvent && activeEvent.kind === 'kraken' && activeEvent.sats.every(x => x.lost)) resolveEvent(new Set());
 }

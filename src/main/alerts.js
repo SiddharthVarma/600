@@ -50,7 +50,10 @@ function foldForPhones() {
   moreEl.textContent = alertsEl.classList.contains('expanded') ? 'show less' : `+${folded} more`;
   moreEl.classList.toggle('show', folded > 0);
 }
-export function pushAlert({ sat = null, event = null, title, body, crit = false, sticky = false, emergency = false }) {
+// stack: repeats of one kind (the creature's TAKEN tickets) fold into a single ticket, newest on top with a count badge
+export function pushAlert({ sat = null, event = null, title, body, crit = false, sticky = false, emergency = false, stack = null }) {
+  const held = stack && alerts.find(x => x.stack === stack);
+  if (held) return restack(held, sat, title, body);
   const el = document.createElement('div');
   el.className = 'alert' + (crit ? ' crit' : '') + (emergency ? ' emergency' : '');
   // a problem ticket can't be dismissed: it leaves only when the satellite is fixed or lost
@@ -61,7 +64,7 @@ export function pushAlert({ sat = null, event = null, title, body, crit = false,
     '</span><span class="alert-time">now</span></div><div class="alert-title"></div><div class="alert-body"></div><span class="alert-short"></span>';
   el.querySelector('.alert-title').textContent = title;
   el.querySelector('.alert-body').textContent = body;
-  const a = { sat, event, type: sat?.anomalyType, sticky, emergency, el, born: Date.now() };
+  const a = { sat, event, type: sat?.anomalyType, sticky, emergency, stack, n: 1, el, born: Date.now() };
   el.querySelector('.alert-short').textContent = shortText(a);
   el.onclick = e => {
     if (e.target.closest('.alert-x')) dismissAlert(a);
@@ -73,6 +76,24 @@ export function pushAlert({ sat = null, event = null, title, body, crit = false,
   if (!sticky) a.timer = setTimeout(() => dismissAlert(a), 6000);
   while (alerts.length > MAX_ALERTS) dismissAlert([...alerts].reverse().find(x => !x.sticky) || alerts[alerts.length - 1]); // drop the oldest passing alert first
   foldForPhones();
+}
+function restack(a, sat, title, body) {
+  a.n++;
+  a.sat = sat;
+  a.born = Date.now();
+  a.el.querySelector('.alert-title').textContent = `${title} · +${a.n - 1} more`;
+  a.el.querySelector('.alert-body').textContent = body;
+  if (!a.badge) {
+    a.badge = document.createElement('span');
+    a.badge.className = 'alert-badge';
+    a.el.append(a.badge);
+  }
+  a.badge.textContent = a.n;
+  a.el.classList.add('stacked');
+  a.el.classList.toggle('two', a.n === 2);
+  // each new one keeps the stack up for its full six seconds
+  clearTimeout(a.timer);
+  a.timer = setTimeout(() => dismissAlert(a), 6000);
 }
 function dismissAlert(a) {
   if (!alerts.includes(a)) return;
