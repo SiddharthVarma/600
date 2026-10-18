@@ -1,7 +1,6 @@
 import { pushAnomalyAlert } from './alerts.js';
 import { satellites } from './constellation.js';
-import { EVENT_TYPES, eventActive } from './events/core.js';
-import { krakenLive } from './events/creature.js';
+import { EVENT_TYPES, eventBusy } from './events/core.js';
 import { state } from './state.js';
 
 let lastAnomalyType = 'thermal',
@@ -21,7 +20,9 @@ export const MAX_CONCURRENT_ANOMALIES = 2,
 // everyday faults under way (event satellites don't count, so faults keep coming while an event ticket waits)
 export const activeFaults = () => satellites.filter(s => s.anomaly && !EVENT_TYPES.includes(s.anomalyType));
 export function trySpawnAnomaly(max = MAX_CONCURRENT_ANOMALIES) {
-  if (eventActive() || krakenLive() || state.intro || performance.now() < state.faultsAfter) return;
+  // no new faults from the moment a celestial event is on its way until it's over (eventBusy covers the intro too);
+  // faults already open carry on
+  if (eventBusy() || performance.now() < state.faultsAfter) return;
   if (activeFaults().length < max) {
     const available = satellites.filter(s => !s.lost && !s.anomaly && !s.rejoining),
       s = available[Math.floor(Math.random() * available.length)];
