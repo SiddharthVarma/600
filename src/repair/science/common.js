@@ -3,13 +3,26 @@ import { inSky, onEarth } from './scenes.js';
 // Each science request: who asked for it, what the window says, and where the camera dives in on the Earth sprite.
 // coords: picks a fresh, believable location each time a window opens (a spot in the right part of the world, or
 // anywhere on the sky).
+// The window's side panel: brief (what to do), guide (what counts, ✓, and what doesn't, ✗, each with a colour
+// swatch: [counts, colour, text]), about (why the requester wants it), optionally cite ([text, url], a paper linked
+// at the end of about) and facts (a couple of details about the data).
 const earth = (lat, lon) => () => onEarth(Math.random, lat, lon),
   sky = () => inSky(Math.random);
 export const SCIENCE = {
   penguins: {
     title: 'PENGUIN COLONY TRACKING',
     signal: 'EMPEROR PENGUINS · SEA ICE SURVEY',
-    text: "Penguin colonies show up as brown patches on the sea ice. Tap each colony to mark it, then downlink your results to the British Antarctic Survey. Grey rocks and icebergs aren't colonies.",
+    brief: 'Tap each colony on the sea ice to mark it, then downlink.',
+    guide: [
+      [1, '#7a5a3c', 'Brown patches on the ice: a colony'],
+      [0, '#9aa3a6', 'Grey rock'],
+      [0, '#e8f2f6', 'Icebergs'],
+    ],
+    about: "Emperor penguins breed on sea ice, which is thinning. Counting colonies from orbit shows how they're coping.",
+    facts: [
+      ['Sensor', 'optical · 0.5 m/px'],
+      ['Region', 'Antarctic coast'],
+    ],
     uni: 'British Antarctic Survey',
     noun: ['colony', 'colonies'],
     earthAt: [118, 214],
@@ -18,7 +31,17 @@ export const SCIENCE = {
   whales: {
     title: 'WHALE POPULATION TRACKING',
     signal: 'SOUTHERN BLUE WHALES · CONSERVATION SURVEY',
-    text: "Tap each whale to mark it, then downlink your results to the British Antarctic Survey. Watch for their blows. Boats, rocks and kelp don't count.",
+    brief: 'Tap each whale to mark it, then downlink.',
+    guide: [
+      [1, '#3a5c7a', 'Long dark shape, often with a white blow'],
+      [0, '#c9c9c9', 'Boats (straight wakes)'],
+      [0, '#55704a', 'Rocks and kelp'],
+    ],
+    about: "Blue whales were hunted almost to extinction. Counting them from space shows whether they're coming back.",
+    facts: [
+      ['Sensor', 'optical · 0.3 m/px'],
+      ['Sea state', 'calm, low glint'],
+    ],
     uni: 'British Antarctic Survey',
     noun: ['whale', 'whales'],
     earthAt: [150, 150],
@@ -27,7 +50,17 @@ export const SCIENCE = {
   wildfire: {
     title: 'WILDFIRE HOTSPOT TRACKING',
     signal: 'AMAZON RAINFOREST · ACTIVE FIRE SURVEY',
-    text: "Smoke hides the fires. Switch to thermal infrared to see through it, tap each active fire to mark it, then downlink your survey to the Brazilian Fire Research Center. Warm rooftops aren't fires.",
+    brief: 'Switch to thermal to see through the smoke. Tap each active fire, then downlink.',
+    guide: [
+      [1, '#ff7a3a', 'Bright hotspot in thermal: an active fire'],
+      [0, '#c9a77a', 'Warm rooftops'],
+      [0, '#8a8f8a', 'Smoke (visible only)'],
+    ],
+    about: 'Most Amazon fires are set to clear forest. Fire counts show where clearing is happening this week.',
+    facts: [
+      ['Sensor', 'visible + thermal IR (4 µm)'],
+      ['Region', 'southern Amazon'],
+    ],
     uni: 'Brazilian Fire Research Center',
     noun: ['fire', 'fires'],
     earthAt: [64, 92],
@@ -36,7 +69,17 @@ export const SCIENCE = {
   flamingos: {
     title: 'FLAMINGO FLOCK TRACKING',
     signal: 'LESSER FLAMINGOS · SODA LAKE SURVEY',
-    text: 'Tap each flock of flamingos to mark it, then downlink your survey to the University of Nairobi. Flocks are speckled pink clusters in the shallows. Smooth pink streaks are algae, and the steaming pools are hot springs.',
+    brief: 'Tap each flock of flamingos in the shallows, then downlink.',
+    guide: [
+      [1, '#f29ab8', 'Speckled pink clusters: a flock'],
+      [0, '#d97a9a', 'Smooth pink streaks: algae'],
+      [0, '#e8e8e8', 'Steaming pools: hot springs'],
+    ],
+    about: 'Lesser flamingos feed on a few soda lakes. As the lakes rise they lose them: this tracks where the flocks go.',
+    facts: [
+      ['Sensor', 'optical · 0.5 m/px'],
+      ['Lakes', 'East African Rift'],
+    ],
     uni: 'University of Nairobi',
     noun: ['flock', 'flocks'],
     earthAt: [205, 120],
@@ -45,7 +88,15 @@ export const SCIENCE = {
   aircraft: {
     title: 'AIRCRAFT RECOGNITION',
     signal: 'ARMS CONTROL VERIFICATION · DEFENCE SURVEY',
-    text: 'The Ministry of Defence wants a count of one type of aircraft at this base, shown on the target card. Tap each one that matches, then downlink your count.',
+    brief: 'Count the aircraft that match the target card. Tap each one, then downlink your count.',
+    guide: [
+      [1, '#9aa3ad', 'The type on the target card'],
+      [0, '#3a3f44', 'Any other aircraft'],
+      [0, '#d9c25a', 'Ground vehicles'],
+    ],
+    about:
+      'Unfortunately, military contracts pay really well. Counting the type of aircraft the Ministry of Defence asks us to will help pay for our next launch.',
+    facts: [['Sensor', 'optical · 0.5 m/px']],
     uni: 'Ministry of Defence',
     noun: ['fighter jet', 'fighter jets'],
     earthAt: [80, 185],
@@ -54,7 +105,17 @@ export const SCIENCE = {
   oil: {
     title: 'OIL SPILL TRACKING',
     signal: 'MARINE POLLUTION · RADAR SURVEY',
-    text: 'Switch to radar to see through the cloud. Oil smooths the sea, so slicks show up dark. Calm, windless patches are dark too, but slicks are long and narrow, often trailing from a ship or platform. Tap each slick to mark it, then downlink your survey to University College Dublin.',
+    brief: 'Switch to radar to see through cloud. Tap each slick, then downlink.',
+    guide: [
+      [1, '#1d2328', 'Long, narrow, dark: a slick'],
+      [0, '#2c3540', 'Broad and dark: calm water'],
+      [0, '#e0e0e0', 'Bright dots: ships, rigs'],
+    ],
+    about: "Oil smooths the sea's ripples, so radar sees a slick as a dark streak, day or night, through cloud.",
+    facts: [
+      ['Sensor', 'radar (SAR) · 5 m/px'],
+      ['Region', 'Gulf of Mexico'],
+    ],
     uni: 'University College Dublin',
     noun: ['slick', 'slicks'],
     earthAt: [140, 190],
@@ -63,7 +124,16 @@ export const SCIENCE = {
   darkships: {
     title: 'DARK SHIP TRACKING',
     signal: 'ILLEGAL FISHING · AIS CROSS-CHECK',
-    text: 'Ships broadcast their position every few seconds, but some switch it off to fish illegally. Watch for the pings and mark every ship that stays silent, then downlink to Global Fishing Watch.',
+    brief: 'Watch for position pings. Mark every ship that stays silent, then downlink.',
+    guide: [
+      [1, '#ff5964', 'No ping: a dark ship'],
+      [0, '#55b6ff', 'Pings every few seconds'],
+    ],
+    about: 'Some ships switch off their position beacon to fish illegally inside the Galápagos Marine Reserve.',
+    facts: [
+      ['Sensor', 'radar (SAR) + AIS'],
+      ['Area', 'off the Galápagos'],
+    ],
     uni: 'Global Fishing Watch',
     noun: ['dark ship', 'dark ships'],
     earthAt: [130, 50],
@@ -72,27 +142,61 @@ export const SCIENCE = {
   supernova: {
     title: 'SUPERNOVA SEARCH',
     signal: 'TRANSIENT SURVEY · ARCHIVE VS TONIGHT',
-    text: "Tonight's image of this patch of sky is flicking back and forth with an older one. Find the new star that wasn't there before, tap it, then downlink to the University of Surrey. Anything that moves between the two is an asteroid, and a sharp single-pixel speck is a cosmic ray hit.",
+    brief: "Tonight's image flicks with an older one. Tap the new star, then downlink.",
+    guide: [
+      [1, '#ffffff', 'New since the archive: the star'],
+      [0, '#ffd166', 'Moves between them: an asteroid'],
+      [0, '#c58cff', 'One sharp pixel: a cosmic ray'],
+    ],
+    about: 'A supernova fades within weeks. Catching one early lets bigger telescopes study it.',
+    facts: [['Survey', 'tonight vs archive']],
     uni: 'University of Surrey',
     coords: sky,
   },
   exoplanet: {
     title: 'EXOPLANET TRANSIT SEARCH',
     signal: 'TRANSIT PHOTOMETRY · WATCHING ONE STAR',
-    text: "When a planet passes in front of its star, the star dims slightly, once every orbit. Watch its brightness and tap each dip as it scrolls past. Three dips pin down the orbit. Flares, sudden upward spikes, aren't transits.",
+    brief: 'Tap each dip in brightness as it scrolls past. Three dips pin down the orbit.',
+    guide: [
+      [1, '#55b6ff', 'A short, flat-bottomed dip: a transit'],
+      [0, '#ffd166', 'Sudden upward spike: a flare'],
+    ],
+    about: "The dip's depth gives the planet's size; the gap between dips gives the length of its year.",
+    facts: [
+      ['Method', 'transit photometry'],
+      ['Precision', '200 ppm'],
+    ],
     uni: 'University of Hawaiʻi',
   },
   galaxies: {
     title: 'GALAXY CLASSIFICATION',
     signal: 'DEEP FIELD · SORT BY SHAPE',
-    text: 'Sort each galaxy by its shape - spiral, irregular, elliptical, or disk. Classify all 12 to help with ongoing research at the Instituto de Astrofísica de Canarias.',
+    brief: 'Sort each galaxy by its shape. Classify all 12.',
+    guide: [
+      [1, '#c9d3ff', 'Spiral: arms winding out'],
+      [1, '#9ab0ff', 'Irregular: lumpy, no symmetry'],
+      [1, '#ffe2a8', 'Elliptical: smooth oval'],
+      [1, '#dfe6ff', 'Disk: a thin edge-on line'],
+    ],
+    about: 'Galaxies sorted by eye train the ML models that classify millions more. Check out this cool paper on CNNs being used to classify galaxies:',
+    cite: ['Varma et al. (2022)', 'https://academic.oup.com/mnras/article/509/2/2654/6425754'],
+    facts: [], // the paper takes their room
     uni: 'Instituto de Astrofísica de Canarias',
     coords: sky,
   },
   interstellar: {
     title: 'INTERSTELLAR OBJECT TRACKING',
     signal: 'OBJECT 2026 A1 · VISITOR FROM ANOTHER STAR',
-    text: 'An interstellar object is streaking through our solar system! Keep it inside the reticle until all its data is recorded.',
+    brief: 'Keep the object inside the reticle until all its data is recorded.',
+    guide: [
+      [1, '#ffffff', 'The fast-moving object: keep it centred'],
+      [0, '#9aa3a6', 'Background stars'],
+    ],
+    about: 'Only three objects from another star have ever been seen: ʻOumuamua, Borisov and 3I/ATLAS. This is the fourth.',
+    facts: [
+      ['Orbit', 'hyperbolic · unbound'],
+      ['Speed', 'about 58 km/s'],
+    ],
     uni: 'Instituto de Astrofísica de Canarias',
     coords: sky,
   },

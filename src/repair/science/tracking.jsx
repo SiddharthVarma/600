@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, fitWidth, hudText, pixelFont, report } from './common.js';
+import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, hudText, pixelFont, report } from './common.js';
+import { ScienceLayout, ScienceResult } from './layout.jsx';
 import { BH, BW, bay, makeBuffer, rng } from './scenes.js';
 
 // Interstellar object: keep a tumbling object from another star inside the reticle (which sits right on the pointer)
 // until all its data is recorded. It streaks across the field along one gentle curve; if it gets away before you're
 // done, the next sweep picks it up crossing back the other way, with the data so far kept. No timer, no fail.
-// the view never grows taller than the window leaves room for: header and instructions above, buttons and result below
-const FIT = fitWidth(BW * 4, BH * 4);
 const SCALE = 4,
   PASS = 18, // seconds for one streak across the field
   RECORD = 7, // % of the data recorded per second while locked
@@ -92,6 +91,7 @@ export function Tracking() {
   const [coords] = useState(info.coords); // a fresh patch of sky each time
   const canvasRef = useRef(null);
   const [phase, setPhase] = useState('track'); // track → downlink → done
+  const [readout, setReadout] = useState({ pct: 0, locked: false });
   const live = useRef({});
   live.current = { phase };
   const aim = useRef({ x: BW / 2, y: BH / 2 });
@@ -111,7 +111,8 @@ export function Tracking() {
       passStart = 0,
       data = 0,
       lastPoint = 0,
-      sentAt = 0;
+      sentAt = 0,
+      shown = { pct: 0, locked: false };
     const loop = () => {
       const now = performance.now() / 1000,
         t = now - t0,
@@ -130,6 +131,11 @@ export function Tracking() {
       const o = objectAt(pass, Math.min(1, (t - passStart) / PASS)),
         bright = drawObject(B, o, t),
         locked = phase === 'track' && Math.abs(o.x - a.x) < LOCK && Math.abs(o.y - a.y) < LOCK;
+      // the side panel's readouts, updated only when they change
+      if (Math.floor(data) !== shown.pct || locked !== shown.locked) {
+        shown = { pct: Math.floor(data), locked };
+        setReadout(shown);
+      }
       if (locked) {
         data = Math.min(100, data + dt * RECORD);
         if (t - lastPoint > 0.2) {
@@ -220,40 +226,31 @@ export function Tracking() {
     aim.current = { x: ((e.clientX - r.left) / r.width) * BW, y: ((e.clientY - r.top) / r.height) * BH };
   };
   return (
-    <>
-      <div className="eyebrow">Hosted payload request</div>
-      <h1>{info.title}</h1>
-      <div className="signal" style={{ color: 'var(--blue)' }}>
-        {info.signal}
-      </div>
-      <p className="instructions">{info.text}</p>
-      <canvas
-        ref={canvasRef}
-        width={BW * SCALE}
-        height={BH * SCALE}
-        onPointerDown={point}
-        onPointerMove={point}
-        style={{
-          width: '100%',
-          maxWidth: FIT,
-          display: 'block',
-          imageRendering: 'pixelated',
-          border: '1px solid #34403a',
-          background: '#000',
-          cursor: 'crosshair',
-          touchAction: 'none',
-        }}
-      />
-      {phase === 'done' && (
-        <>
-          <div className="success">{info.uni} received the observation · light curve recorded</div>
-          <div className="actions">
-            <button className="action" onClick={() => report({ type: 'science-close' })}>
-              DONE
-            </button>
-          </div>
-        </>
-      )}
-    </>
+    <ScienceLayout
+      info={info}
+      view={
+        <canvas
+          ref={canvasRef}
+          width={BW * SCALE}
+          height={BH * SCALE}
+          onPointerDown={point}
+          onPointerMove={point}
+          style={{ cursor: 'crosshair', touchAction: 'none' }}
+        />
+      }
+      live={[
+        ['Data recorded', `${phase === 'track' ? readout.pct : 100}%`],
+        ['Lock', phase !== 'track' ? 'complete' : readout.locked ? 'on target' : 'searching'],
+      ]}
+      left={<span className="eyebrow">Drag to track</span>}
+      right={
+        phase === 'done' && (
+          <button className="action" onClick={() => report({ type: 'science-close' })}>
+            DONE
+          </button>
+        )
+      }
+      result={phase === 'done' && <ScienceResult ok>{info.uni} received the observation · light curve recorded</ScienceResult>}
+    />
   );
 }

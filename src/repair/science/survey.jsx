@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, fitWidth, hudText, pixelFont, report } from './common.js';
+import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, hudText, pixelFont, report } from './common.js';
+import { ScienceLayout, ScienceResult, ViewSwitch } from './layout.jsx';
 import { BH, BW, ZOOM_TIME, drawZoom, makeSurvey, placeText } from './scenes.js';
 
 // Earth-observation request (penguins, whales, wildfires): the camera dives in, the player taps what they're asked to
 // find, and downlinks the survey. No timer; a wrong survey costs nothing.
-// the view never grows taller than the window leaves room for: header and instructions above, buttons and result below
-const FIT = fitWidth(BW * 4, BH * 4);
 const SCALE = 4,
   MATCH = 7; // a mark within this many scene pixels of a target counts as finding it
 // after the main screen's dive the window opens inside the clouds, so its own zoom skips the Earth
@@ -177,38 +176,31 @@ export function Survey({ kind }) {
     perfect = result && found === total && !wrong;
 
   return (
-    <>
-      <div className="eyebrow">Hosted payload request</div>
-      <h1>{info.title}</h1>
-      <div className="signal" style={{ color: 'var(--blue)' }}>
-        {info.signal}
-      </div>
-      <p className="instructions">{info.text}</p>
-      <canvas
-        ref={canvasRef}
-        width={BW * SCALE}
-        height={BH * SCALE}
-        onPointerDown={tap}
-        style={{
-          width: '100%',
-          maxWidth: FIT,
-          display: 'block',
-          imageRendering: 'pixelated',
-          border: '1px solid #34403a',
-          background: '#000',
-          cursor: phase === 'look' ? 'crosshair' : 'default',
-          touchAction: 'none',
-        }}
-      />
-      <div className="actions" style={{ alignItems: 'center' }}>
-        {scene.toggle && (
-          <button className="action" onClick={() => setIr(!ir)}>
-            {scene.toggle.button}: {ir ? 'ON' : 'OFF'}
-          </button>
-        )}
-        <span className="eyebrow">{marks.length ? `${marks.length} MARKED` : 'TAP TO MARK'}</span>
-        <span style={{ flex: 1 }} />
-        {phase === 'done' ? (
+    <ScienceLayout
+      info={info}
+      view={
+        <canvas
+          ref={canvasRef}
+          width={BW * SCALE}
+          height={BH * SCALE}
+          onPointerDown={tap}
+          style={{ cursor: phase === 'look' ? 'crosshair' : 'default', touchAction: 'none' }}
+        />
+      }
+      live={[
+        ['Marked', marks.length],
+        ...(scene.reference ? [['Target', scene.reference.name.toLowerCase()]] : []),
+        ...(scene.toggle ? [['View', ir ? scene.toggle.on : scene.toggle.off]] : []),
+      ]}
+      left={
+        scene.toggle ? (
+          <ViewSwitch off={scene.toggle.off} on={scene.toggle.on} value={ir} onChange={setIr} />
+        ) : (
+          <span className="eyebrow">Tap to mark</span>
+        )
+      }
+      right={
+        phase === 'done' ? (
           <button className="action" onClick={() => report({ type: 'science-close' })}>
             DONE
           </button>
@@ -221,15 +213,17 @@ export function Survey({ kind }) {
           >
             DOWNLINK
           </button>
-        )}
-      </div>
-      {phase === 'done' && (
-        <div className={perfect ? 'success' : 'failure'} style={perfect ? {} : { color: 'var(--yellow)' }}>
-          {info.uni} received your data ·{' '}
-          {perfect ? `all ${plural(total, scene.noun || info.noun)} found` : `you found ${found} of ${plural(total, scene.noun || info.noun)}`}
-          {wrong > 0 && ` · ${wrong} ${wrong === 1 ? 'mark was' : 'marks were'} on nothing`}
-        </div>
-      )}
-    </>
+        )
+      }
+      result={
+        phase === 'done' && (
+          <ScienceResult ok={perfect}>
+            {info.uni} received your data ·{' '}
+            {perfect ? `all ${plural(total, scene.noun || info.noun)} found` : `you found ${found} of ${plural(total, scene.noun || info.noun)}`}
+            {wrong > 0 && ` · ${wrong} ${wrong === 1 ? 'mark was' : 'marks were'} on nothing`}
+          </ScienceResult>
+        )
+      }
+    />
   );
 }

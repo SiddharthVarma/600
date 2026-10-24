@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { DOWNLINK_TIME, SCIENCE, brackets, drawDownlink, fitWidth, hudText, pixelFont, report } from './common.js';
+import { DOWNLINK_TIME, SCIENCE, brackets, drawDownlink, hudText, pixelFont, report } from './common.js';
+import { ScienceLayout, ScienceResult } from './layout.jsx';
 import { BH, BW, rng } from './scenes.js';
 
 // Exoplanet transit search. One star's brightness streams in; when its planet crosses in front, it dims by the
@@ -7,7 +8,6 @@ import { BH, BW, rng } from './scenes.js';
 // size from the period and the star's mass). The player taps each dip as it scrolls past; three pin down the period.
 // Starspots make the star wander slowly and flares spike it; neither is a transit. The result is worked out from the
 // player's own marks and the data, then the light curve is folded on that period.
-const FIT = fitWidth(BW * 4, BH * 4);
 const W = BW * 4,
   H = BH * 4,
   STAR_H = 150, // star-field strip at the top of the view
@@ -262,46 +262,35 @@ export function Transit() {
   };
 
   return (
-    <>
-      <div className="eyebrow">Hosted payload request</div>
-      <h1>{info.title}</h1>
-      <div className="signal" style={{ color: 'var(--blue)' }}>
-        {info.signal}
-      </div>
-      <p className="instructions">{info.text}</p>
-      <canvas
-        ref={canvasRef}
-        width={W}
-        height={H}
-        onPointerDown={tap}
-        style={{
-          width: '100%',
-          maxWidth: FIT,
-          display: 'block',
-          imageRendering: 'pixelated',
-          border: '1px solid #34403a',
-          background: '#000',
-          cursor: phase === 'watch' ? 'crosshair' : 'default',
-          touchAction: 'none',
-        }}
-      />
-      <div className="actions" style={{ alignItems: 'center' }}>
-        <span className="eyebrow">
-          {found} OF {NEEDED} TRANSITS
-        </span>
-        <span style={{ flex: 1 }} />
-        {phase === 'done' && (
+    <ScienceLayout
+      info={info}
+      view={
+        <canvas
+          ref={canvasRef}
+          width={W}
+          height={H}
+          onPointerDown={tap}
+          style={{ cursor: phase === 'watch' ? 'crosshair' : 'default', touchAction: 'none' }}
+        />
+      }
+      live={[['Dips marked', `${found} / ${NEEDED}`]]}
+      left={<span className="eyebrow">Tap each dip</span>}
+      right={
+        phase === 'done' && (
           <button className="action" onClick={() => report({ type: 'science-close' })}>
             DONE
           </button>
-        )}
-      </div>
-      {phase === 'done' && result && (
-        <div className="success">
-          {info.uni} confirms {result.kind} · period {result.P.toFixed(2)} days · {result.size} · orbit {result.a.toFixed(3)} AU · about{' '}
-          {Math.round(result.teq / 10) * 10} K
-        </div>
-      )}
-    </>
+        )
+      }
+      result={
+        phase === 'done' &&
+        result && (
+          <ScienceResult ok>
+            {info.uni} confirms {result.kind} · period {result.P.toFixed(2)} days · {result.size} · orbit {result.a.toFixed(3)} AU ·
+            about {Math.round(result.teq / 10) * 10} K
+          </ScienceResult>
+        )
+      }
+    />
   );
 }

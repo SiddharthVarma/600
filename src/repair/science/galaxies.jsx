@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, fitWidth, hudText, pixelFont, report } from './common.js';
+import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, hudText, pixelFont, report } from './common.js';
+import { ScienceLayout, ScienceResult } from './layout.jsx';
 import { BH, BW, bay, rng } from './scenes.js';
 
 // Galaxy classification, the way volunteers sort galaxies by eye: each one is spiral, irregular, elliptical or an
@@ -9,7 +10,6 @@ import { BH, BW, bay, rng } from './scenes.js';
 // - irregular: lumpy blue star clouds with no symmetry, like the Magellanic Clouds;
 // - elliptical: a smooth oval glow following the de Vaucouleurs profile, I ∝ exp(−7.67((r/rₑ)^¼ − 1)), yellowish;
 // - disk: a disc seen edge-on, exponential along it and sech² through it, usually split by a dark dust lane.
-const FIT = fitWidth(BW * 4, BH * 4);
 const SCALE = 4,
   COUNT = 12,
   KINDS = ['spiral', 'irregular', 'elliptical', 'disk'],
@@ -399,58 +399,48 @@ export function Galaxies() {
   const correct = answers.filter(Boolean).length;
 
   return (
-    <>
-      <div className="eyebrow">Hosted payload request</div>
-      <h1>{info.title}</h1>
-      <div className="signal" style={{ color: 'var(--blue)' }}>
-        {info.signal}
-      </div>
-      <p className="instructions">{info.text}</p>
-      <canvas
-        ref={canvasRef}
-        width={BW * SCALE}
-        height={BH * SCALE}
-        style={{
-          width: '100%',
-          maxWidth: FIT,
-          display: 'block',
-          imageRendering: 'pixelated',
-          border: '1px solid #34403a',
-          background: '#000',
-        }}
-      />
-      <div className="actions" style={{ alignItems: 'center' }}>
-        {phase === 'sort' &&
-          CHOICES.map((k, i) => (
-            <button
-              key={k}
-              className="action"
-              onClick={() => classify(k)}
-              disabled={!!flash}
-              // ??? sits there quietly, in grey, whether or not anything comes
-              style={{ ...(k === 'unknown' ? { color: '#6b7470', borderColor: '#39403c' } : {}), ...(flash ? { opacity: 0.5 } : {}) }}
-            >
-              {i + 1} · {LABEL[k]}
-            </button>
-          ))}
-        <span className="eyebrow">{answers.length ? `${correct} OF ${answers.length} RIGHT · STREAK ${streak}` : 'PRESS 1–5'}</span>
-        <span style={{ flex: 1 }} />
-        {phase === 'done' && (
+    <ScienceLayout
+      info={info}
+      view={<canvas ref={canvasRef} width={BW * SCALE} height={BH * SCALE} />}
+      live={[
+        ['Classified', `${answers.length} / ${COUNT}`],
+        ['Right', correct],
+        ['Streak', streak],
+      ]}
+      left={
+        phase !== 'done' && (
+          <div className="sci-choices">
+            {CHOICES.map((k, i) => (
+              <button
+                key={k}
+                className="action"
+                onClick={() => classify(k)}
+                disabled={!!flash || phase !== 'sort'}
+                // ??? sits there quietly, in grey, whether or not anything comes
+                style={{ ...(k === 'unknown' ? { color: '#6b7470', borderColor: '#39403c' } : {}), ...(flash || phase !== 'sort' ? { opacity: 0.5 } : {}) }}
+              >
+                {i + 1} · {LABEL[k]}
+              </button>
+            ))}
+          </div>
+        )
+      }
+      right={
+        phase === 'done' && (
           <button className="action" onClick={() => report({ type: 'science-close' })}>
             DONE
           </button>
-        )}
-      </div>
-      {phase === 'done' && (
-        <div
+        )
+      }
+      result={
+        phase === 'done' && (
           // green only for a perfect run, the one that pays in full; anything less is amber, like a partial survey
-          className={correct === COUNT ? 'success' : 'failure'}
-          style={correct === COUNT ? {} : { color: 'var(--yellow)' }}
-        >
-          {info.uni} received your classifications · {correct} of {COUNT} correct
-          {deck.some(g => g.kind === 'unknown') && ' · 1 image withheld from the archive'}
-        </div>
-      )}
-    </>
+          <ScienceResult ok={correct === COUNT}>
+            {info.uni} received your classifications · {correct} of {COUNT} correct
+            {deck.some(g => g.kind === 'unknown') && ' · 1 image withheld from the archive'}
+          </ScienceResult>
+        )
+      }
+    />
   );
 }
