@@ -3,6 +3,7 @@ import { ANOMALY_FAIL_WINDOW } from './anomalies.js';
 import { drawEarth } from './earth.js';
 import { drawEventFx, flareFlicker } from './events/core.js';
 import { drawKraken } from './events/creature.js';
+import { drawGRB, grbRing } from './events/grb.js';
 import { drawSun, drawSunFlash } from './events/sun.js';
 import { state } from './state.js';
 
@@ -170,7 +171,16 @@ export function draw(t) {
         : '#ff4d4d'
       : `rgba(255,255,255,${0.38 + 0.35 * (0.5 + 0.5 * Math.sin(s.phase + t * 0.0005))})`;
     ctx.fill();
-    if (hot) {
+    if (hot && s.anomalyType === 'bitflip') {
+      // gamma-ray burst damage: a uranium-green ring
+      const g = grbRing(t);
+      ctx.beginPath();
+      ctx.arc(px, py, g.r + Math.sin(t * 0.003) * 1.5, 0, Math.PI * 2);
+      ctx.strokeStyle = g.colour;
+      ctx.lineWidth = g.width;
+      ctx.stroke();
+      ctx.lineWidth = 1;
+    } else if (hot) {
       ctx.beginPath();
       ctx.arc(px, py, 11 + Math.sin(t * 0.003) * 2.5, 0, Math.PI * 2);
       ctx.strokeStyle = s.anomalyType === 'kraken' ? 'rgba(176,108,224,.5)' : 'rgba(255,77,77,.3)';
@@ -183,5 +193,6 @@ export function draw(t) {
   drawKraken(t);
   drawHighlight(t);
   drawSunFlash();
+  drawGRB(t);
   requestAnimationFrame(draw);
 }

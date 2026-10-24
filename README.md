@@ -13,7 +13,7 @@ npm install        # once
 npm run dev        # local server with live reload, prints the URL (usually http://localhost:5173/sixhundred/)
 ```
 
-Individual minigames can be opened directly, e.g. `http://localhost:5173/sixhundred/react.html?type=thermal`.
+Individual minigames can be opened directly, e.g. `http://localhost:5173/sixhundred/react.html?type=thermal`. In galaxy classification, add `&thing=spiral` or `&thing=disk` to see what the creature looks like behind the galaxy.
 
 ```bash
 npm run build      # production build into dist/sixhundred/

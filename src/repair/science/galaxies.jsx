@@ -163,26 +163,32 @@ function render(seed, makeLight) {
   return img;
 }
 
-// The thing that isn't a galaxy, or not only one. A galaxy, and behind it something large, slowly writhing. It hides
-// behind one of two:
-// - an edge-on disc with a dark dust lane: its body behind the bright bulge, tentacles reaching up over the disc and
-//   hanging down below it;
-// - a big spiral, nearly face on: its body tucked behind one edge of the disc, five tentacles reaching out from there.
-// It gives off no light, so all that shows is where it blots out the stars and faint far-off galaxies behind, and a thin
-// purple rim where starlight catches its edge. The galaxy's own light lies over it.
-function makeThing(seed) {
+// The thing that isn't a galaxy, or not only one. A galaxy, and behind it something large, slowly writhing: a deep
+// purple silhouette with a bright purple rim. Where the galaxy is dark (the lanes between a spiral's arms, the sky
+// around a disc) it shows plainly; under the galaxy's bright light it shows through only faintly. It hides behind one
+// of two:
+// - an edge-on disc with a dark dust lane: its body behind the bright bulge, six tentacles reaching up over the disc
+//   and four hanging down below it;
+// - a big spiral, nearly face on: its body just behind the core, seven tentacles reaching out all round it, through
+//   the lanes and out past the rim.
+const THING_FILL = [28, 10, 42],
+  THING_RIM = [132, 80, 170];
+// a displayed colour back into light, so after tone mapping it shows as that colour
+const unTone = c => c.map(v => -Math.log(1 - Math.min(0.985, v / 255)) / 2.2);
+// disguise: 'disk' or 'spiral' to choose which galaxy it hides behind; left out, it's a coin flip
+function makeThing(seed, disguise) {
   const r = rng(seed),
-    // tentacles in a fan, reaching out around a direction
-    fan = (n, side) =>
+    // tentacles in a fan of `spread` radians around a direction
+    fan = (n, at, spread, len, curl) =>
       Array.from({ length: n }, (_, k) => ({
-        a: side - 1.4 + (k / (n - 1)) * 2.8 + (r() - 0.5) * 0.6,
-        len: 55 + r() * 35,
-        curl: (r() - 0.5) * 0.09,
+        a: at - spread / 2 + (k / (n - 1)) * spread + (r() - 0.5) * 0.5,
+        len: len + r() * 20,
+        curl: curl + (r() - 0.5) * 0.08,
         ph: r() * 9,
         wig: 0.9 + r() * 0.7,
       }));
-  let light, body, arms;
-  if (r() < 0.5) {
+  let light, body, arms, thick, plain;
+  if (disguise ? disguise === 'disk' : r() < 0.5) {
     // the edge-on disc (exponential along it, sech² through it, a bulge, and a dust lane along the midplane), tilted a
     // little
     const pa = (r() - 0.5) * 0.4,
@@ -197,14 +203,19 @@ function makeThing(seed) {
         lane = Math.abs(u) < 36 ? 1 - 0.8 * Math.exp(-((v / 0.6) ** 2)) : 1;
       return [(bulge * 1.05 + along * 0.75) * lane, (bulge * 0.92 + along * 0.85) * lane, (bulge * 0.72 + along * 1.05) * lane];
     };
-    body = { x: BW / 2, y: BH / 2, rad: 9 + r() * 4 };
-    arms = [...fan(6, -Math.PI / 2 + pa), ...fan(4, Math.PI / 2 + pa)];
+    body = { x: BW / 2, y: BH / 2, rad: 8 };
+    arms = [...fan(6, -Math.PI / 2 + pa, 2.2, 62, 0.04), ...fan(4, Math.PI / 2 + pa, 2.0, 52, 0.04)];
+    thick = 3;
+    plain = glow => glow < 0.3; // shows plainly wherever the disc is dim: above and below it, and in the dust lane
   } else {
-    // the spiral, and the side it hides behind
+    // the spiral: the body just off its core, the arms all round it
     const side = r() * Math.PI * 2;
     light = spiral(rng(seed + 1), 0, 0, 1.8, true);
-    body = { x: BW / 2 + Math.cos(side) * 26, y: BH / 2 + Math.sin(side) * 16, rad: 9 + r() * 4 };
-    arms = fan(5, side);
+    body = { x: BW / 2 + Math.cos(side) * 4, y: BH / 2 + Math.sin(side) * 2.5, rad: 7 };
+    arms = fan(7, side, 6, 95, 0.05);
+    thick = 3.6;
+    // plainly in the dark lanes between the spiral's arms, and anywhere out past its rim
+    plain = (glow, x, y) => glow < 0.32 || Math.hypot(x - BW / 2, (y - BH / 2) * 1.35) > 46;
   }
   const gal = new Float32Array(BW * BH * 3),
     sky = new Float32Array(BW * BH * 3),
@@ -226,16 +237,22 @@ function makeThing(seed) {
   for (let k = 0; k < 60; k++) glow(r() * BW, r() * BH, 0.55, 0.3 + Math.pow(r(), 4) * 2.5, [1, 1, 1.05]);
   for (let k = 0; k < 25; k++) glow(r() * BW, r() * BH, 0.9 + r() * 0.8, 0.12 + r() * 0.12, r() < 0.5 ? [1, 0.85, 0.7] : [0.75, 0.85, 1.1]);
   for (let i = 0; i < BW * BH; i++) gal.set(light((i % BW) - BW / 2, ((i / BW) | 0) - BH / 2), i * 3);
+  const fill = unTone(THING_FILL),
+    rimLight = unTone(THING_RIM);
   const stamp = (cx, cy, rad) => {
-    for (let y = Math.floor(cy - rad); y <= cy + rad; y++)
-      for (let x = Math.floor(cx - rad); x <= cx + rad; x++)
-        if (x >= 0 && y >= 0 && x < BW && y < BH && (x - cx) ** 2 + (y - cy) ** 2 <= rad * rad) mask[y * BW + x] = 1;
+    const R = Math.ceil(rad) + 1;
+    for (let dy = -R; dy <= R; dy++)
+      for (let dx = -R; dx <= R; dx++) {
+        const x = Math.round(cx + dx),
+          y = Math.round(cy + dy);
+        if (x >= 0 && y >= 0 && x < BW && y < BH && dx * dx + dy * dy <= rad * rad + rad * 0.6) mask[y * BW + x] = 1;
+      }
   };
   return t => {
     mask.fill(0);
     stamp(body.x, body.y, body.rad);
-    stamp(body.x + 4, body.y - 3, body.rad * 0.7);
-    stamp(body.x - 3, body.y + 3, body.rad * 0.75);
+    stamp(body.x + 3, body.y - 3, body.rad * 0.75);
+    stamp(body.x - 3, body.y + 3, body.rad * 0.8);
     arms.forEach(arm => {
       let a = arm.a,
         x = body.x,
@@ -245,21 +262,24 @@ function makeThing(seed) {
         a += Math.sin(t * 1.1 + f * 6 + arm.ph) * 0.045 * arm.wig + arm.curl * f;
         x += Math.cos(a);
         y += Math.sin(a);
-        stamp(x, y, Math.max(0.6, (1 - f) * 4.2));
+        stamp(x, y, 0.6 + thick * Math.pow(1 - f, 1.15));
       }
     });
     for (let i = 0, p = 0; i < mask.length; i++, p += 4) {
       const x = i % BW,
         y = (i / BW) | 0,
-        behind = mask[i] ? 0 : 1,
-        rim = !mask[i] && ((x > 0 && mask[i - 1]) || (x < BW - 1 && mask[i + 1]) || (y > 0 && mask[i - BW]) || (y < BH - 1 && mask[i + BW])) ? 0.11 : 0,
+        on = mask[i],
+        rim = !on && ((x > 0 && mask[i - 1]) || (x < BW - 1 && mask[i + 1]) || (y > 0 && mask[i - BW]) || (y < BH - 1 && mask[i + BW])),
+        // under the galaxy's bright light it shows through faintly: a dithered 30% of its pixels
+        faint = !plain(gal[i * 3] + gal[i * 3 + 1] + gal[i * 3 + 2], x, y) && bay(x, y) > 0.3,
         n = (noise[i] - 0.5) * 0.04,
         dith = (bay(x, y) - 0.5) / 10;
-      // the light that reaches us: the deep field where it isn't blocked, the rim, and the spiral over the top, tone
-      // mapped and dithered the same way as every other galaxy
-      const lin = [sky[i * 3] * behind + rim * 0.55, sky[i * 3 + 1] * behind + rim * 0.22, sky[i * 3 + 2] * behind + rim * 0.85];
+      // the light that reaches us: its rim, its body with the galaxy's light over it, or the deep field and galaxy where
+      // it isn't, tone mapped and dithered the same way as every other galaxy
       for (let k = 0; k < 3; k++) {
-        const v = 1 - Math.exp(-(lin[k] + gal[i * 3 + k] + n + 0.02) * 2.2);
+        const g = gal[i * 3 + k],
+          lin = rim && !faint ? rimLight[k] + g * 0.5 : on && !faint ? fill[k] + g : sky[i * 3 + k] + g,
+          v = 1 - Math.exp(-(lin + n + 0.02) * 2.2);
         d[p + k] = Math.round(Math.max(0, Math.min(1, Math.round(v * 10 + dith * 10) / 10)) * 255);
       }
       d[p + 3] = 255;
@@ -277,7 +297,10 @@ export function Galaxies() {
     const r = rng(Math.floor(Math.random() * 1e9)),
       kinds = Array.from({ length: COUNT }, (_, i) => KINDS[i % KINDS.length]).sort(() => r() - 0.5),
       deck = kinds.map(kind => ({ kind, img: paint(kind, Math.floor(r() * 1e9)) }));
-    if (r() < 0.4) deck[4 + Math.floor(r() * 7)] = { kind: 'unknown', frame: makeThing(Math.floor(r() * 1e9)) };
+    // for testing: ?thing=spiral or ?thing=disk puts it first in the deck, behind that galaxy
+    const test = new URLSearchParams(location.search).get('thing');
+    if (test) deck[0] = { kind: 'unknown', frame: makeThing(Math.floor(r() * 1e9), test) };
+    else if (r() < 0.4) deck[4 + Math.floor(r() * 7)] = { kind: 'unknown', frame: makeThing(Math.floor(r() * 1e9)) };
     return deck;
   });
   const [index, setIndex] = useState(0);

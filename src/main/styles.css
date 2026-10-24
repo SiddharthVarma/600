@@ -671,6 +671,12 @@ button.command:hover {
   pointer-events: auto;
 }
 
+/* any window open (repair, science, launch, emergency): SUDO steps back, and returns when it closes */
+body:has(.repair-modal.show) .sudo.on {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* SUDO corrupted by the creature: its purple, a nervous jitter, and no button, so clicks go through to the tentacles */
 .sudo.on.sudo-corrupt {
   border-color: rgba(176, 108, 224, 0.75);
