@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Header, Result } from '../shared/ui.jsx';
+import { Execute, LabLayout, Status } from '../shared/layout.jsx';
 import { shuffle } from '../shared/util.js';
 
 function genStarSetup() {
@@ -76,14 +76,8 @@ export function StarTracker() {
       window.removeEventListener('pointerup', up);
     };
   }, [drag && drag.id]);
-  return (
-    <>
-      <Header title="STAR TRACKER LOCK" sub="LOST LOCK · CATALOG MATCH REQUIRED" />
-      <p className="instructions">
-        Drag stars from the rack onto the grid to copy the catalog pattern on the left. Match the position and brightness of each star.
-        Each wrong drop is a strike. Three strikes clear the grid.
-      </p>
-      <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'flex-start', marginTop: 18 }}>
+  const view = (
+      <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'center', width: '100%' }}>
         <div>
           <div style={{ fontSize: 11, letterSpacing: '.14em', color: '#7b8580', marginBottom: 8 }}>CATALOG REF · SECTOR 14-B</div>
           <div
@@ -117,9 +111,7 @@ export function StarTracker() {
           </div>
         </div>
         <div>
-          <div style={{ fontSize: 11, letterSpacing: '.14em', color: '#7b8580', marginBottom: 8 }}>
-            SENSOR GRID · {strikes}/3 MISALIGN STRIKES
-          </div>
+          <div style={{ fontSize: 11, letterSpacing: '.14em', color: '#7b8580', marginBottom: 8 }}>SENSOR GRID</div>
           <div
             ref={gridRef}
             style={{
@@ -155,7 +147,8 @@ export function StarTracker() {
             })}
           </div>
         </div>
-        <div style={{ flex: 1, minWidth: 220 }}>
+        {/* a narrow column beside the grid: two candidates to a row */}
+        <div style={{ width: 130 }}>
           <div style={{ fontSize: 11, letterSpacing: '.14em', color: '#7b8580', marginBottom: 8 }}>CANDIDATE RACK</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, minHeight: 150 }}>
             {pool
@@ -196,7 +189,21 @@ export function StarTracker() {
           </div>
         </div>
       </div>
-      <Result ok={ok}>{ok ? 'PATTERN MATCHED · LOCK REACQUIRED' : 'Match the catalog reference exactly to reacquire lock.'}</Result>
-    </>
+  );
+  return (
+    <LabLayout
+      eyebrow="Critical subsystem interaction"
+      title="STAR TRACKER LOCK"
+      signal="LOST LOCK · CATALOG MATCH REQUIRED"
+      view={view}
+      boxed
+      brief="Drag stars from the rack to copy the catalog pattern: position and brightness."
+      live={[['Strikes', `${strikes} / 3`, strikes ? 'var(--red)' : undefined]]}
+      about="A star tracker works out which way the satellite faces by matching the stars it sees to a catalog."
+      aboutLabel="About this fault"
+      left={<Status>Match the catalog reference exactly to reacquire lock.</Status>}
+      right={<Execute ready={ok} />}
+      result={ok && <Status tone="ok">PATTERN MATCHED · LOCK REACQUIRED</Status>}
+    />
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Header, Result } from '../shared/ui.jsx';
+import { Execute, LabLayout, Status } from '../shared/layout.jsx';
 
 export function ReactionWheel() {
   const ASSETS = '600_wheel_assets/';
@@ -103,18 +103,33 @@ export function ReactionWheel() {
   };
   const driftAngle = (setup.targetAngle + 180) % 360;
 
-  return (
-    <>
-      <Header title="REACTION WHEEL FAULT" sub={`WHEEL ${setup.failedIdx + 1} OFFLINE · UNCOMMANDED TUMBLE`} />
-      <p className="instructions">
-        One wheel has failed. Cycle each working wheel's speed until the combined torque cancels the drift. Direction and magnitude both
-        matter.
-      </p>
-      <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
-        <svg viewBox="0 0 300 300" width="320" height="320" style={{ background: '#0c1210', border: '1px solid #34403a' }}>
+  // each arrow says what it is, beside the middle of its shaft: well inside the ring, clear of the wheels and their labels
+  const resLen = Math.min(56, 22 + resMag * 38);
+  const tag = (angleDeg, length, text, color) => {
+    const [mx, my] = polar(angleDeg, length * 0.55),
+      [px, py] = polar(angleDeg + 90, 9),
+      ox = px - CX,
+      oy = py - CY,
+      side = Math.abs(ox) > Math.abs(oy);
+    return (
+      <text
+        x={mx + ox}
+        y={my + oy + (side ? 3 : oy > 0 ? 7 : -1)}
+        textAnchor={side ? (ox > 0 ? 'start' : 'end') : 'middle'}
+        fontSize="8"
+        fill={color}
+      >
+        {text}
+      </text>
+    );
+  };
+  const view = (
+        <svg viewBox="0 0 300 300" width="100%" height="100%" style={{ display: 'block' }}>
           <circle cx={CX} cy={CY} r="104" fill="none" stroke="#242c29" strokeDasharray="3 5" />
           {arrow(driftAngle, 72, '#ff5964')}
-          {resMag > 0.05 && arrow(resAngle, Math.min(56, 22 + resMag * 38), closeEnough ? '#c9ff4d' : '#ffd166')}
+          {tag(driftAngle, 72, 'DRIFT', '#ff5964')}
+          {resMag > 0.05 && arrow(resAngle, resLen, closeEnough ? '#c9ff4d' : '#ffd166')}
+          {resMag > 0.05 && tag(resAngle, resLen, 'YOUR CORRECTION', closeEnough ? '#c9ff4d' : '#ffd166')}
           <circle cx={CX} cy={CY} r="16" fill="#141d1a" stroke="#5c6b64" strokeWidth="3" />
           {WHEEL_ANGLES.map((ang, i) => {
             const failed = i === setup.failedIdx,
@@ -150,20 +165,20 @@ export function ReactionWheel() {
             {closeEnough ? 'CORRECTION ALIGNED · READY TO FIRE' : 'CYCLE WHEEL SPEED · MATCH DIRECTION AND MAGNITUDE'}
           </text>
         </svg>
-      </div>
-      <div className="legend">
-        <span>
-          <i className="dot redbg" />
-          DRIFT VECTOR
-        </span>
-        <span>
-          <i className="dot green" />
-          COMMANDED CORRECTION
-        </span>
-      </div>
-      <Result ok={closeEnough}>
-        {closeEnough ? 'RESIDUAL DRIFT NULLED · ATTITUDE STABLE' : 'Toggle wheels until the correction vector cancels the drift.'}
-      </Result>
-    </>
+  );
+  return (
+    <LabLayout
+      eyebrow="Critical subsystem interaction"
+      title="REACTION WHEEL FAULT"
+      signal={`WHEEL ${setup.failedIdx + 1} OFFLINE · UNCOMMANDED TUMBLE`}
+      view={view}
+      boxed
+      brief="Change each working wheel's speed until their combined torque cancels the drift."
+      about="Reaction wheels turn a satellite by spinning up or down, pushing it the other way. With one wheel dead, the other three have to cover for it."
+      aboutLabel="About this fault"
+      left={<Status>Toggle wheels until the correction vector cancels the drift.</Status>}
+      right={<Execute ready={closeEnough} />}
+      result={closeEnough && <Status tone="ok">RESIDUAL DRIFT NULLED · ATTITUDE STABLE</Status>}
+    />
   );
 }

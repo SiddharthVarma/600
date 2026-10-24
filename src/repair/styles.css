@@ -406,32 +406,32 @@ input {
   outline-offset: 5px;
 }
 
-/* ---- Science windows: one layout for every request ----
+/* ---- Lab windows (science and repairs): one layout for every window ----
    The title, then the view with its side panel beside it, then the toolbar, 24 px apart. The view takes the width
    the panel leaves, capped so it never grows taller than the window allows. The panel is exactly as tall as the view
-   (it never sets the height itself) and holds the same four sections in every request. */
-.sci {
+   (it never sets the height itself); its sections stack from the top. */
+.lab {
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
-.sci h1 {
+.lab h1 {
   margin: 8px 0;
 }
 
-.sci-body {
+.lab-body {
   display: flex;
   gap: 24px;
 }
 
-.sci-stage {
+.lab-stage {
   flex: 1 1 0;
   min-width: 0;
   max-width: calc((100vh - 296px) * 1.6); /* 296 px: everything around the view, top to bottom */
 }
 
-.sci-stage canvas {
+.lab-stage canvas {
   width: 100%;
   display: block;
   image-rendering: pixelated;
@@ -439,7 +439,23 @@ input {
   background: #000;
 }
 
-.sci-panel {
+/* a game that isn't a canvas sits centred in a box the same shape as the canvases */
+.lab-stage.boxed {
+  aspect-ratio: 1.6;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  border: 1px solid #34403a;
+  background: #0c1210;
+  overflow: hidden;
+}
+
+.lab-stage.boxed > * {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.lab-panel {
   flex: 0 0 268px;
   display: flex;
   flex-direction: column;
@@ -449,20 +465,12 @@ input {
   overflow: auto;
 }
 
-.sci-panel section {
+.lab-panel section {
   padding: 12px 16px;
   border-bottom: 1px solid var(--line);
 }
 
-.sci-panel section:last-child {
-  border-bottom: 0;
-}
-
-.sci-about {
-  margin-top: auto;
-}
-
-.sci-label {
+.lab-label {
   color: #7b8580;
   letter-spacing: 0.16em;
   font-size: 10px;
@@ -470,23 +478,26 @@ input {
   margin-bottom: 6px;
 }
 
-.sci-panel p {
+.lab-panel p {
   margin: 0;
   font-size: 12.5px;
   line-height: 1.55;
   color: #98a19b;
 }
 
-.sci-about p {
-  margin-bottom: 8px;
+.lab-about p {
   font-size: 11.5px;
 }
 
-.sci-about a {
+.lab-about p + .lab-row {
+  margin-top: 8px;
+}
+
+.lab-about a {
   color: var(--blue);
 }
 
-.sci-row {
+.lab-row {
   display: flex;
   justify-content: space-between;
   gap: 8px;
@@ -495,17 +506,17 @@ input {
   color: #98a19b;
 }
 
-.sci-row b {
+.lab-row b {
   color: #f4f7ef;
   font-weight: 500;
   text-align: right;
 }
 
-.sci-about .sci-row {
+.lab-about .lab-row {
   font-size: 11px;
 }
 
-.sci-guide {
+.lab-guide {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -515,29 +526,29 @@ input {
   margin: 1px 0;
 }
 
-.sci-swatch {
+.lab-swatch {
   width: 10px;
   height: 10px;
   flex: none;
 }
 
-.sci-yes,
-.sci-no {
+.lab-yes,
+.lab-no {
   width: 12px;
   flex: none;
   font-weight: 600;
 }
 
-.sci-yes {
+.lab-yes {
   color: var(--green);
 }
 
-.sci-no {
+.lab-no {
   color: var(--red);
 }
 
-/* the toolbar: a hint, a view switch or the result on the left; the main action on the right */
-.sci-tool {
+/* the toolbar: a hint, a control or the result on the left; the main action on the right */
+.lab-tool {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -547,29 +558,37 @@ input {
   border-top: 1px solid var(--line);
 }
 
-.sci-left {
+.lab-left {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
-.sci-result {
+.lab-status {
   font-size: 13px;
   line-height: 1.5;
+  color: #7b8580;
 }
 
-.sci-result.ok {
+.lab-status.ok {
   color: var(--green);
 }
 
-.sci-result.partial {
+.lab-status.partial {
   color: var(--yellow);
 }
 
-.sci-switch {
+.lab-status.bad {
+  color: var(--red);
+}
+
+.lab-switch {
   display: inline-flex;
 }
 
-.sci-switch button {
+.lab-switch button {
   border: 1px solid #39453f;
   background: transparent;
   color: #dbe5dc;
@@ -577,18 +596,19 @@ input {
   cursor: pointer;
 }
 
-.sci-switch button.on {
+.lab-switch button.on {
   background: var(--green);
   border-color: var(--green);
   color: #070809;
 }
 
-.sci-choices {
+.lab-choices {
   display: flex;
   gap: 8px;
+  flex: 1;
 }
 
-.sci-choices .action {
+.lab-choices .action {
   flex: 1;
 }
 
@@ -666,39 +686,48 @@ input {
     font-size: 13px;
   }
 
-  /* science: the view full width, the panel's sections under it, the toolbar last */
-  .sci {
+  /* lab windows: the view full width, the panel's sections under it, the toolbar last */
+  .lab {
     gap: 12px;
   }
 
-  .sci > div:first-child > .eyebrow {
+  .lab > div:first-child > .eyebrow {
     display: none;
   }
 
-  .sci h1 {
+  .lab h1 {
     margin: 2px 0;
   }
 
-  .sci-body {
+  .lab-body {
     flex-direction: column;
     gap: 12px;
   }
 
-  .sci-stage {
+  .lab-stage {
+    flex: none;
     max-width: none;
   }
 
-  .sci-panel {
+  /* stacked, the box is as tall as its game rather than a fixed shape */
+  .lab-stage.boxed {
+    aspect-ratio: auto;
+    overflow: visible;
+    padding: 12px;
+  }
+
+  .lab-panel {
     flex: none;
     contain: none;
   }
 
-  .sci-tool {
+  .lab-tool {
     flex-wrap: wrap;
     padding-top: 12px;
   }
 
-  .sci-choices {
+  .lab-left,
+  .lab-choices {
     flex-wrap: wrap;
   }
 }

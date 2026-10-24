@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Header } from '../shared/ui.jsx';
+import { LabLayout, Status } from '../shared/layout.jsx';
 import { shuffle, usePhone } from '../shared/util.js';
 
 const PROCESS_POOL = [
@@ -142,16 +142,12 @@ export function Process() {
   const phone = usePhone(); // compact layout on phones: narrower columns, no status column, the command box on its own line
   const prompt = <span style={{ color: 'var(--green)' }}>ops@600:~/cluster$</span>;
   const tone = { muted: '#7b8580', warn: 'var(--yellow)', err: 'var(--red)', ok: 'var(--green)' };
-  return (
-    <>
-      <Header title="CPU OVERLOAD" sub={`CLUSTER LOAD ${load}% · ${purgedRunaways}/${RUNAWAY} RUNAWAYS PURGED`} />
-      <p className="instructions">
-        Some satellites in this cluster have runaway processes maxing out their CPU. Purge them, but leave heavy load from tasks in schedule.cfg
-        running. That's expected. Click lines or type IDs, then purge.
-      </p>
+  const view = (
       <div
         style={{
-          maxWidth: 720,
+          width: '100%',
+          boxSizing: 'border-box',
+          overflowY: 'auto',
           border: '1px solid #262d2b',
           background: '#070909',
           padding: phone ? '8px 10px' : '8px 12px',
@@ -242,14 +238,6 @@ export function Process() {
               padding: 0,
             }}
           />
-          <button
-            className="action"
-            onClick={purge}
-            disabled={phase !== 'run'}
-            style={{ padding: phone ? '7px 14px' : '3px 10px', fontSize: 11 }}
-          >
-            PURGE
-          </button>
         </div>
         {out.map(([text, kind], i) => (
           <div key={i} style={{ color: tone[kind] }}>
@@ -257,8 +245,32 @@ export function Process() {
           </div>
         ))}
       </div>
-      {phase === 'won' && <div className="success">RUNAWAY PROCESSES PURGED · CLUSTER LOAD NOMINAL</div>}
-      {phase === 'lost' && <div className="failure">{failMsg}</div>}
-    </>
+  );
+  return (
+    <LabLayout
+      eyebrow="Critical subsystem interaction"
+      title="CPU OVERLOAD"
+      signal={`CLUSTER LOAD ${load}% · ${purgedRunaways}/${RUNAWAY} RUNAWAYS PURGED`}
+      view={view}
+      boxed
+      brief="Purge the runaway processes. Leave the tasks listed in schedule.cfg running."
+      about="A stuck process can max out a flight computer and starve everything else, including the software that talks to the ground."
+      aboutLabel="About this fault"
+      left={<Status>CLICK LINES OR TYPE IDS</Status>}
+      right={
+        phase === 'run' && (
+          <button className="action" onClick={purge}>
+            PURGE
+          </button>
+        )
+      }
+      result={
+        phase === 'won' ? (
+          <Status tone="ok">RUNAWAY PROCESSES PURGED · CLUSTER LOAD NOMINAL</Status>
+        ) : (
+          phase === 'lost' && <Status tone="bad">{failMsg}</Status>
+        )
+      }
+    />
   );
 }

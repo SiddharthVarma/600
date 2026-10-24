@@ -409,7 +409,7 @@ export function Galaxies() {
       ]}
       left={
         phase !== 'done' && (
-          <div className="sci-choices">
+          <div className="lab-choices">
             {CHOICES.map((k, i) => (
               <button
                 key={k}

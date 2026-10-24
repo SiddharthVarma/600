@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Header, Result } from '../shared/ui.jsx';
+import { Execute, LabLayout, Status } from '../shared/layout.jsx';
 import { allSubsets, shuffle } from '../shared/util.js';
 
 export function Power() {
@@ -83,18 +83,8 @@ export function Power() {
   const stagedV = staged.reduce((s, i) => s + setup.voltages[i], 0);
   const ok = powered.length === 3;
 
-  return (
-    <>
-      <Header title="POWER BUS" sub="VOLTAGE OSCILLATION · MULTI-RAIL FEED REQUIRED" />
-      <p className="instructions">
-        Stage buses so their combined voltage lands in a load's range, then click the load to commit. Two loads need one bus each; the
-        leftover two pair for the third.
-      </p>
-      <svg
-        viewBox="0 0 620 340"
-        width="100%"
-        style={{ maxWidth: 720, display: 'block', margin: '12px 0', background: '#0c1210', border: '1px solid #34403a' }}
-      >
+  const view = (
+      <svg viewBox="0 0 620 340" width="100%" style={{ display: 'block' }}>
         {Object.entries(connections).flatMap(([li, busIdxs]) =>
           busIdxs.map(bi => {
             const y1 = busYs[bi] + 26,
@@ -171,22 +161,41 @@ export function Power() {
           SELECT BUS SOCKETS · THEN CLICK A LOAD TO COMMIT
         </text>
       </svg>
-      <div className="readout">
-        STAGED {stagedV}V · {staged.length} BUS{staged.length === 1 ? '' : 'ES'} SELECTED
-      </div>
-      <button
-        className="action"
-        onClick={() => {
-          setStaged([]);
-          setUsedBuses([]);
-          setConnections({});
-          setPowered([]);
-          setError('');
-        }}
-      >
-        CLEAR SELECTION
-      </button>
-      <Result ok={ok}>{ok ? 'POWER BUS BALANCED · ALL LOADS NOMINAL' : error || 'Select bus sockets, then commit them to a load.'}</Result>
-    </>
+  );
+  return (
+    <LabLayout
+      eyebrow="Critical subsystem interaction"
+      title="POWER BUS"
+      signal="VOLTAGE OSCILLATION · MULTI-RAIL FEED REQUIRED"
+      view={view}
+      boxed
+      brief="Stage buses until their voltage fits a load's range, then click the load."
+      live={[
+        ['Staged', `${stagedV} V`],
+        ['Buses selected', staged.length],
+        ['Loads powered', `${powered.length} / 3`],
+      ]}
+      about="Arrays, batteries and loads share separate power rails. When a rail oscillates, operators move loads between rails by hand until it settles."
+      aboutLabel="About this fault"
+      left={
+        <>
+          <button
+            className="action"
+            onClick={() => {
+              setStaged([]);
+              setUsedBuses([]);
+              setConnections({});
+              setPowered([]);
+              setError('');
+            }}
+          >
+            CLEAR SELECTION
+          </button>
+          <Status tone={error ? 'bad' : 'plain'}>{error || 'Select bus sockets, then commit them to a load.'}</Status>
+        </>
+      }
+      right={<Execute ready={ok} />}
+      result={ok && <Status tone="ok">POWER BUS BALANCED · ALL LOADS NOMINAL</Status>}
+    />
   );
 }
