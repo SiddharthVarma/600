@@ -1,8 +1,6 @@
 # Lessons learnt
 
-Problems found while play-testing Six Hundred, what caused them, how they were fixed, and why the fix works, plus the
-engineering practices and tools used to build it safely. Each entry ends with a one-line takeaway for explaining it in an
-interview.
+Problems found while play-testing Six Hundred, what caused them, how they were fixed, and why the fix works, plus the engineering practices and tools used to build it safely.
 
 ---
 
