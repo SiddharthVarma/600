@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, fitWidth, hudText, pixelFont, report } from './common.js';
+import { DOWNLINK_TIME, SCIENCE, blit, brackets, drawDownlink, hudText, pixelFont, report } from './common.js';
+import { ScienceLayout, ScienceResult } from './layout.jsx';
 import { BH, BW, rng } from './scenes.js';
 
 // Supernova search, the way transients are found: tonight's image of a patch of sky is blinked against an archive
@@ -7,7 +8,6 @@ import { BH, BW, rng } from './scenes.js';
 // galaxy, off its core, and has the same blurred shape as every star (the telescope's point-spread function). The
 // decoys are the classic false positives: an asteroid that moved between the frames, cosmic-ray hits (sharp specks in
 // one frame only, no blur), and a variable star that was there all along and just brightened.
-const FIT = fitWidth(BW * 4, BH * 4);
 const SCALE = 4,
   BLINK = 0.6, // seconds per frame while blinking
   NEAR = 6, // how close (scene pixels) a mark must be to count as that thing
@@ -238,36 +238,28 @@ export function Blink() {
     mly = Math.round((mpc * 3.2616) / 10) * 10;
 
   return (
-    <>
-      <div className="eyebrow">Hosted payload request</div>
-      <h1>{info.title}</h1>
-      <div className="signal" style={{ color: 'var(--blue)' }}>
-        {info.signal}
-      </div>
-      <p className="instructions">{info.text}</p>
-      <canvas
-        ref={canvasRef}
-        width={BW * SCALE}
-        height={BH * SCALE}
-        onPointerDown={tap}
-        style={{
-          width: '100%',
-          maxWidth: FIT,
-          display: 'block',
-          imageRendering: 'pixelated',
-          border: '1px solid #34403a',
-          background: '#000',
-          cursor: phase === 'look' ? 'crosshair' : 'default',
-          touchAction: 'none',
-        }}
-      />
-      <div className="actions" style={{ alignItems: 'center' }}>
+    <ScienceLayout
+      info={info}
+      view={
+        <canvas
+          ref={canvasRef}
+          width={BW * SCALE}
+          height={BH * SCALE}
+          onPointerDown={tap}
+          style={{ cursor: phase === 'look' ? 'crosshair' : 'default', touchAction: 'none' }}
+        />
+      }
+      live={[
+        ['View', views[view].toLowerCase()],
+        ['Candidate', mark ? 'marked' : 'none yet'],
+      ]}
+      left={
         <button className="action" onClick={() => setView(next[view])}>
           VIEW: {views[view]}
         </button>
-        <span className="eyebrow">{mark ? 'CANDIDATE MARKED' : 'TAP THE NEW STAR'}</span>
-        <span style={{ flex: 1 }} />
-        {phase === 'done' ? (
+      }
+      right={
+        phase === 'done' ? (
           <button className="action" onClick={() => report({ type: 'science-close' })}>
             DONE
           </button>
@@ -280,19 +272,21 @@ export function Blink() {
           >
             DOWNLINK
           </button>
-        )}
-      </div>
-      {phase === 'done' &&
+        )
+      }
+      result={
+        phase === 'done' &&
         (verdict === 'sn' ? (
-          <div className="success">
+          <ScienceResult ok>
             {info.uni} confirms a supernova · host galaxy at redshift z ≈ {field.z.toFixed(3)}, about{' '}
             {mly.toLocaleString('en-GB')} million light-years away
-          </div>
+          </ScienceResult>
         ) : (
-          <div className="failure" style={{ color: 'var(--yellow)' }}>
+          <ScienceResult>
             {info.uni} received your candidate · {VERDICT[verdict]}
-          </div>
-        ))}
-    </>
+          </ScienceResult>
+        ))
+      }
+    />
   );
 }

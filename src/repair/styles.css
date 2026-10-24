@@ -406,6 +406,192 @@ input {
   outline-offset: 5px;
 }
 
+/* ---- Science windows: one layout for every request ----
+   The title, then the view with its side panel beside it, then the toolbar, 24 px apart. The view takes the width
+   the panel leaves, capped so it never grows taller than the window allows. The panel is exactly as tall as the view
+   (it never sets the height itself) and holds the same four sections in every request. */
+.sci {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.sci h1 {
+  margin: 8px 0;
+}
+
+.sci-body {
+  display: flex;
+  gap: 24px;
+}
+
+.sci-stage {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: calc((100vh - 296px) * 1.6); /* 296 px: everything around the view, top to bottom */
+}
+
+.sci-stage canvas {
+  width: 100%;
+  display: block;
+  image-rendering: pixelated;
+  border: 1px solid #34403a;
+  background: #000;
+}
+
+.sci-panel {
+  flex: 0 0 268px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  background: #0a0d0c;
+  contain: size;
+  overflow: auto;
+}
+
+.sci-panel section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sci-panel section:last-child {
+  border-bottom: 0;
+}
+
+.sci-about {
+  margin-top: auto;
+}
+
+.sci-label {
+  color: #7b8580;
+  letter-spacing: 0.16em;
+  font-size: 10px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.sci-panel p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #98a19b;
+}
+
+.sci-about p {
+  margin-bottom: 8px;
+  font-size: 11.5px;
+}
+
+.sci-about a {
+  color: var(--blue);
+}
+
+.sci-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #98a19b;
+}
+
+.sci-row b {
+  color: #f4f7ef;
+  font-weight: 500;
+  text-align: right;
+}
+
+.sci-about .sci-row {
+  font-size: 11px;
+}
+
+.sci-guide {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #98a19b;
+  margin: 1px 0;
+}
+
+.sci-swatch {
+  width: 10px;
+  height: 10px;
+  flex: none;
+}
+
+.sci-yes,
+.sci-no {
+  width: 12px;
+  flex: none;
+  font-weight: 600;
+}
+
+.sci-yes {
+  color: var(--green);
+}
+
+.sci-no {
+  color: var(--red);
+}
+
+/* the toolbar: a hint, a view switch or the result on the left; the main action on the right */
+.sci-tool {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  min-height: 60px; /* the same with or without a button in it */
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.sci-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.sci-result {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.sci-result.ok {
+  color: var(--green);
+}
+
+.sci-result.partial {
+  color: var(--yellow);
+}
+
+.sci-switch {
+  display: inline-flex;
+}
+
+.sci-switch button {
+  border: 1px solid #39453f;
+  background: transparent;
+  color: #dbe5dc;
+  padding: 9px 14px;
+  cursor: pointer;
+}
+
+.sci-switch button.on {
+  background: var(--green);
+  border-color: var(--green);
+  color: #070809;
+}
+
+.sci-choices {
+  display: flex;
+  gap: 8px;
+}
+
+.sci-choices .action {
+  flex: 1;
+}
+
 /* ---- Phones (portrait) ----
    Only narrow touch screens; laptops never match, so their layout is untouched. The window's header and instructions get
    compact so the game itself gets the screen. */
@@ -478,5 +664,41 @@ input {
   .failure {
     padding: 7px 10px;
     font-size: 13px;
+  }
+
+  /* science: the view full width, the panel's sections under it, the toolbar last */
+  .sci {
+    gap: 12px;
+  }
+
+  .sci > div:first-child > .eyebrow {
+    display: none;
+  }
+
+  .sci h1 {
+    margin: 2px 0;
+  }
+
+  .sci-body {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sci-stage {
+    max-width: none;
+  }
+
+  .sci-panel {
+    flex: none;
+    contain: none;
+  }
+
+  .sci-tool {
+    flex-wrap: wrap;
+    padding-top: 12px;
+  }
+
+  .sci-choices {
+    flex-wrap: wrap;
   }
 }

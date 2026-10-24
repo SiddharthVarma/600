@@ -588,6 +588,11 @@ button.command:hover {
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
 }
 
+/* every science request shares one layout, so its window is cut to fit that layout exactly */
+#scienceFrame {
+  height: min(759px, 97vh);
+}
+
 .repair-close {
   position: absolute;
   top: 22px;
@@ -1068,7 +1073,8 @@ body:has(.repair-modal.show) .sudo.on {
     height: 100dvh;
   }
 
-  .repair-frame {
+  .repair-frame,
+  #scienceFrame {
     width: 100%;
     height: 100%;
     height: 100dvh;
