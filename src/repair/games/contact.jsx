@@ -125,32 +125,16 @@ export function Contact() {
   const trackPts = pass.track.map(([a, e]) => plot(a, e).join(',')).join(' ');
   const sigColor = view.sig >= THRESH ? '#c9ff4d' : view.sig > 40 ? '#ffd166' : '#ff5964';
   const lockPx = ((Math.sqrt(Math.log(100 / THRESH)) * SIGMA) / 90) * PR; // on-plot radius of the lock zone
-  const FRAME_DIR = '600_gn_antenna_pixel_frames/';
-  const FRAMES = [
-    { file: 'antenna_r01_f01.png', w: 96, h: 168 },
-    { file: 'antenna_r01_f02.png', w: 128, h: 168 },
-    { file: 'antenna_r01_f03.png', w: 128, h: 173 },
-    { file: 'antenna_r01_f04.png', w: 105, h: 176 },
-    { file: 'antenna_r01_f05.png', w: 103, h: 177 },
-    { file: 'antenna_r01_f06.png', w: 96, h: 186 },
-    { file: 'antenna_r01_f07.png', w: 93, h: 184 },
-    { file: 'antenna_r01_f08.png', w: 99, h: 176 },
-    { file: 'antenna_r01_f09.png', w: 103, h: 176 },
-    { file: 'antenna_r01_f10.png', w: 128, h: 170 },
-    { file: 'antenna_r01_f11.png', w: 128, h: 166 },
-    { file: 'antenna_r01_f12.png', w: 96, h: 159 },
-  ];
-  const fr = FRAMES[Math.round(ant[0] / 30) % 12];
   const bars = [20, 45, 70, 90];
 
   // where to label the predicted pass: beside the middle of its track
   const [lx, ly] = plot(...pass.track[Math.floor(pass.track.length / 2)]);
   const stage = (
-      <div style={{ display: 'flex', gap: 24, alignItems: 'center', justifyContent: 'center', height: '100%' }}>
         <svg
           viewBox="0 0 300 300"
+          width="100%"
           height="100%"
-          style={{ display: 'block', maxWidth: '100%', cursor: phase === 'search' ? 'crosshair' : 'default', touchAction: 'none' }}
+          style={{ display: 'block', cursor: phase === 'search' ? 'crosshair' : 'default', touchAction: 'none' }}
           onPointerDown={down}
           onPointerMove={move}
           onPointerUp={up}
@@ -203,24 +187,12 @@ export function Contact() {
           {view.truth &&
             (() => {
               const [tx, ty] = plot(...view.truth);
-              return (
-                <g>
-                  <circle cx={tx} cy={ty} r="10" fill="none" stroke={phase === 'locked' ? '#c9ff4d' : '#ff5964'} strokeWidth="1.5" />
-                  <image href="600_solar_assets/satellite.png" x={tx - 16} y={ty - 7} width="32" height={(32 * 644) / 1490} />
-                </g>
-              );
+              return <circle cx={tx} cy={ty} r="10" fill="none" stroke={phase === 'locked' ? '#c9ff4d' : '#ff5964'} strokeWidth="1.5" />;
             })()}
           {bars.map((th, i) => (
             <rect key={th} x={10 + i * 8} y={30 - (6 + i * 5)} width="5" height={6 + i * 5} fill={view.sig >= th ? '#c9ff4d' : '#2a332f'} />
           ))}
         </svg>
-        <div style={{ textAlign: 'center' }}>
-          <img src={FRAME_DIR + fr.file} alt="" style={{ height: 130, imageRendering: 'pixelated' }} />
-          <div style={{ fontSize: 11, color: '#89948d', letterSpacing: '.12em', marginTop: 8 }}>
-            AZ {Math.round(ant[0])}° · EL {Math.round(ant[1])}°
-          </div>
-        </div>
-      </div>
   );
   return (
     <LabLayout
