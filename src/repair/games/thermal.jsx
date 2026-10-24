@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Header, Result } from '../shared/ui.jsx';
+import { Execute, LabLayout, Status } from '../shared/layout.jsx';
 
 function buildThermalLayout(N, safes) {
   const nodes = { CORE: [35, 120], PUMP: [105, 120], PURGE: [105, 42] };
@@ -100,25 +100,11 @@ export function Thermal() {
       />
     );
   };
-  return (
-    <>
-      <Header title="THERMAL ROUTING" sub={`CORE ${temp}°C · COOLANT ${pressure} kPa`} />
-      <p className="instructions">
-        Drag a route from the core through the pump. At each of the {junctions} junctions, take the cooler valve. The hotter valve sends
-        coolant into the bypass. The purge line is a dead end.
-      </p>
+  const view = (
       <svg
         viewBox={`0 0 ${width} 240`}
         width="100%"
-        style={{
-          maxWidth: 760,
-          display: 'block',
-          margin: '12px 0',
-          background: '#0c1210',
-          border: '1px solid #34403a',
-          cursor: dragging ? 'grabbing' : 'crosshair',
-          touchAction: 'none',
-        }}
+        style={{ display: 'block', cursor: dragging ? 'grabbing' : 'crosshair', touchAction: 'none' }}
         onPointerDown={start}
         onPointerMove={follow}
         onPointerUp={() => setDragging(false)}
@@ -154,21 +140,37 @@ export function Thermal() {
           {dragging ? 'DRAGGING COOLANT FLOW' : 'HOLD ON CORE · TRACE THE SAFE ROUTE'}
         </text>
       </svg>
-      <div className="readout" style={{ color: temp > 70 ? 'var(--red)' : temp > 55 ? 'var(--yellow)' : 'var(--green)' }}>
-        CORE {temp}°C · PRESSURE {pressure} kPa
-      </div>
-      <button
-        className="action"
-        onClick={() => {
-          setPath([]);
-          setError('');
-        }}
-      >
-        RESET ROUTE
-      </button>
-      <Result ok={ok}>
-        {ok ? 'THERMAL LOOP STABLE · COOLANT FLOW CONFIRMED' : error || 'Drag a continuous coolant path through the system.'}
-      </Result>
-    </>
+  );
+  return (
+    <LabLayout
+      eyebrow="Critical subsystem interaction"
+      title="THERMAL ROUTING"
+      signal={`CORE ${temp}°C · COOLANT ${pressure} kPa`}
+      view={view}
+      boxed
+      brief="Drag from the core through the pump, taking the cooler valve at each junction."
+      live={[
+        ['Core', `${temp}°C`, temp > 70 ? 'var(--red)' : temp > 55 ? 'var(--yellow)' : 'var(--green)'],
+        ['Coolant', `${pressure} kPa`],
+      ]}
+      about="Electronics survive only a narrow range of temperatures, so coolant carries heat from the hottest parts to radiators."
+      aboutLabel="About this fault"
+      left={
+        <>
+          <button
+            className="action"
+            onClick={() => {
+              setPath([]);
+              setError('');
+            }}
+          >
+            RESET ROUTE
+          </button>
+          <Status tone={error ? 'bad' : 'plain'}>{error || 'Drag a continuous coolant path through the system.'}</Status>
+        </>
+      }
+      right={<Execute ready={ok} />}
+      result={ok && <Status tone="ok">THERMAL LOOP STABLE · COOLANT FLOW CONFIRMED</Status>}
+    />
   );
 }

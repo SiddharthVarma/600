@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Header } from '../shared/ui.jsx';
+import { LabLayout, Status } from '../shared/layout.jsx';
 
 export function Orbit() {
   const cx = 150,
@@ -241,25 +241,12 @@ export function Orbit() {
             : 'var(--yellow)'
         : 'var(--yellow)';
 
-  return (
-    <>
-      <Header title="ORBITAL BURN" sub="ORBIT DECAYING · TWO-BURN TRANSFER REQUIRED" />
-      <p className="instructions">
-        Drag to plot the transfer burn. Too much or too little delta-v misses the target orbit. Click EXECUTE BURN. When the satellite is
-        inside the insertion window, click FIRE CIRCULARIZATION BURN. The window narrows as you approach. If you miss it, plot the burn
-        again.
-      </p>
-      <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
+  const view = (
         <svg
           viewBox="0 0 300 300"
-          width="320"
-          height="320"
-          style={{
-            background: '#0c1210',
-            border: '1px solid #34403a',
-            cursor: stage === 'plot' && !locked ? 'crosshair' : 'default',
-            touchAction: 'none',
-          }}
+          width="100%"
+          height="100%"
+          style={{ display: 'block', cursor: stage === 'plot' && !locked ? 'crosshair' : 'default', touchAction: 'none' }}
           onPointerDown={start}
           onPointerMove={move}
           onPointerUp={release}
@@ -321,25 +308,23 @@ export function Orbit() {
             {captionText}
           </text>
         </svg>
-      </div>
-      <div className="readout" style={{ color: readoutColor }}>
-        {readoutText}
-      </div>
-      <div className="legend">
-        <span>
-          <i className="dot green" />
-          INSERTION WINDOW
-        </span>
-        <span>
-          <i className="dot redbg" />
-          MIN SAFE ALTITUDE
-        </span>
-      </div>
-      {stage === 'plot' && locked && (
-        <div className="actions">
-          <button className="action" onClick={() => setStage('approach')}>
-            EXECUTE BURN
-          </button>
+  );
+  return (
+    <LabLayout
+      eyebrow="Critical subsystem interaction"
+      title="ORBITAL BURN"
+      signal="ORBIT DECAYING · TWO-BURN TRANSFER REQUIRED"
+      view={view}
+      boxed
+      brief="Drag to plot the transfer burn and execute it. Then fire the circularization burn inside the insertion window."
+      live={[
+        ['Status', readoutText.toLowerCase(), readoutColor],
+        ['Burns', `${stage === 'plot' ? 0 : stage === 'success' ? 2 : 1} / 2`],
+      ]}
+      about="A Hohmann transfer raises an orbit with two burns: one stretches it into an ellipse, the second, at the top, makes it round again."
+      aboutLabel="About this fault"
+      left={
+        stage === 'plot' && locked ? (
           <button
             className="action"
             onClick={() => {
@@ -349,27 +334,33 @@ export function Orbit() {
           >
             REPLOT
           </button>
-        </div>
-      )}
-      {stage === 'coast' && (
-        <div className="actions">
-          <button
-            className="action"
-            style={{
-              borderColor: inWindow ? 'var(--green)' : nearWindow ? 'var(--yellow)' : '#39453f',
-              color: inWindow ? 'var(--green)' : nearWindow ? 'var(--yellow)' : '#85908a',
-            }}
-            onClick={fireCircularization}
-          >
-            FIRE CIRCULARIZATION BURN
+        ) : error && stage === 'plot' ? (
+          <Status tone="bad">{error}</Status>
+        ) : (
+          stage === 'plot' && <Status>DRAG TO PLOT</Status>
+        )
+      }
+      right={
+        stage === 'plot' && locked ? (
+          <button className="action" onClick={() => setStage('approach')}>
+            EXECUTE BURN
           </button>
-        </div>
-      )}
-      {stage === 'success' ? (
-        <div className="success">CIRCULARIZATION ACCURATE · ORBIT RAISED INTO HOME PLANE</div>
-      ) : error && stage === 'plot' ? (
-        <div className="failure">{error}</div>
-      ) : null}
-    </>
+        ) : (
+          stage === 'coast' && (
+            <button
+              className="action"
+              style={{
+                borderColor: inWindow ? 'var(--green)' : nearWindow ? 'var(--yellow)' : '#39453f',
+                color: inWindow ? 'var(--green)' : nearWindow ? 'var(--yellow)' : '#85908a',
+              }}
+              onClick={fireCircularization}
+            >
+              FIRE CIRCULARIZATION BURN
+            </button>
+          )
+        )
+      }
+      result={stage === 'success' && <Status tone="ok">CIRCULARIZATION ACCURATE · ORBIT RAISED INTO HOME PLANE</Status>}
+    />
   );
 }

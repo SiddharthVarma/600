@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Header } from '../shared/ui.jsx';
+import { LabLayout, Status } from '../shared/layout.jsx';
 
 export function Contact() {
   const MASK = 10,
@@ -143,24 +143,14 @@ export function Contact() {
   const fr = FRAMES[Math.round(ant[0] / 30) % 12];
   const bars = [20, 45, 70, 90];
 
-  return (
-    <>
-      <Header title="MISSED CONTACT" sub="STALE EPHEMERIS · BLIND ACQUISITION" />
-      <p className="instructions">
-        The plotted pass uses an old prediction, so the satellite is ahead of or behind it on the track. Drag the crosshair along the
-        track to find the signal. Hold on the signal to lock it before loss of signal (LOS).
-      </p>
-      <div style={{ display: 'flex', gap: 24, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', margin: '12px 0' }}>
+  // where to label the predicted pass: beside the middle of its track
+  const [lx, ly] = plot(...pass.track[Math.floor(pass.track.length / 2)]);
+  const stage = (
+      <div style={{ display: 'flex', gap: 24, alignItems: 'center', justifyContent: 'center', height: '100%' }}>
         <svg
           viewBox="0 0 300 300"
-          width="330"
-          height="330"
-          style={{
-            background: '#0c1210',
-            border: '1px solid #34403a',
-            cursor: phase === 'search' ? 'crosshair' : 'default',
-            touchAction: 'none',
-          }}
+          height="100%"
+          style={{ display: 'block', maxWidth: '100%', cursor: phase === 'search' ? 'crosshair' : 'default', touchAction: 'none' }}
           onPointerDown={down}
           onPointerMove={move}
           onPointerUp={up}
@@ -198,6 +188,13 @@ export function Contact() {
             30°
           </text>
           <polyline points={trackPts} fill="none" stroke="#55b6ff" strokeWidth="1.2" strokeDasharray="3 4" opacity=".7" />
+          {/* what the blue track and the red ring are, written on them */}
+          <text x={lx + 8} y={ly - 6} fontSize="7" fill="#55b6ff" opacity=".85">
+            PREDICTED PASS
+          </text>
+          <text x={PX} y={PY + PR - 4} textAnchor="middle" fontSize="6.5" fill="rgba(255,89,100,.8)" letterSpacing=".08em">
+            ELEVATION MASK
+          </text>
           <circle cx={px} cy={py} r="5" fill="none" stroke="#55b6ff" strokeWidth="1.5" />
           <circle cx={ax} cy={ay} r={(SIGMA / 90) * PR} fill="none" stroke={sigColor} strokeWidth=".8" opacity=".35" />
           <circle cx={ax} cy={ay} r={lockPx} fill="none" stroke={sigColor} strokeWidth="1.8" />
@@ -222,38 +219,35 @@ export function Contact() {
           <div style={{ fontSize: 11, color: '#89948d', letterSpacing: '.12em', marginTop: 8 }}>
             AZ {Math.round(ant[0])}° · EL {Math.round(ant[1])}°
           </div>
-          <div style={{ fontSize: 11, color: '#89948d', letterSpacing: '.12em', marginTop: 4 }}>
-            {phase === 'search'
-              ? `PREDICTED LOS IN ${Math.max(0, Math.ceil(pass.D - view.t))}s`
-              : phase === 'locked'
-                ? 'TRACKING'
-                : 'LOSS OF SIGNAL'}
-          </div>
         </div>
       </div>
-      <div className="readout" style={{ color: sigColor }}>
-        SIGNAL {Math.round(view.sig)}% ·{' '}
-        {phase === 'locked' ? 'LOCKED' : view.sig >= THRESH ? 'HOLD STEADY · LOCKING' : dragging ? 'SLEWING' : 'SEARCHING'}
-      </div>
-      <div className="bar">
-        <i style={{ width: `${view.prog * 100}%`, background: 'var(--blue)', transition: 'none' }} />
-      </div>
-      <div className="legend">
-        <span>
-          <i className="dot bluebg" />
-          PREDICTED PASS
-        </span>
-        <span>
-          <i className="dot green" />
-          ANTENNA · LOCK ZONE
-        </span>
-        <span>
-          <i className="dot redbg" />
-          ELEVATION MASK
-        </span>
-      </div>
-      {phase === 'locked' && <div className="success">DOWNLINK ESTABLISHED · TELEMETRY RECEIVED</div>}
-      {phase === 'los' && <div className="failure">LOSS OF SIGNAL · PASS SET BEFORE LOCK</div>}
-    </>
+  );
+  return (
+    <LabLayout
+      eyebrow="Critical subsystem interaction"
+      title="MISSED CONTACT"
+      signal="STALE EPHEMERIS · BLIND ACQUISITION"
+      view={stage}
+      boxed
+      brief="Search along the track for the signal and hold on it to lock before LOS."
+      live={[
+        [
+          'Signal',
+          `${Math.round(view.sig)}% · ${phase === 'locked' ? 'locked' : view.sig >= THRESH ? 'locking' : dragging ? 'slewing' : 'searching'}`,
+          sigColor,
+        ],
+        ['LOS in', phase === 'search' ? `${Math.max(0, Math.ceil(pass.D - view.t))} s` : phase === 'locked' ? 'tracking' : 'lost'],
+      ]}
+      about="Dishes point using a predicted orbit. When it's out of date, the satellite isn't where the dish expects."
+      aboutLabel="About this fault"
+      left={<Status>DRAG TO SEARCH</Status>}
+      result={
+        phase === 'locked' ? (
+          <Status tone="ok">DOWNLINK ESTABLISHED · TELEMETRY RECEIVED</Status>
+        ) : (
+          phase === 'los' && <Status tone="bad">LOSS OF SIGNAL · PASS SET BEFORE LOCK</Status>
+        )
+      }
+    />
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Header } from '../shared/ui.jsx';
+import { LabLayout, Status } from '../shared/layout.jsx';
 
 export function Solar() {
   const CHARGE_RATE = 100 / 9,
@@ -119,24 +119,12 @@ export function Solar() {
     SUN_H = (SUN_W * 345) / 520;
   const [bx, by] = polar(angle, 118);
 
-  return (
-    <>
-      <Header title="SOLAR ALIGNMENT" sub="ARRAY OFFLINE · BATTERY DEPLETED" />
-      <p className="instructions">
-        Drag the dial to point the array at the Sun. Power is highest when the array faces the Sun directly. It falls quickly as the
-        array turns away.
-      </p>
-      <div style={{ display: 'grid', placeItems: 'center', margin: '12px 0' }}>
+  const view = (
         <svg
           viewBox="0 0 300 300"
-          width="320"
-          height="320"
-          style={{
-            background: 'radial-gradient(circle,#0e1614,#070809 70%)',
-            border: '1px solid #34403a',
-            cursor: done || failed ? 'default' : 'grab',
-            touchAction: 'none',
-          }}
+          width="100%"
+          height="100%"
+          style={{ display: 'block', cursor: done || failed ? 'default' : 'grab', touchAction: 'none' }}
           onPointerDown={steerStart}
           onPointerMove={steerMove}
           onPointerUp={steerEnd}
@@ -183,28 +171,30 @@ export function Solar() {
             {done ? 'ARRAY CHARGED' : failed ? 'BATTERY DEPLETED' : dragging ? 'STEERING' : `OUTPUT ${Math.round(efficiency * 100)}%`}
           </text>
         </svg>
-      </div>
-      <div className="readout" style={{ color: failed ? 'var(--red)' : glowColor }}>
-        BATTERY {Math.round(charge)}% · OUTPUT {Math.round(efficiency * 100)}% · OFFSET {Math.round(offset)}°
-      </div>
-      <div className="bar">
-        <i style={{ width: `${charge}%`, background: failed ? 'var(--red)' : glowColor }} />
-      </div>
-      <div className="legend">
-        <span>
-          <i className="dot yellowbg" />
-          PANEL OUTPUT
-        </span>
-        <span>
-          <i className="dot green" />
-          CHARGING
-        </span>
-      </div>
-      {done ? (
-        <div className="success">ARRAY CHARGED · BATTERY ONLINE</div>
-      ) : failed ? (
-        <div className="failure">BATTERY FULLY DEPLETED · ARRAY OFFLINE · SATELLITE LOST</div>
-      ) : null}
-    </>
+  );
+  return (
+    <LabLayout
+      eyebrow="Critical subsystem interaction"
+      title="SOLAR ALIGNMENT"
+      signal="ARRAY OFFLINE · BATTERY DEPLETED"
+      view={view}
+      boxed
+      brief="Drag the dial to point the array at the Sun."
+      live={[
+        ['Battery', `${Math.round(charge)}%`, failed ? 'var(--red)' : glowColor],
+        ['Output', `${Math.round(efficiency * 100)}%`],
+        ['Offset', `${Math.round(offset)}°`],
+      ]}
+      about="A panel's power drops as it turns away from the Sun, and side-on it makes nothing."
+      aboutLabel="About this fault"
+      left={<Status>DRAG THE DIAL</Status>}
+      result={
+        done ? (
+          <Status tone="ok">ARRAY CHARGED · BATTERY ONLINE</Status>
+        ) : (
+          failed && <Status tone="bad">BATTERY FULLY DEPLETED · ARRAY OFFLINE · SATELLITE LOST</Status>
+        )
+      }
+    />
   );
 }
