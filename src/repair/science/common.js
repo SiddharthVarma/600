@@ -143,12 +143,9 @@ export const SCIENCE = {
     title: 'SUPERNOVA SEARCH',
     signal: 'TRANSIENT SURVEY · ARCHIVE VS TONIGHT',
     brief: "Tonight's image flicks with an older one. Tap the new star, then downlink.",
-    guide: [
-      [1, '#ffffff', 'New since the archive: the star'],
-      [0, '#ffd166', 'Moves between them: an asteroid'],
-      [0, '#c58cff', 'One sharp pixel: a cosmic ray'],
-    ],
-    about: 'A supernova fades within weeks. Catching one early lets bigger telescopes study it.',
+    guide: [],
+    about:
+      "A supernova fades within weeks, so catching one early matters. Type Ia supernovae are standard candles: they all peak at nearly the same brightness, so how faint one looks tells us how far away it is. Measuring them is how astronomers found that the universe's expansion is speeding up.",
     facts: [['Survey', 'tonight vs archive']],
     uni: 'University of Surrey',
     coords: sky,
