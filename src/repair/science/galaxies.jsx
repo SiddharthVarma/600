@@ -163,14 +163,12 @@ function render(seed, makeLight) {
   return img;
 }
 
-// The thing that isn't a galaxy, or not only one. A galaxy, and behind it something large, slowly writhing: a deep
-// purple silhouette with a bright purple rim. Where the galaxy is dark (the lanes between a spiral's arms, the sky
-// around a disc) it shows plainly; under the galaxy's bright light it shows through only faintly. It hides behind one
-// of two:
-// - an edge-on disc with a dark dust lane: its body behind the bright bulge, six tentacles reaching up over the disc
-//   and four hanging down below it;
-// - a big spiral, nearly face on: its body just behind the core, seven tentacles reaching out all round it, through
-//   the lanes and out past the rim.
+// The thing that isn't a galaxy, or not only one. A galaxy, and wrapped through it something large, slowly writhing: a
+// deep purple silhouette with a dim purple rim. Its body sits in front of the galaxy's bright core, a dark heart, with
+// six tentacles reaching up over the galaxy and four hanging down below it. The tentacles weave through the galaxy:
+// each starts behind it and passes in front, then behind, then in front again along its length. In front, it blocks
+// the galaxy's light; behind, it shows through the bright parts only faintly (in the dark ones it's plain either way).
+// It hides in one of two: an edge-on disc with a dark dust lane, or a big spiral, nearly face on.
 const THING_FILL = [28, 10, 42],
   THING_RIM = [132, 80, 170];
 // a displayed colour back into light, so after tone mapping it shows as that colour
@@ -208,12 +206,12 @@ function makeThing(seed, disguise) {
     thick = 3;
     plain = glow => glow < 0.3; // shows plainly wherever the disc is dim: above and below it, and in the dust lane
   } else {
-    // the spiral: the body just off its core, the arms all round it
-    const side = r() * Math.PI * 2;
+    // the spiral: the same arrangement, a little larger to match the bigger galaxy, tilted a little either way
+    const tilt = (r() - 0.5) * 0.4;
     light = spiral(rng(seed + 1), 0, 0, 1.8, true);
-    body = { x: BW / 2 + Math.cos(side) * 4, y: BH / 2 + Math.sin(side) * 2.5, rad: 7 };
-    arms = fan(7, side, 6, 95, 0.05);
-    thick = 3.6;
+    body = { x: BW / 2, y: BH / 2, rad: 8 };
+    arms = [...fan(6, -Math.PI / 2 + tilt, 2.2, 74, 0.04), ...fan(4, Math.PI / 2 + tilt, 2.0, 64, 0.04)];
+    thick = 3.4;
     // plainly in the dark lanes between the spiral's arms, and anywhere out past its rim
     plain = (glow, x, y) => glow < 0.32 || Math.hypot(x - BW / 2, (y - BH / 2) * 1.35) > 46;
   }
@@ -222,7 +220,8 @@ function makeThing(seed, disguise) {
     noise = Float32Array.from({ length: BW * BH }, rng(seed + 2)),
     img = new ImageData(BW, BH),
     d = img.data,
-    mask = new Uint8Array(BW * BH);
+    mask = new Uint8Array(BW * BH),
+    front = new Uint8Array(BW * BH); // the parts of it in front of the galaxy
   // the light, baked once: the galaxy in front, and the deep field behind (stars, and faint galaxies much further off)
   const glow = (cx, cy, sd, b, col) => {
     for (let y = Math.max(0, Math.floor(cy - 3 * sd)); y <= Math.min(BH - 1, cy + 3 * sd); y++)
@@ -239,46 +238,55 @@ function makeThing(seed, disguise) {
   for (let i = 0; i < BW * BH; i++) gal.set(light((i % BW) - BW / 2, ((i / BW) | 0) - BH / 2), i * 3);
   const fill = unTone(THING_FILL),
     rimLight = unTone(THING_RIM);
-  const stamp = (cx, cy, rad) => {
+  const stamp = (cx, cy, rad, inFront) => {
     const R = Math.ceil(rad) + 1;
     for (let dy = -R; dy <= R; dy++)
       for (let dx = -R; dx <= R; dx++) {
         const x = Math.round(cx + dx),
           y = Math.round(cy + dy);
-        if (x >= 0 && y >= 0 && x < BW && y < BH && dx * dx + dy * dy <= rad * rad + rad * 0.6) mask[y * BW + x] = 1;
+        if (x >= 0 && y >= 0 && x < BW && y < BH && dx * dx + dy * dy <= rad * rad + rad * 0.6) {
+          mask[y * BW + x] = 1;
+          front[y * BW + x] = inFront ? 1 : 0;
+        }
       }
   };
   return t => {
     mask.fill(0);
-    stamp(body.x, body.y, body.rad);
-    stamp(body.x + 3, body.y - 3, body.rad * 0.75);
-    stamp(body.x - 3, body.y + 3, body.rad * 0.8);
-    arms.forEach(arm => {
+    front.fill(0);
+    arms.forEach((arm, k) => {
       let a = arm.a,
         x = body.x,
         y = body.y;
       for (let s = 0; s < arm.len; s++) {
         const f = s / arm.len;
-        a += Math.sin(t * 1.1 + f * 6 + arm.ph) * 0.045 * arm.wig + arm.curl * f;
+        // the writhe, unhurried
+        a += Math.sin(t * 0.77 + f * 6 + arm.ph) * 0.045 * arm.wig + arm.curl * f;
         x += Math.cos(a);
         y += Math.sin(a);
-        stamp(x, y, 0.6 + thick * Math.pow(1 - f, 1.15));
+        // the weave: behind the galaxy for its first stretch, then in front, behind, in front, staggered arm to arm
+        stamp(x, y, 0.6 + thick * Math.pow(1 - f, 1.15), Math.floor((s + k * 3) / 14) % 2 === 1);
       }
     });
+    // the body last, in front of everything
+    stamp(body.x, body.y, body.rad, true);
+    stamp(body.x + 3, body.y - 3, body.rad * 0.75, true);
+    stamp(body.x - 3, body.y + 3, body.rad * 0.8, true);
     for (let i = 0, p = 0; i < mask.length; i++, p += 4) {
       const x = i % BW,
         y = (i / BW) | 0,
         on = mask[i],
         rim = !on && ((x > 0 && mask[i - 1]) || (x < BW - 1 && mask[i + 1]) || (y > 0 && mask[i - BW]) || (y < BH - 1 && mask[i + BW])),
-        // under the galaxy's bright light it shows through faintly: a dithered 30% of its pixels
-        faint = !plain(gal[i * 3] + gal[i * 3 + 1] + gal[i * 3 + 2], x, y) && bay(x, y) > 0.3,
+        inFront =
+          front[i] || (x > 0 && front[i - 1]) || (x < BW - 1 && front[i + 1]) || (y > 0 && front[i - BW]) || (y < BH - 1 && front[i + BW]),
+        // behind the galaxy, under its bright light it shows through faintly: a dithered 30% of its pixels
+        faint = !inFront && !plain(gal[i * 3] + gal[i * 3 + 1] + gal[i * 3 + 2], x, y) && bay(x, y) > 0.3,
         n = (noise[i] - 0.5) * 0.04,
         dith = (bay(x, y) - 0.5) / 10;
-      // the light that reaches us: its rim, its body with the galaxy's light over it, or the deep field and galaxy where
-      // it isn't, tone mapped and dithered the same way as every other galaxy
+      // the light that reaches us: its rim; its body, with the galaxy's light over it where it's behind and none where it's
+      // in front; or the deep field and galaxy where it isn't. Tone mapped and dithered like every other galaxy.
       for (let k = 0; k < 3; k++) {
         const g = gal[i * 3 + k],
-          lin = rim && !faint ? rimLight[k] + g * 0.5 : on && !faint ? fill[k] + g : sky[i * 3 + k] + g,
+          lin = rim && !faint ? rimLight[k] + g * 0.5 : on && !faint ? fill[k] + (front[i] ? 0 : g) : sky[i * 3 + k] + g,
           v = 1 - Math.exp(-(lin + n + 0.02) * 2.2);
         d[p + k] = Math.round(Math.max(0, Math.min(1, Math.round(v * 10 + dith * 10) / 10)) * 255);
       }
