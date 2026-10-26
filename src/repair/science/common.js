@@ -169,12 +169,7 @@ export const SCIENCE = {
     title: 'GALAXY CLASSIFICATION',
     signal: 'DEEP FIELD · SORT BY SHAPE',
     brief: 'Sort each galaxy by its shape. Classify all 12.',
-    guide: [
-      [1, '#c9d3ff', 'Spiral: arms winding out'],
-      [1, '#9ab0ff', 'Irregular: lumpy, no symmetry'],
-      [1, '#ffe2a8', 'Elliptical: smooth oval'],
-      [1, '#dfe6ff', 'Disk: a thin edge-on line'],
-    ],
+    guide: [],
     about: 'Galaxies sorted by eye train the ML models that classify millions more. Check out this cool paper on CNNs being used to classify galaxies:',
     cite: ['Varma et al. (2022)', 'https://academic.oup.com/mnras/article/509/2/2654/6425754'],
     facts: [], // the paper takes their room
