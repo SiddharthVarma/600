@@ -89,11 +89,7 @@ export const SCIENCE = {
     title: 'AIRCRAFT RECOGNITION',
     signal: 'ARMS CONTROL VERIFICATION · DEFENCE SURVEY',
     brief: 'Count the aircraft that match the target card. Tap each one, then downlink your count.',
-    guide: [
-      [1, '#9aa3ad', 'The type on the target card'],
-      [0, '#3a3f44', 'Any other aircraft'],
-      [0, '#d9c25a', 'Ground vehicles'],
-    ],
+    guide: [],
     about:
       'Unfortunately, military contracts pay really well. Counting the type of aircraft the Ministry of Defence asks us to will help pay for our next launch.',
     facts: [['Sensor', 'optical · 0.5 m/px']],
@@ -125,10 +121,7 @@ export const SCIENCE = {
     title: 'DARK SHIP TRACKING',
     signal: 'ILLEGAL FISHING · AIS CROSS-CHECK',
     brief: 'Watch for position pings. Mark every ship that stays silent, then downlink.',
-    guide: [
-      [1, '#ff5964', 'No ping: a dark ship'],
-      [0, '#55b6ff', 'Pings every few seconds'],
-    ],
+    guide: [],
     about: 'Some ships switch off their position beacon to fish illegally inside the Galápagos Marine Reserve.',
     facts: [
       ['Sensor', 'radar (SAR) + AIS'],
@@ -180,10 +173,7 @@ export const SCIENCE = {
     title: 'INTERSTELLAR OBJECT TRACKING',
     signal: 'OBJECT 2026 A1 · VISITOR FROM ANOTHER STAR',
     brief: 'Keep the object inside the reticle until all its data is recorded.',
-    guide: [
-      [1, '#ffffff', 'The fast-moving object: keep it centred'],
-      [0, '#9aa3a6', 'Background stars'],
-    ],
+    guide: [],
     about: 'Only three objects from another star have ever been seen: ʻOumuamua, Borisov and 3I/ATLAS. This is the fourth.',
     facts: [
       ['Orbit', 'hyperbolic · unbound'],

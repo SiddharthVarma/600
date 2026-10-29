@@ -1,5 +1,5 @@
 import { activeFaults, scheduleAnomaly, trySpawnAnomaly } from './anomalies.js';
-import { activeEvent, eventHeld, eventIncoming } from './events/core.js';
+import { activeEvent, eventHeld, eventIncoming, eventsResting } from './events/core.js';
 import { scheduleKraken, triggerKraken } from './events/creature.js';
 import { scheduleDebris, triggerDebris } from './events/debris.js';
 import { scheduleFlare, triggerFlare } from './events/flare.js';
@@ -69,7 +69,8 @@ function tick() {
   } else if (stage === 'warm') {
     if (t >= warmEnd) return goBusy();
     if (!faults.length && t >= until) trySpawnAnomaly(1);
-    if (t >= nextEvent && !eventBusy()) {
+    // an event that comes due during the quiet spell after the creature waits for it to end, rather than being skipped
+    if (t >= nextEvent && !eventBusy() && !eventsResting()) {
       EVENTS[Math.floor(Math.random() * EVENTS.length)]();
       nextEvent = t + between(120, 180);
     }
