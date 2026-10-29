@@ -89,11 +89,7 @@ export const SCIENCE = {
     title: 'AIRCRAFT RECOGNITION',
     signal: 'ARMS CONTROL VERIFICATION · DEFENCE SURVEY',
     brief: 'Count the aircraft that match the target card. Tap each one, then downlink your count.',
-    guide: [
-      [1, '#9aa3ad', 'The type on the target card'],
-      [0, '#3a3f44', 'Any other aircraft'],
-      [0, '#d9c25a', 'Ground vehicles'],
-    ],
+    guide: [],
     about:
       'Unfortunately, military contracts pay really well. Counting the type of aircraft the Ministry of Defence asks us to will help pay for our next launch.',
     facts: [['Sensor', 'optical · 0.5 m/px']],
@@ -106,11 +102,7 @@ export const SCIENCE = {
     title: 'OIL SPILL TRACKING',
     signal: 'MARINE POLLUTION · RADAR SURVEY',
     brief: 'Switch to radar to see through cloud. Tap each slick, then downlink.',
-    guide: [
-      [1, '#1d2328', 'Long, narrow, dark: a slick'],
-      [0, '#2c3540', 'Broad and dark: calm water'],
-      [0, '#e0e0e0', 'Bright dots: ships, rigs'],
-    ],
+    guide: [],
     about: "Oil smooths the sea's ripples, so radar sees a slick as a dark streak, day or night, through cloud.",
     facts: [
       ['Sensor', 'radar (SAR) · 5 m/px'],
@@ -125,10 +117,7 @@ export const SCIENCE = {
     title: 'DARK SHIP TRACKING',
     signal: 'ILLEGAL FISHING · AIS CROSS-CHECK',
     brief: 'Watch for position pings. Mark every ship that stays silent, then downlink.',
-    guide: [
-      [1, '#ff5964', 'No ping: a dark ship'],
-      [0, '#55b6ff', 'Pings every few seconds'],
-    ],
+    guide: [],
     about: 'Some ships switch off their position beacon to fish illegally inside the Galápagos Marine Reserve.',
     facts: [
       ['Sensor', 'radar (SAR) + AIS'],
@@ -154,10 +143,7 @@ export const SCIENCE = {
     title: 'EXOPLANET TRANSIT SEARCH',
     signal: 'TRANSIT PHOTOMETRY · WATCHING ONE STAR',
     brief: 'Tap each dip in brightness as it scrolls past. Three dips pin down the orbit.',
-    guide: [
-      [1, '#55b6ff', 'A short, flat-bottomed dip: a transit'],
-      [0, '#ffd166', 'Sudden upward spike: a flare'],
-    ],
+    guide: [],
     about: "The dip's depth gives the planet's size; the gap between dips gives the length of its year.",
     facts: [
       ['Method', 'transit photometry'],
@@ -180,10 +166,7 @@ export const SCIENCE = {
     title: 'INTERSTELLAR OBJECT TRACKING',
     signal: 'OBJECT 2026 A1 · VISITOR FROM ANOTHER STAR',
     brief: 'Keep the object inside the reticle until all its data is recorded.',
-    guide: [
-      [1, '#ffffff', 'The fast-moving object: keep it centred'],
-      [0, '#9aa3a6', 'Background stars'],
-    ],
+    guide: [],
     about: 'Only three objects from another star have ever been seen: ʻOumuamua, Borisov and 3I/ATLAS. This is the fourth.',
     facts: [
       ['Orbit', 'hyperbolic · unbound'],

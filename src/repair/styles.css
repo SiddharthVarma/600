@@ -532,21 +532,6 @@ input {
   flex: none;
 }
 
-.lab-yes,
-.lab-no {
-  width: 12px;
-  flex: none;
-  font-weight: 600;
-}
-
-.lab-yes {
-  color: var(--green);
-}
-
-.lab-no {
-  color: var(--red);
-}
-
 /* the toolbar: a hint, a control or the result on the left; the main action on the right */
 .lab-tool {
   display: flex;

@@ -28,6 +28,8 @@ export const eventActive = () => !!activeEvent && activeEvent.phase === 'running
 export const windowsBlocked = () => eventActive() || (!!activeEvent && activeEvent.kind === 'kraken');
 // no new celestial event while one is live or on its way (a flare builds up for a few seconds before it has a ticket)
 export const eventBusy = () => !!activeEvent || eventIncoming || state.intro;
+// the quiet spell after the creature: no new celestial event until it's over (everyday faults have their own, shorter one)
+export const eventsResting = () => performance.now() < state.eventsAfter;
 export function setEventIncoming(v) {
   eventIncoming = v;
 }
@@ -233,8 +235,10 @@ export function resolveEvent(saved) {
   // saved: ids of the satellites that came through
   const ev = activeEvent;
   if (!ev) return;
-  // a breather once any event is over: no new fault for 10 s, so the result is read before the next ticket arrives
-  state.faultsAfter = performance.now() + 10000;
+  // a breather once any event is over: no new fault for 10 s, so the result is read before the next ticket arrives.
+  // After the creature, the climax, a longer one: no fault for 30 s, and no other celestial event for 2 minutes.
+  state.faultsAfter = performance.now() + (ev.kind === 'kraken' ? 30000 : 10000);
+  if (ev.kind === 'kraken') state.eventsAfter = performance.now() + 120000;
   if (ev.kind === 'kraken') {
     const now = performance.now();
     kraken.tentacles.forEach(tn => {

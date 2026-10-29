@@ -1,5 +1,5 @@
 import { H, W, ctx, satellites } from '../constellation.js';
-import { EVENTS, activeEvent, eventBusy, eventIncoming, holdForWindow, setEventIncoming, startEvent } from './core.js';
+import { EVENTS, activeEvent, eventBusy, eventIncoming, eventsResting, holdForWindow, setEventIncoming, startEvent } from './core.js';
 
 export function scheduleGRB() {
   setTimeout(
@@ -30,7 +30,7 @@ const BUILD_MS = 2200,
 let grb = null; // { t0, burstAt, endAt }
 
 export function triggerGRB() {
-  if (eventBusy() || holdForWindow(triggerGRB)) return;
+  if (eventBusy() || eventsResting() || holdForWindow(triggerGRB)) return;
   setEventIncoming(true);
   grb = { t0: performance.now(), burstAt: 0, endAt: 0 };
   setTimeout(burst, BUILD_MS);

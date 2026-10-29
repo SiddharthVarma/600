@@ -313,7 +313,6 @@ export function Galaxies() {
   });
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState([]);
-  const [streak, setStreak] = useState(0);
   const [flash, setFlash] = useState(null); // the last answer, shown briefly: { ok, kind }
   const [phase, setPhase] = useState('sort'); // sort → downlink → done
   const live = useRef({});
@@ -380,7 +379,6 @@ export function Galaxies() {
     const truth = deck[index].kind,
       ok = kind === truth;
     setAnswers([...answers, ok]);
-    setStreak(ok ? streak + 1 : 0);
     setFlash({ ok, kind: truth, chose: kind });
     // a moment to see whether you were right, then the next galaxy. The thing behind the galaxy lingers, still writhing,
     // so there's time to see what was there.
@@ -411,9 +409,7 @@ export function Galaxies() {
       info={info}
       view={<canvas ref={canvasRef} width={BW * SCALE} height={BH * SCALE} />}
       live={[
-        ['Classified', `${answers.length} / ${COUNT}`],
         ['Right', correct],
-        ['Streak', streak],
       ]}
       left={
         phase !== 'done' && (
