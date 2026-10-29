@@ -102,11 +102,7 @@ export const SCIENCE = {
     title: 'OIL SPILL TRACKING',
     signal: 'MARINE POLLUTION · RADAR SURVEY',
     brief: 'Switch to radar to see through cloud. Tap each slick, then downlink.',
-    guide: [
-      [1, '#1d2328', 'Long, narrow, dark: a slick'],
-      [0, '#2c3540', 'Broad and dark: calm water'],
-      [0, '#e0e0e0', 'Bright dots: ships, rigs'],
-    ],
+    guide: [],
     about: "Oil smooths the sea's ripples, so radar sees a slick as a dark streak, day or night, through cloud.",
     facts: [
       ['Sensor', 'radar (SAR) · 5 m/px'],
@@ -147,10 +143,7 @@ export const SCIENCE = {
     title: 'EXOPLANET TRANSIT SEARCH',
     signal: 'TRANSIT PHOTOMETRY · WATCHING ONE STAR',
     brief: 'Tap each dip in brightness as it scrolls past. Three dips pin down the orbit.',
-    guide: [
-      [1, '#55b6ff', 'A short, flat-bottomed dip: a transit'],
-      [0, '#ffd166', 'Sudden upward spike: a flare'],
-    ],
+    guide: [],
     about: "The dip's depth gives the planet's size; the gap between dips gives the length of its year.",
     facts: [
       ['Method', 'transit photometry'],

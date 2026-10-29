@@ -56,10 +56,9 @@ export function LabLayout({
           {guide.length > 0 && (
             <section>
               <div className="lab-label">Guide</div>
-              {guide.map(([counts, colour, text]) => (
+              {guide.map(([, colour, text]) => (
                 <div className="lab-guide" key={text}>
                   <span className="lab-swatch" style={{ background: colour }} />
-                  <span className={counts ? 'lab-yes' : 'lab-no'}>{counts ? '✓' : '✗'}</span>
                   {text}
                 </div>
               ))}
