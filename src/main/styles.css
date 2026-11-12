@@ -37,6 +37,7 @@
   --warn: #ffd166;
   --danger: #ff5964;
   --science: #55b6ff;
+  --ground: #5fd3c4;
   --font-ui: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
   --font-pixel: 'Departure Mono', 'IBM Plex Mono', monospace;
 }
@@ -175,6 +176,163 @@ canvas {
   opacity: 0.4;
   cursor: default;
   animation: none;
+}
+
+.gain.spend {
+  color: var(--muted);
+}
+
+/* GROUND-UI: the stations online, read like the satellite count; trouble shows as a button like LAUNCH, in teal, by the
+   credits it spends */
+.gcount {
+  margin-left: 0.6em;
+  color: var(--muted);
+  font: 13px var(--font-ui);
+  letter-spacing: 0.08em;
+  vertical-align: middle;
+}
+
+.launch.ground {
+  border-color: var(--ground);
+  color: var(--ground);
+  animation-name: ground-ready;
+}
+
+.launch.ground i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 8px var(--danger);
+}
+
+.launch.ground:hover,
+.launch.ground.on {
+  background: var(--ground);
+  color: #061412;
+}
+
+/* only offline stations left: nothing to pay for, so no glow */
+.launch.ground.quiet,
+.launch.ground.on {
+  animation: none;
+}
+
+@keyframes ground-ready {
+  50% {
+    box-shadow: 0 0 14px rgba(95, 211, 196, 0.45);
+  }
+}
+
+.gdrop {
+  position: fixed;
+  z-index: 17;
+  width: 330px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gdrop.show {
+  display: flex;
+}
+
+.alert.ground {
+  cursor: default;
+  border-color: rgba(95, 211, 196, 0.45);
+}
+
+/* the tickets drop down from the button, and fold back up into it */
+.gdrop .alert {
+  transform-origin: top;
+  animation: gdrop-in 0.25s cubic-bezier(0.22, 0.8, 0.2, 1);
+}
+
+.gdrop .alert.out {
+  animation: gdrop-out 0.3s forwards;
+}
+
+@keyframes gdrop-in {
+  from {
+    transform: translateY(-12px) scaleY(0.9);
+    opacity: 0;
+  }
+}
+
+@keyframes gdrop-out {
+  to {
+    transform: translateY(-12px) scaleY(0.9);
+    opacity: 0;
+  }
+}
+
+.alert.ground .alert-app,
+.alert.ground .alert-title {
+  color: var(--ground);
+}
+
+.alert.ground.crit {
+  border-color: rgba(255, 89, 100, 0.5);
+}
+
+.alert.ground.crit .alert-title {
+  color: var(--danger);
+}
+
+.alert.ground.crit .g-more,
+.alert.ground.crit .g-act {
+  display: none;
+}
+
+.g-more {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.g-act {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 10px;
+}
+
+.g-fix {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--ground);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ground);
+  font: 12px var(--font-ui);
+  letter-spacing: 0.08em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.g-fix:hover:not(:disabled) {
+  background: var(--ground);
+  color: #061412;
+}
+
+.g-fix:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.g-note {
+  color: #7b8580;
+  font-size: 12px;
+}
+
+.g-note.short {
+  color: var(--danger);
 }
 
 @keyframes launch-ready {
@@ -1004,6 +1162,26 @@ body:has(.repair-modal.show) .sudo.on {
   .alert-x,
   .alerts:not(.expanded) .alert.folded {
     display: none;
+  }
+
+  /* no room beside the name on a phone: the GROUND ISSUE button still shows when it matters */
+  .gcount {
+    display: none;
+  }
+
+  /* the ground tickets keep their full text: they only show when asked for */
+  .gdrop {
+    left: 12px !important;
+    right: 12px;
+    width: auto;
+  }
+
+  .gdrop .alert {
+    padding: 10px 12px;
+  }
+
+  .gdrop .alert-body {
+    display: block;
   }
 
   .alert-title {
