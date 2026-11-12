@@ -68,7 +68,9 @@ document.querySelector('.purse').prepend(btn);
 document.body.append(drop);
 let issues = [], // { inc, el, left, offline }
   bag = [],
-  next = 0;
+  next = 0,
+  shown = false; // an incident has turned up this visit (SUDO's walkthrough brings the first, or pacing does)
+export const groundShown = () => shown;
 
 // incidents come out of a shuffled bag, so none repeats until the rest have had a turn
 function draw() {
@@ -92,6 +94,7 @@ export function triggerGround() {
   const issue = { inc, el, left: GRACE, offline: false, born: Date.now() };
   el.querySelector('.g-fix').onclick = () => fix(issue);
   issues.push(issue);
+  shown = true;
   drop.prepend(el);
   render();
 }
@@ -153,7 +156,8 @@ document.addEventListener('click', e => {
 });
 addEventListener('resize', () => drop.classList.contains('show') && toggle(true));
 
-// Pacing brings the first incident itself, before the first celestial event, then calls startGround(); after that they
+// SUDO's walkthrough brings the first incident (or, if it was skipped, pacing does, before the first celestial event);
+// pacing then calls startGround(), and after that they
 // come on their own, one at a time, never during an event or the creature, nor in the breather after one (the same as
 // faults), nor while SUDO's walkthrough is replaying. Nor while a window (a repair, science request, launch or
 // emergency, or the dive into one) is open, where the button can't be seen: one that comes due then waits until a few

@@ -2,18 +2,25 @@ import { spawnAnomaly } from './anomalies.js';
 import { alertElFor, alertElForEvent } from './alerts.js';
 import { H, W, ringProgress, satellites } from './constellation.js';
 import { activeEvent } from './events/core.js';
+import { groundOpen, groundReady, triggerGround } from './ground.js';
 import { startPacing } from './pacing.js';
 import { panel } from './panel.js';
 import { pushScience } from './science.js';
 import { state } from './state.js';
 
 // SUDO, the satellite's sarcastic onboard computer, walks the player through their first fault: the ticket, its
-// terminal, the repair, then the first science request. It watches what the player does rather than blocking anything;
+// terminal, the repair, then the first science request and the first ground station incident. It watches what the player does rather than blocking anything;
 // while it runs, random faults, science requests and celestial events wait, and the tutorial fault's countdown is
 // frozen until its repair is open. It opens every visit (skip ends it); the corner "?" replays it.
 const PHONE = matchMedia('(max-width: 600px) and (pointer: coarse)'),
   NUDGE_AFTER = 15000, // long enough to read, look around and work it out before SUDO points
-  TYPE_SPEED = 45; // characters per second
+  TYPE_SPEED = 45, // characters per second
+  GROUND_AFTER = 3000, // the pause between closing the first science window and the first ground incident
+  GROUND_SEEN = 'sixhundred.groundSeen',
+  GROUND_LINE =
+    'Satellites are useless without the dishes that talk to them. One of ours just broke. Click GROUND ISSUE. Pay to fix it, or that station goes offline for a minute. Short on credits? Complete more hosted payload requests.';
+// The walkthrough: the first fault (welcome to done or failed), the first science request, then the first ground
+// station incident a few seconds after its window closes, and goodbye.
 const STEPS = {
   welcome: {
     line: "Hi! Welcome to your first night shift in mission control. 600 satellites, one sleepy you. Nothing's on fire yet.",
@@ -36,6 +43,9 @@ const STEPS = {
     next: 'hide',
   },
   sciencePlaying: {},
+  groundWait: {},
+  ground: { line: GROUND_LINE },
+  groundPlaying: {},
   bye: { line: "Bigger things turn up later. You'll see... Good luck!", next: 'finish' },
 };
 const say = s => (PHONE.matches ? s.replace(/\bClick\b/g, 'Tap').replace(/\bclick\b/g, 'tap') : s);
@@ -53,7 +63,8 @@ let bubble = null,
   opening = 0;
 const repairOpen = () => document.getElementById('repairModal').classList.contains('show'),
   scienceOpen = () => document.getElementById('scienceModal').classList.contains('show') || !!document.querySelector('.dive.on');
-const satOpen = () => state.selected === sat && panel.classList.contains('open');
+const satOpen = () => state.selected === sat && panel.classList.contains('open'),
+  groundBtn = () => document.getElementById('groundBtn');
 
 let full = '';
 function show(line) {
@@ -113,13 +124,15 @@ function go(name) {
     playing: () => (sat.frozen = false),
     aborted: () => (sat.frozen = true),
     science: () => {
-      // the walkthrough's done its job: the game carries on from here. SUDO's goodbye waits for the first science
-      // window to be opened and closed. Until the penguin request is opened, it's the only one: others wait.
+      // the game carries on from here, while SUDO waits for the first science window to be opened and closed, then
+      // brings the first ground incident, then says goodbye. Until the penguin request is opened, it's the only one.
       pushScience('penguins', true);
       state.sudoScience = true;
       release();
     },
     sciencePlaying: () => (state.sudoScience = false),
+    // SUDO has explained the ground button here, so its one-off tip (below) needn't
+    ground: () => remember(GROUND_SEEN),
   })[name]?.();
 }
 // where the bubble sits: next to whatever it's talking about
@@ -135,6 +148,11 @@ function place() {
     // phones: along the bottom, or the top when the bottom is busy (the science card, the side panel's terminal)
     x = 12;
     y = step === 'science' || step === 'terminal' || step === 'aborted' ? 74 : innerHeight - bh - 16;
+  } else if (step === 'ground' && spot) {
+    // under the button, right-aligned to it, where the tickets will drop down
+    const r = spot.getBoundingClientRect();
+    x = r.right - bw;
+    y = r.bottom + 14;
   } else if ((step === 'ticket' || step === 'science') && spot) {
     const r = spot.getBoundingClientRect();
     x = r.right + 16;
@@ -170,7 +188,21 @@ function tick() {
     spotlight(document.getElementById('science'));
     if (scienceOpen()) go('sciencePlaying');
   } else if (step === 'sciencePlaying') {
-    if (!scienceOpen()) go('bye');
+    if (!scienceOpen()) go('groundWait');
+  } else if (step === 'groundWait') {
+    // pacing may have brought one already, if the science request waited a long time to be opened
+    if (groundOpen()) go('ground');
+    else if (waited > GROUND_AFTER && groundReady()) {
+      triggerGround();
+      go('ground');
+    }
+  } else if (step === 'ground') {
+    spotlight(groundBtn());
+    if (groundBtn().classList.contains('on')) go('groundPlaying');
+    else if (!groundOpen()) go('bye');
+  } else if (step === 'groundPlaying') {
+    // fixed, gone offline, or the tickets folded away
+    if (!groundOpen() || !groundBtn().classList.contains('on')) go('bye');
   }
   if (bubble.classList.contains('on')) place();
 }
@@ -228,10 +260,11 @@ const HINTS = [
     btn: () => document.getElementById('launch'),
     done: b => b.hidden || state.launch,
   },
+  // for when the walkthrough was skipped before it got to the ground station
   {
-    seen: 'sixhundred.groundSeen',
-    line: 'Satellites are useless without the dishes that talk to them. One of ours just broke. Click GROUND ISSUE. Pay to fix it, or that station goes offline for a minute. Short on credits? Complete more hosted payload requests.',
-    btn: () => document.getElementById('groundBtn'),
+    seen: GROUND_SEEN,
+    line: GROUND_LINE,
+    btn: groundBtn,
     done: b => b.hidden || b.classList.contains('on'),
   },
 ];
@@ -241,6 +274,13 @@ function hintSeen(h) {
     return !!localStorage.getItem(h.seen);
   } catch {
     return false;
+  }
+}
+function remember(key) {
+  try {
+    localStorage.setItem(key, '1');
+  } catch {
+    // no storage: it may show again next visit
   }
 }
 function closeHint() {
@@ -260,11 +300,7 @@ const hintPoll = setInterval(() => {
   const busy = bubble || state.intro || document.querySelector('.repair-modal.show') || document.querySelector('.dive.on');
   const h = !busy && left.find(h => h.btn() && !h.btn().hidden && !h.btn().disabled && !h.done(h.btn()));
   if (!h) return;
-  try {
-    localStorage.setItem(h.seen, '1');
-  } catch {
-    // no storage: it may show again next visit
-  }
+  remember(h.seen);
   const btn = h.btn(),
     el = document.createElement('div');
   el.className = 'sudo on';
