@@ -114,7 +114,12 @@ function render() {
   count.textContent = `· GROUND ${n - down}/${n}`;
   // an offline station is still an issue, so its ticket stays reachable; the button glows while one can be fixed
   btn.hidden = !issues.length;
-  btn.innerHTML = `${open ? '<i></i>' : ''}${issues.length} GROUND ISSUE${issues.length > 1 ? 'S' : ''} ▾`;
+  // rebuilt only when it changes, so a press on the dot isn't lost to it being swapped out mid-click
+  const label = `${open ? '<i></i>' : ''}${issues.length} GROUND ISSUE${issues.length > 1 ? 'S' : ''} ▾`;
+  if (label !== btn.dataset.label) {
+    btn.dataset.label = label;
+    btn.innerHTML = label;
+  }
   btn.classList.toggle('quiet', !open);
   issues.forEach(i => {
     const fixable = !i.offline && balance() >= cost(i.inc);
@@ -149,14 +154,18 @@ document.addEventListener('click', e => {
 addEventListener('resize', () => drop.classList.contains('show') && toggle(true));
 
 // Pacing brings the first incident itself, before the first celestial event, then calls startGround(); after that they
-// come on their own, one at a time, never during an event or the creature. Nor while a window (a repair, science
-// request, launch or emergency, or the dive into one) is open, where the button can't be seen: one that comes due then
-// waits until a few seconds after it closes.
+// come on their own, one at a time, never during an event or the creature, nor in the breather after one (the same as
+// faults), nor while SUDO's walkthrough is replaying. Nor while a window (a repair, science request, launch or
+// emergency, or the dive into one) is open, where the button can't be seen: one that comes due then waits until a few
+// seconds after it closes.
 const AFTER_WINDOW = 4000;
 let windowAt = 0, // when a window was last seen open
   started = false;
 const windowOpen = () => state.science || state.launch || !!document.querySelector('.repair-modal.show, .dive.on');
-export const groundReady = (t = performance.now()) => !activeEvent && !eventIncoming && !eventHeld() && t - windowAt >= AFTER_WINDOW;
+export function groundReady(t = performance.now()) {
+  if (windowOpen()) windowAt = t;
+  return !activeEvent && !eventIncoming && !eventHeld() && !state.intro && t >= state.faultsAfter && t - windowAt >= AFTER_WINDOW;
+}
 // an incident still waiting to be fixed (one that's gone offline no longer holds anything up)
 export const groundOpen = () => issues.some(i => !i.offline);
 export function startGround() {
@@ -171,7 +180,7 @@ setInterval(() => {
     i.left = OFFLINE;
   });
   const t = performance.now();
-  if (windowOpen()) windowAt = t;
+  groundReady(t); // notes an open window even when nothing's due
   if (!next && started) next = t + between(90, 150);
   if (next && t >= next && quiet(t) && !groundOpen()) {
     triggerGround();
