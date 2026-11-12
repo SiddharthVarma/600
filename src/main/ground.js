@@ -1,6 +1,5 @@
 import { balance, COIN, spend } from './credits.js';
 import { activeEvent, eventHeld, eventIncoming } from './events/core.js';
-import { pacingStage } from './pacing.js';
 import { state } from './state.js';
 import { UPLINK_STATIONS } from './terminal.js';
 
@@ -149,14 +148,21 @@ document.addEventListener('click', e => {
 });
 addEventListener('resize', () => drop.classList.contains('show') && toggle(true));
 
-// New incidents start once the first celestial event is over, one at a time, never during an event or the creature.
-// Nor while a window (a repair, science request, launch or emergency, or the dive into one) is open, where the button
-// can't be seen: one that comes due then waits until a few seconds after it closes.
+// Pacing brings the first incident itself, before the first celestial event, then calls startGround(); after that they
+// come on their own, one at a time, never during an event or the creature. Nor while a window (a repair, science
+// request, launch or emergency, or the dive into one) is open, where the button can't be seen: one that comes due then
+// waits until a few seconds after it closes.
 const AFTER_WINDOW = 4000;
-let windowAt = 0; // when a window was last seen open
+let windowAt = 0, // when a window was last seen open
+  started = false;
 const windowOpen = () => state.science || state.launch || !!document.querySelector('.repair-modal.show, .dive.on');
-const quiet = t =>
-  ['calm', 'warm', 'busy'].includes(pacingStage()) && !activeEvent && !eventIncoming && !eventHeld() && t - windowAt >= AFTER_WINDOW;
+export const groundReady = (t = performance.now()) => !activeEvent && !eventIncoming && !eventHeld() && t - windowAt >= AFTER_WINDOW;
+// an incident still waiting to be fixed (one that's gone offline no longer holds anything up)
+export const groundOpen = () => issues.some(i => !i.offline);
+export function startGround() {
+  started = true;
+}
+const quiet = t => started && groundReady(t);
 setInterval(() => {
   issues.slice().forEach(i => {
     if (--i.left > 0) return;
@@ -166,8 +172,8 @@ setInterval(() => {
   });
   const t = performance.now();
   if (windowOpen()) windowAt = t;
-  if (!next && quiet(t)) next = t + between(30, 60);
-  if (next && t >= next && quiet(t) && !issues.some(i => !i.offline)) {
+  if (!next && started) next = t + between(90, 150);
+  if (next && t >= next && quiet(t) && !groundOpen()) {
     triggerGround();
     next = t + between(90, 150);
   }

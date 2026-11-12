@@ -230,7 +230,7 @@ const HINTS = [
   },
   {
     seen: 'sixhundred.groundSeen',
-    line: 'Satellites are useless without the dishes that talk to them. One of ours just broke. Click GROUND ISSUE. Pay to fix it, or that station goes offline for a minute.',
+    line: 'Satellites are useless without the dishes that talk to them. One of ours just broke. Click GROUND ISSUE. Pay to fix it, or that station goes offline for a minute. Short on credits? Complete more hosted payload requests.',
     btn: () => document.getElementById('groundBtn'),
     done: b => b.hidden || b.classList.contains('on'),
   },
