@@ -1,6 +1,7 @@
 import { balance, COIN, spend } from './credits.js';
 import { activeEvent, eventHeld, eventIncoming } from './events/core.js';
 import { pacingStage } from './pacing.js';
+import { state } from './state.js';
 import { UPLINK_STATIONS } from './terminal.js';
 
 // GROUND-UI: trouble at the ground stations. The top bar counts the stations online, and a GROUND ISSUE button by the
@@ -148,8 +149,14 @@ document.addEventListener('click', e => {
 });
 addEventListener('resize', () => drop.classList.contains('show') && toggle(true));
 
-// New incidents start once the first celestial event is over, one at a time, never during an event or the creature
-const quiet = () => ['calm', 'warm', 'busy'].includes(pacingStage()) && !activeEvent && !eventIncoming && !eventHeld();
+// New incidents start once the first celestial event is over, one at a time, never during an event or the creature.
+// Nor while a window (a repair, science request, launch or emergency, or the dive into one) is open, where the button
+// can't be seen: one that comes due then waits until a few seconds after it closes.
+const AFTER_WINDOW = 4000;
+let windowAt = 0; // when a window was last seen open
+const windowOpen = () => state.science || state.launch || !!document.querySelector('.repair-modal.show, .dive.on');
+const quiet = t =>
+  ['calm', 'warm', 'busy'].includes(pacingStage()) && !activeEvent && !eventIncoming && !eventHeld() && t - windowAt >= AFTER_WINDOW;
 setInterval(() => {
   issues.slice().forEach(i => {
     if (--i.left > 0) return;
@@ -158,8 +165,9 @@ setInterval(() => {
     i.left = OFFLINE;
   });
   const t = performance.now();
-  if (!next && quiet()) next = t + between(30, 60);
-  if (next && t >= next && quiet() && !issues.some(i => !i.offline)) {
+  if (windowOpen()) windowAt = t;
+  if (!next && quiet(t)) next = t + between(30, 60);
+  if (next && t >= next && quiet(t) && !issues.some(i => !i.offline)) {
     triggerGround();
     next = t + between(90, 150);
   }
