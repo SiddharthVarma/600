@@ -23,6 +23,7 @@ import { closeRepair, launchers, startIfReady } from './launcher.js';
 import { replayIntro, startIntro } from './intro.js';
 import { closePanel, panel, renderCountdown, renderSat } from './panel.js';
 import { closeLaunch, earn, launchMessage, resetCredits } from './credits.js';
+import { resetGround, triggerGround } from './ground.js';
 import { closeScience, pushScience, resetScience, scheduleScience, scienceMessage } from './science.js';
 import { state } from './state.js';
 import { touchScroll } from '../shared/touchscroll.js';
@@ -64,6 +65,7 @@ document.getElementById('restartAll').onclick = () => {
   resetScience();
   closeLaunch();
   resetCredits();
+  resetGround();
   resetEvents();
   resetCreature();
   document.getElementById('gameOver').classList.remove('show');
@@ -209,6 +211,7 @@ Object.assign(window, {
   triggerDebris,
   triggerGRB,
   triggerKraken,
+  triggerGround,
   trySpawnAnomaly,
   pushAnomalyAlert,
   pushScience,

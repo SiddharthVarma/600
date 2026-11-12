@@ -42,6 +42,17 @@ export function earn(n) {
   purse.append(gain);
   setTimeout(() => gain.remove(), 1600);
 }
+export const balance = () => credits;
+// paying for a ground station fix: the cost floats off the coin count
+export function spend(n) {
+  credits -= n;
+  render();
+  const loss = document.createElement('span');
+  loss.className = 'gain spend';
+  loss.textContent = `-${n}`;
+  purse.append(loss);
+  setTimeout(() => loss.remove(), 1600);
+}
 export function resetCredits() {
   credits = 0;
   render();
