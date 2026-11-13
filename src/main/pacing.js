@@ -4,14 +4,15 @@ import { scheduleKraken, triggerKraken } from './events/creature.js';
 import { scheduleDebris, triggerDebris } from './events/debris.js';
 import { scheduleFlare, triggerFlare } from './events/flare.js';
 import { scheduleGRB, triggerGRB } from './events/grb.js';
-import { groundOpen, groundReady, startGround, triggerGround } from './ground.js';
+import { groundOpen, groundReady, groundShown, startGround, triggerGround } from './ground.js';
 import { pushScience } from './science.js';
 
 // Pacing: how a visit ramps up, so there's time to read, enjoy and do, and something new keeps turning up. Once SUDO
 // hands over (or is skipped):
-//   opening  faults one at a time until two have come and gone (SUDO's guided fault counts as the first)
-//   ground   then the first ground station incident, on a quiet screen so it's seen; the next stage waits until it's
-//            fixed or the station has gone offline. Incidents come on their own after that
+//   opening  faults one at a time until two have come and gone (SUDO's guided fault came before, and isn't counted)
+//   ground   SUDO's walkthrough has brought the first ground station incident by now; if it was skipped, it comes here,
+//            on a quiet screen so it's seen. The next stage waits until it's fixed or the station has gone offline.
+//            Incidents come on their own after that
 //   event    then the first celestial event: a random flare, gamma-ray burst or debris field, never the creature
 //   calm     90–120 s of quiet once it's over, with a fresh science request: no faults
 //   warm     about six minutes of single faults with 45–75 s gaps; celestial events every 2–3 minutes, and the
@@ -27,8 +28,7 @@ let stage = null,
   warmEnd = 0,
   nextEvent = 0,
   tries = [], // events still to try for the first one: one may not be possible right then (a flare needs sunlit satellites)
-  ended = 0,
-  groundShown = false;
+  ended = 0;
 const live = new Set(); // faults under way, to notice when one ends
 
 function tick() {
@@ -48,11 +48,8 @@ function tick() {
       until = t + 10;
     } else if (!faults.length && t >= until) trySpawnAnomaly(1);
   } else if (stage === 'ground') {
-    if (!groundShown) {
-      if (t >= until && groundReady()) {
-        triggerGround();
-        groundShown = true;
-      }
+    if (!groundShown()) {
+      if (t >= until && groundReady()) triggerGround();
     } else if (!groundOpen()) {
       stage = 'event';
       until = t + 10;

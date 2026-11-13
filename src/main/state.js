@@ -6,6 +6,7 @@
 // faultsAfter: no new everyday fault before this time (performance.now()), e.g. a breather after the creature leaves.
 // eventsAfter: likewise for celestial events: none before this time.
 // sudoScience: SUDO is introducing the first science request, so no other request arrives until it's been opened.
+// krakenDue: the creature is due but waiting for the open fault tickets to clear; no new faults meanwhile.
 export const state = {
   selected: null,
   highlighted: [],
@@ -16,4 +17,5 @@ export const state = {
   faultsAfter: 0,
   eventsAfter: 0,
   sudoScience: false,
+  krakenDue: false,
 };
