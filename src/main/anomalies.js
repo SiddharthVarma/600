@@ -21,8 +21,8 @@ export const MAX_CONCURRENT_ANOMALIES = 2,
 export const activeFaults = () => satellites.filter(s => s.anomaly && !EVENT_TYPES.includes(s.anomalyType));
 export function trySpawnAnomaly(max = MAX_CONCURRENT_ANOMALIES) {
   // no new faults from the moment a celestial event is on its way until it's over (eventBusy covers the intro too);
-  // faults already open carry on
-  if (eventBusy() || performance.now() < state.faultsAfter) return;
+  // faults already open carry on. Nor while the creature is due and waiting for the open ones to clear
+  if (eventBusy() || state.krakenDue || performance.now() < state.faultsAfter) return;
   if (activeFaults().length < max) {
     const available = satellites.filter(s => !s.lost && !s.anomaly && !s.rejoining),
       s = available[Math.floor(Math.random() * available.length)];

@@ -1,6 +1,7 @@
 import { pushAlert, satTag } from '../alerts.js';
 import { H, W, ctx, point, satellites, updateNetwork } from '../constellation.js';
-import { activeEvent, eventBusy, holdForWindow, pulse, resolveEvent, startEvent } from './core.js';
+import { state } from '../state.js';
+import { activeEvent, EVENT_TYPES, eventBusy, holdForWindow, pulse, resolveEvent, startEvent } from './core.js';
 
 // Tentacle event: no window and no procedure. Tentacles reach in from the screen edges for real satellites. Click a
 // tentacle to zap it back (it returns angrier and takes more hits); if one grabs a satellite, click the satellite fast
@@ -325,8 +326,16 @@ export function scheduleKraken() {
     600000 + Math.random() * 300000,
   );
 } // rare, so it stays a surprise
+// The creature never arrives on top of a fault ticket: when it comes due with one open, it waits (state.krakenDue, which
+// holds back new faults meanwhile) until the open ones are fixed or lost, then comes.
+const faultsOpen = () => satellites.some(s => s.anomaly && !EVENT_TYPES.includes(s.anomalyType));
 export function triggerKraken() {
   if (eventBusy() || holdForWindow(triggerKraken)) return;
+  if (faultsOpen()) {
+    state.krakenDue = true;
+    return;
+  }
+  state.krakenDue = false;
   // prey only from rings 7 and 9: they orbit the same way, so tentacles chasing them don't sweep into each other
   const pool = satellites.filter(s => !s.lost && !s.anomaly && !s.rejoining && (s.ring === 7 || s.ring === 9)),
     picked = [];
@@ -336,7 +345,10 @@ export function triggerKraken() {
   kraken.nextSpawn = performance.now() + 1200;
 }
 
+setInterval(() => state.krakenDue && !faultsOpen() && triggerKraken(), 1000);
+
 export function resetCreature() {
+  state.krakenDue = false;
   kraken.tentacles = [];
   kraken.sparks = [];
   satellites.forEach(s => {

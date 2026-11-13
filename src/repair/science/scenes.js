@@ -849,8 +849,8 @@ function flamingos(B, r) {
 const clamp01 = v => Math.max(0, Math.min(1, v));
 const AIRCRAFT = {
   delta: {
-    name: 'DELTA-WING FIGHTER',
-    plural: 'delta-wing fighters',
+    name: 'DELTA FIGHTER',
+    plural: 'delta fighters',
     L: 10,
     color: [112, 118, 124],
     pts(L) {
@@ -909,8 +909,8 @@ const AIRCRAFT = {
     },
   },
   drone: {
-    name: 'RECONNAISSANCE DRONE',
-    plural: 'reconnaissance drones',
+    name: 'RECON DRONE',
+    plural: 'recon drones',
     L: 8,
     color: [184, 186, 188],
     pts() {
@@ -945,8 +945,8 @@ const AIRCRAFT = {
     },
   },
   transport: {
-    name: 'TRANSPORT AIRCRAFT',
-    plural: 'transport aircraft',
+    name: 'TRANSPORT PLANE',
+    plural: 'transport planes',
     L: 18,
     color: [204, 206, 208],
     pts() {
