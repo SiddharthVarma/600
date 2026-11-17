@@ -168,7 +168,6 @@ export function ReactionWheel() {
   );
   return (
     <LabLayout
-      eyebrow="Critical subsystem interaction"
       title="REACTION WHEEL FAULT"
       signal={`WHEEL ${setup.failedIdx + 1} OFFLINE · UNCOMMANDED TUMBLE`}
       view={view}

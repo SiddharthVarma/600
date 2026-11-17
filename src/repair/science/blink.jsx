@@ -136,11 +136,10 @@ export function Blink() {
   const canvasRef = useRef(null);
   const [field] = useState(() => makeField(Math.floor(Math.random() * 1e9)));
   const [phase, setPhase] = useState('look'); // look → downlink → done
-  const [view, setView] = useState('blink'); // blink | tonight | reference
   const [mark, setMark] = useState(null);
   const [verdict, setVerdict] = useState(null);
   const live = useRef({});
-  live.current = { phase, view, mark, verdict };
+  live.current = { phase, mark, verdict };
   const sentAt = useRef(0);
 
   useEffect(() => {
@@ -154,8 +153,9 @@ export function Blink() {
     const loop = () => {
       const now = performance.now() / 1000,
         t = now - t0,
-        { phase, view, mark, verdict } = live.current,
-        showTonight = view === 'tonight' || (view === 'blink' && Math.floor(t / BLINK) % 2 === 1);
+        { phase, mark, verdict } = live.current,
+        // always blinking between the two: the new star is the thing that flickers
+        showTonight = Math.floor(t / BLINK) % 2 === 1;
       blit(ctx, buf, showTonight ? field.tonight : field.reference);
       if (mark && phase !== 'done') {
         ctx.strokeStyle = 'rgba(85,182,255,.95)';
@@ -232,9 +232,7 @@ export function Blink() {
     sentAt.current = performance.now() / 1000;
     setPhase('downlink');
   };
-  const views = { blink: 'BLINKING', tonight: 'TONIGHT ONLY', reference: 'ARCHIVE ONLY' },
-    next = { blink: 'tonight', tonight: 'reference', reference: 'blink' },
-    mpc = (C * field.z) / H0,
+  const mpc = (C * field.z) / H0,
     mly = Math.round((mpc * 3.2616) / 10) * 10;
 
   return (
@@ -249,27 +247,14 @@ export function Blink() {
           style={{ cursor: phase === 'look' ? 'crosshair' : 'default', touchAction: 'none' }}
         />
       }
-      live={[
-        ['View', views[view].toLowerCase()],
-        ['Candidate', mark ? 'marked' : 'none yet'],
-      ]}
-      left={
-        <button className="action" onClick={() => setView(next[view])}>
-          VIEW: {views[view]}
-        </button>
-      }
+      live={[['Candidate', mark ? 'marked' : 'none yet']]}
       right={
         phase === 'done' ? (
           <button className="action" onClick={() => report({ type: 'science-close' })}>
             DONE
           </button>
         ) : (
-          <button
-            className="action"
-            disabled={phase !== 'look' || !mark}
-            style={phase !== 'look' || !mark ? { opacity: 0.4 } : {}}
-            onClick={downlink}
-          >
+          <button className="action" disabled={phase !== 'look' || !mark} onClick={downlink}>
             DOWNLINK
           </button>
         )

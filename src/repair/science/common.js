@@ -50,17 +50,14 @@ export const SCIENCE = {
   wildfire: {
     title: 'WILDFIRE HOTSPOT TRACKING',
     signal: 'AMAZON RAINFOREST · ACTIVE FIRE SURVEY',
-    brief: 'Switch to thermal to see through the smoke. Tap each active fire, then downlink.',
+    brief: 'Switch to thermal to see through the smoke. Tap each fire, then downlink.',
     guide: [
       [1, '#ff7a3a', 'Bright hotspot in thermal: an active fire'],
       [0, '#c9a77a', 'Warm rooftops'],
       [0, '#8a8f8a', 'Smoke (visible only)'],
     ],
     about: 'Most Amazon fires are set to clear forest. Fire counts show where clearing is happening this week.',
-    facts: [
-      ['Sensor', 'visible + thermal IR (4 µm)'],
-      ['Region', 'southern Amazon'],
-    ],
+    facts: [['Sensor', 'visible + thermal IR']],
     uni: 'Brazilian Fire Research Center',
     noun: ['fire', 'fires'],
     earthAt: [64, 92],

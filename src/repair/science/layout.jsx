@@ -4,7 +4,6 @@ import { LabLayout, Status, ViewSwitch } from '../shared/layout.jsx';
 export function ScienceLayout({ info, ...rest }) {
   return (
     <LabLayout
-      eyebrow="Hosted payload request"
       title={info.title}
       signal={info.signal}
       signalColor="var(--blue)"

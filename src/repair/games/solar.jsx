@@ -174,7 +174,6 @@ export function Solar() {
   );
   return (
     <LabLayout
-      eyebrow="Critical subsystem interaction"
       title="SOLAR ALIGNMENT"
       signal="ARRAY OFFLINE · BATTERY DEPLETED"
       view={view}

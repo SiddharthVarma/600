@@ -196,7 +196,6 @@ export function Contact() {
   );
   return (
     <LabLayout
-      eyebrow="Critical subsystem interaction"
       title="MISSED CONTACT"
       signal="STALE EPHEMERIS · BLIND ACQUISITION"
       view={stage}

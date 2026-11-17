@@ -192,25 +192,14 @@ export function Survey({ kind }) {
         ...(scene.reference ? [['Target', scene.reference.name.toLowerCase()]] : []),
         ...(scene.toggle ? [['View', ir ? scene.toggle.on : scene.toggle.off]] : []),
       ]}
-      left={
-        scene.toggle ? (
-          <ViewSwitch off={scene.toggle.off} on={scene.toggle.on} value={ir} onChange={setIr} />
-        ) : (
-          <span className="eyebrow">Tap to mark</span>
-        )
-      }
+      left={scene.toggle && <ViewSwitch off={scene.toggle.off} on={scene.toggle.on} value={ir} onChange={setIr} />}
       right={
         phase === 'done' ? (
           <button className="action" onClick={() => report({ type: 'science-close' })}>
             DONE
           </button>
         ) : (
-          <button
-            className="action"
-            disabled={phase !== 'look' || !marks.length}
-            style={phase !== 'look' || !marks.length ? { opacity: 0.4 } : {}}
-            onClick={downlink}
-          >
+          <button className="action" disabled={phase !== 'look' || !marks.length} onClick={downlink}>
             DOWNLINK
           </button>
         )
