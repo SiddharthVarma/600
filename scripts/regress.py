@@ -230,7 +230,8 @@ class Session:
     # the creature: corrupts SUDO, sends tentacles, and leaves
     async def creature(self):
         p = await self.page()
-        await p.evaluate('triggerKraken()')
+        # the creature waits until its glimpse in galaxy classification has been seen: count it as seen
+        await p.evaluate("localStorage.setItem('sixhundred.thingSeen', '1'); triggerKraken()")
         await p.wait_for_timeout(4500)
         self.note('creature', 'tentacles out: %s, sudo corrupted: %s' % (
             await p.evaluate('kraken.tentacles.length > 0'), await self.exists(p, '.sudo-corrupt')))

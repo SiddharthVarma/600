@@ -274,7 +274,6 @@ export function Transit() {
         />
       }
       live={[['Dips marked', `${found} / ${NEEDED}`]]}
-      left={<span className="eyebrow">Tap each dip</span>}
       right={
         phase === 'done' && (
           <button className="action" onClick={() => report({ type: 'science-close' })}>

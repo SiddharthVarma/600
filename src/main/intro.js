@@ -5,7 +5,7 @@ import { activeEvent } from './events/core.js';
 import { groundOpen, groundReady, triggerGround } from './ground.js';
 import { startPacing } from './pacing.js';
 import { panel } from './panel.js';
-import { pushScience } from './science.js';
+import { pushScience, scienceWaiting } from './science.js';
 import { state } from './state.js';
 
 // SUDO, the satellite's sarcastic onboard computer, walks the player through their first fault: the ticket, its
@@ -325,6 +325,50 @@ const hintPoll = setInterval(() => {
       if (n >= line.length) clearInterval(hint.typing);
     }, 2000 / TYPE_SPEED),
   };
+}, 500);
+
+// SUDO on the galaxy request: when the creature's turn has come but its glimpse in galaxy classification hasn't been
+// seen (it waits for that, see creature.js), SUDO points at the request in the science stack. Once a visit, never over
+// a window or another of SUDO's lines; gone once the request is opened, or on GOT IT.
+const TEASE_LINE =
+  'The IAC still wants a second opinion on some galaxies in their latest deep field. Their astronomers say one of them looks… wrong. Click their Galaxy Classification request.';
+const scienceCard = document.getElementById('science');
+let nudge = null,
+  teaseNudged = false;
+function closeNudge() {
+  if (!nudge) return;
+  clearInterval(nudge.timer);
+  nudge.el.remove();
+  scienceCard.classList.remove('sudo-spot');
+  nudge = null;
+}
+// beside the science stack, its bottom edge level with the stack's; on phones, at the top, clear of it
+function placeNudge() {
+  const b = nudge.el,
+    r = scienceCard.getBoundingClientRect(),
+    x = PHONE.matches ? 12 : r.right + 16,
+    y = PHONE.matches ? 74 : r.bottom - b.offsetHeight;
+  b.style.left = Math.max(12, Math.min(innerWidth - b.offsetWidth - 12, x)) + 'px';
+  b.style.top = Math.max(12, Math.min(innerHeight - b.offsetHeight - 12, y)) + 'px';
+}
+setInterval(() => {
+  if (nudge) {
+    // an emergency takes over SUDO; the line comes back once it's over
+    if (activeEvent) {
+      closeNudge();
+      teaseNudged = false;
+    } else if (scienceOpen() || !scienceWaiting('galaxies')) closeNudge();
+    else placeNudge();
+    return;
+  }
+  if (teaseNudged || !state.krakenAwaitsTease || !scienceWaiting('galaxies')) return;
+  if (bubble || hint || aside || activeEvent || state.intro || document.querySelector('.repair-modal.show, .dive.on')) return;
+  teaseNudged = true;
+  nudge = { el: asideBubble(true) };
+  nudge.el.querySelector('.sudo-next').onclick = closeNudge;
+  nudge.timer = typeInto(nudge.el.querySelector('.sudo-text'), say(TEASE_LINE));
+  scienceCard.classList.add('sudo-spot');
+  placeNudge();
 }, 500);
 
 // SUDO on celestial events: the first time each kind turns up in a visit, a line about it beside its EMERGENCY ticket,

@@ -164,7 +164,6 @@ export function Power() {
   );
   return (
     <LabLayout
-      eyebrow="Critical subsystem interaction"
       title="POWER BUS"
       signal="VOLTAGE OSCILLATION · MULTI-RAIL FEED REQUIRED"
       view={view}

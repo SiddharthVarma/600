@@ -3,11 +3,11 @@ import { useState } from 'react';
 // Every lab window (science requests and repairs) is laid out the same way: the title, then the view on the left with a
 // side panel beside it, and a toolbar underneath. The panel's sections are BRIEF (what to do), LIVE (the numbers that
 // change as you play), GUIDE (what counts and what doesn't) and ABOUT (why it matters); a section with nothing to say is
-// left out, and they stack from the top. The toolbar keeps the main action on the right; on the left, a hint, a
-// secondary control or the status, and the result once it's in.
+// left out, and they stack from the top. The brief is the one to read first: larger, brighter, and tinted in the
+// window's colour (signalColor: blue for science, red for repairs). The toolbar keeps the main action on the right; on
+// the left, a secondary control or the status, and the result once it's in.
 // view: the game. A canvas fills the view's width; anything else (an SVG, a terminal) sits centred in a fixed box.
 export function LabLayout({
-  eyebrow,
   title,
   signal,
   signalColor = 'var(--red)',
@@ -25,9 +25,8 @@ export function LabLayout({
   result,
 }) {
   return (
-    <div className="lab">
+    <div className="lab" style={{ '--lab-accent': signalColor }}>
       <div>
-        <div className="eyebrow">{eyebrow}</div>
         <h1>{title}</h1>
         <div className="signal" style={{ color: signalColor }}>
           {signal}
@@ -37,7 +36,7 @@ export function LabLayout({
         <div className={'lab-stage' + (boxed ? ' boxed' : '')}>{view}</div>
         <aside className="lab-panel">
           {brief && (
-            <section>
+            <section className="lab-brief">
               <div className="lab-label">Brief</div>
               <p>{brief}</p>
             </section>
@@ -111,7 +110,7 @@ export function Execute({ ready }) {
     if (window.parent !== window) setTimeout(() => window.parent.postMessage({ type: 'repair-complete' }, '*'), 1200);
   };
   return (
-    <button className="action" disabled={!ready || sent} style={!ready ? { opacity: 0.4 } : undefined} onClick={run}>
+    <button className={'action' + (sent ? ' sent' : '')} disabled={!ready || sent} onClick={run}>
       {sent ? 'EXECUTED' : 'EXECUTE'}
     </button>
   );

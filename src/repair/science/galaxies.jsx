@@ -296,11 +296,23 @@ function makeThing(seed, disguise) {
   };
 }
 
+// whether this browser has met the thing: it only counts once it's actually been on screen, so closing the window early
+// doesn't use up the guaranteed first sighting
+const THING_SEEN = 'sixhundred.thingSeen';
+function thingSeen() {
+  try {
+    return !!localStorage.getItem(THING_SEEN);
+  } catch {
+    return false;
+  }
+}
+
 export function Galaxies() {
   const info = SCIENCE.galaxies;
   const [coords] = useState(info.coords); // a fresh patch of sky each time
   const canvasRef = useRef(null);
-  // the set to sort: a shuffled mix, three of each kind. In about two runs in five, one of them isn't a galaxy.
+  // the set to sort: a shuffled mix, three of each kind. In about two runs in five, one of them isn't a galaxy; always,
+  // until the player has seen it once in this browser.
   const [deck] = useState(() => {
     const r = rng(Math.floor(Math.random() * 1e9)),
       kinds = Array.from({ length: COUNT }, (_, i) => KINDS[i % KINDS.length]).sort(() => r() - 0.5),
@@ -308,7 +320,7 @@ export function Galaxies() {
     // for testing: ?thing=spiral or ?thing=disk puts it first in the deck, behind that galaxy
     const test = new URLSearchParams(location.search).get('thing');
     if (test) deck[0] = { kind: 'unknown', frame: makeThing(Math.floor(r() * 1e9), test) };
-    else if (r() < 0.4) deck[4 + Math.floor(r() * 7)] = { kind: 'unknown', frame: makeThing(Math.floor(r() * 1e9)) };
+    else if (!thingSeen() || r() < 0.4) deck[4 + Math.floor(r() * 7)] = { kind: 'unknown', frame: makeThing(Math.floor(r() * 1e9)) };
     return deck;
   });
   const [index, setIndex] = useState(0);
@@ -318,6 +330,14 @@ export function Galaxies() {
   const live = useRef({});
   live.current = { index, flash, phase, answers };
   const sentAt = useRef(0);
+  useEffect(() => {
+    if (deck[index]?.kind !== 'unknown') return;
+    try {
+      localStorage.setItem(THING_SEEN, '1');
+    } catch {
+      // no storage: it shows every time instead
+    }
+  }, [deck, index]);
 
   useEffect(() => {
     const ctx = canvasRef.current.getContext('2d'),

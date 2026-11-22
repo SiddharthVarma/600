@@ -2,7 +2,7 @@ import { satellites } from './constellation.js';
 import { COIN, earn, payFor } from './credits.js';
 import { dive, diving } from './dive.js';
 import { releaseHeldEvent, windowsBlocked } from './events/core.js';
-import { state } from './state.js';
+import { state, teaseSeen } from './state.js';
 import { fadeCloseModal, launcher, preload, reveal } from './launcher.js';
 import { touchScroll } from '../shared/touchscroll.js';
 
@@ -108,13 +108,17 @@ const hostSat = () => {
 export function pushScience(kind, force = false) {
   // none while SUDO's walkthrough runs, nor while it's pointing at the first request (so there's only the one it means)
   if ((state.intro || state.sudoScience) && !force) return;
-  // a new kind of request each time, while there's room
+  // a new kind of request each time, while there's room; galaxy classification first, while the creature's glimpse in
+  // it is still to be seen
   const free = Object.keys(REQUESTS).filter(k => !waiting.some(r => r.kind === k));
+  if (!REQUESTS[kind] && state.teaseDue && !teaseSeen() && free.includes('galaxies')) kind = 'galaxies';
   kind = REQUESTS[kind] ? kind : free[Math.floor(Math.random() * free.length)];
   if (!kind || waiting.length >= MAX_WAITING || waiting.some(r => r.kind === kind)) return;
   waiting.push({ kind, ...REQUESTS[kind], sat: hostSat() });
   render(true);
 }
+// whether a request of this kind is in the stack, waiting to be opened
+export const scienceWaiting = kind => waiting.some(r => r.kind === kind);
 export function scheduleScience() {
   setTimeout(
     () => {

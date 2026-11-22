@@ -242,7 +242,6 @@ export function Tracking() {
         ['Data recorded', `${phase === 'track' ? readout.pct : 100}%`],
         ['Lock', phase !== 'track' ? 'complete' : readout.locked ? 'on target' : 'searching'],
       ]}
-      left={<span className="eyebrow">Drag to track</span>}
       right={
         phase === 'done' && (
           <button className="action" onClick={() => report({ type: 'science-close' })}>

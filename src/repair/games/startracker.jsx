@@ -192,7 +192,6 @@ export function StarTracker() {
   );
   return (
     <LabLayout
-      eyebrow="Critical subsystem interaction"
       title="STAR TRACKER LOCK"
       signal="LOST LOCK · CATALOG MATCH REQUIRED"
       view={view}

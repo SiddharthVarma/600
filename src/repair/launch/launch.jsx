@@ -30,7 +30,7 @@ const G = 9.81,
   WARP_COAST = 5;
 const PAD_TIME = 3, // real seconds over the pad from above, the last FADE of it fading to black
   FADE = 0.45,
-  COUNTDOWN = 3,
+  COUNTDOWN = 7,
   SEP_TIME = 2.6,
   DEPLOY_GAP = 0.7,
   FLASH_TIME = 2;
@@ -461,7 +461,7 @@ export function Launch() {
         ctx.fillStyle = 'rgba(201,255,77,.9)';
         // in the sky above the rocket, on a dark backing so it reads against the blue
         const n = Math.max(1, Math.ceil(COUNTDOWN - since)),
-          msg = n === 3 ? 'LIFTOFF IN 3' : String(n),
+          msg = n === COUNTDOWN ? `LIFTOFF IN ${n}` : String(n),
           w = ctx.measureText(msg).width;
         ctx.fillStyle = 'rgba(2,4,6,.7)';
         ctx.fillRect(W / 2 - w / 2 - 18, 96, w + 36, 64);

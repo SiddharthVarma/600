@@ -311,7 +311,6 @@ export function Orbit() {
   );
   return (
     <LabLayout
-      eyebrow="Critical subsystem interaction"
       title="ORBITAL BURN"
       signal="ORBIT DECAYING · TWO-BURN TRANSFER REQUIRED"
       view={view}

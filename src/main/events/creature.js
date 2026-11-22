@@ -1,6 +1,6 @@
 import { pushAlert, satTag } from '../alerts.js';
 import { H, W, ctx, point, satellites, updateNetwork } from '../constellation.js';
-import { state } from '../state.js';
+import { state, teaseSeen } from '../state.js';
 import { activeEvent, EVENT_TYPES, eventBusy, holdForWindow, pulse, resolveEvent, startEvent } from './core.js';
 
 // Tentacle event: no window and no procedure. Tentacles reach in from the screen edges for real satellites. Click a
@@ -326,10 +326,17 @@ export function scheduleKraken() {
     600000 + Math.random() * 300000,
   );
 } // rare, so it stays a surprise
-// The creature never arrives on top of a fault ticket: when it comes due with one open, it waits (state.krakenDue, which
-// holds back new faults meanwhile) until the open ones are fixed or lost, then comes.
+// The creature never comes before its glimpse in a galaxy classification request has been seen (state.js): due before
+// then, it waits (krakenAwaitsTease) for that, however long. Nor does it arrive on top of a fault ticket: when it
+// comes due with one open, it waits (krakenDue, which holds back new faults meanwhile) until the open ones are fixed or
+// lost, then comes.
 const faultsOpen = () => satellites.some(s => s.anomaly && !EVENT_TYPES.includes(s.anomalyType));
 export function triggerKraken() {
+  if (!teaseSeen()) {
+    state.krakenAwaitsTease = true;
+    return;
+  }
+  state.krakenAwaitsTease = false;
   if (eventBusy() || holdForWindow(triggerKraken)) return;
   if (faultsOpen()) {
     state.krakenDue = true;
@@ -345,10 +352,13 @@ export function triggerKraken() {
   kraken.nextSpawn = performance.now() + 1200;
 }
 
-setInterval(() => state.krakenDue && !faultsOpen() && triggerKraken(), 1000);
+setInterval(() => {
+  if ((state.krakenAwaitsTease && teaseSeen()) || (state.krakenDue && !faultsOpen())) triggerKraken();
+}, 1000);
 
 export function resetCreature() {
   state.krakenDue = false;
+  state.krakenAwaitsTease = false;
   kraken.tentacles = [];
   kraken.sparks = [];
   satellites.forEach(s => {

@@ -428,7 +428,7 @@ input {
 .lab-stage {
   flex: 1 1 0;
   min-width: 0;
-  max-width: calc((100vh - 296px) * 1.6); /* 296 px: everything around the view, top to bottom */
+  max-width: calc((100vh - 280px) * 1.6); /* 280 px: everything around the view, top to bottom */
 }
 
 .lab-stage canvas {
@@ -466,27 +466,43 @@ input {
 }
 
 .lab-panel section {
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--line);
 }
 
+/* the line under the title: a quiet label, so the brief is what draws the eye after the title */
+.lab .signal {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+}
+
 .lab-label {
-  color: #7b8580;
+  color: #8a938e;
   letter-spacing: 0.16em;
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
   margin-bottom: 6px;
 }
 
 .lab-panel p {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.55;
-  color: #98a19b;
+  color: #8f9893;
 }
 
-.lab-about p {
-  font-size: 11.5px;
+/* the brief: what to do, so the one thing to read first, set apart in the window's colour */
+.lab-brief {
+  border-left: 3px solid var(--lab-accent);
+  background: color-mix(in srgb, var(--lab-accent) 7%, transparent);
+}
+
+.lab-panel .lab-brief p {
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 500;
+  color: #eef0ec;
 }
 
 .lab-about p + .lab-row {
@@ -501,9 +517,9 @@ input {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.6;
-  color: #98a19b;
+  color: #8f9893;
 }
 
 .lab-row b {
@@ -512,17 +528,13 @@ input {
   text-align: right;
 }
 
-.lab-about .lab-row {
-  font-size: 11px;
-}
-
 .lab-guide {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
-  color: #98a19b;
+  color: #8f9893;
   margin: 1px 0;
 }
 
@@ -532,7 +544,22 @@ input {
   flex: none;
 }
 
-/* the toolbar: a hint, a control or the result on the left; the main action on the right */
+/* a main action that isn't ready yet (EXECUTE, DOWNLINK): readable, but plainly waiting, not switched off */
+.lab .action:disabled:not(.sent) {
+  color: #7f8a6a;
+  border-color: #4b5540;
+  cursor: default;
+}
+
+.lab .action:disabled:hover {
+  background: transparent;
+}
+
+.lab .action.sent:hover {
+  color: var(--green);
+}
+
+/* the toolbar: a control or the result on the left; the main action on the right */
 .lab-tool {
   display: flex;
   justify-content: space-between;

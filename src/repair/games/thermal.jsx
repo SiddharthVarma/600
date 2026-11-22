@@ -143,7 +143,6 @@ export function Thermal() {
   );
   return (
     <LabLayout
-      eyebrow="Critical subsystem interaction"
       title="THERMAL ROUTING"
       signal={`CORE ${temp}°C · COOLANT ${pressure} kPa`}
       view={view}

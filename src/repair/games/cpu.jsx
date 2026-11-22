@@ -248,7 +248,6 @@ export function Process() {
   );
   return (
     <LabLayout
-      eyebrow="Critical subsystem interaction"
       title="CPU OVERLOAD"
       signal={`CLUSTER LOAD ${load}% · ${purgedRunaways}/${RUNAWAY} RUNAWAYS PURGED`}
       view={view}
