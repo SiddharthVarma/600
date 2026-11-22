@@ -6,6 +6,7 @@ import { scheduleFlare, triggerFlare } from './events/flare.js';
 import { scheduleGRB, triggerGRB } from './events/grb.js';
 import { groundOpen, groundReady, groundShown, startGround, triggerGround } from './ground.js';
 import { pushScience } from './science.js';
+import { state } from './state.js';
 
 // Pacing: how a visit ramps up, so there's time to read, enjoy and do, and something new keeps turning up. Once SUDO
 // hands over (or is skipped):
@@ -91,6 +92,8 @@ function tick() {
 function startCalm(t) {
   stage = 'calm';
   until = t + between(90, 120);
+  // from here, requests lead with galaxy classification until the creature's glimpse in it has been seen
+  state.teaseDue = true;
   pushScience();
 }
 function goBusy() {

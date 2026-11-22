@@ -7,6 +7,8 @@
 // eventsAfter: likewise for celestial events: none before this time.
 // sudoScience: SUDO is introducing the first science request, so no other request arrives until it's been opened.
 // krakenDue: the creature is due but waiting for the open fault tickets to clear; no new faults meanwhile.
+// teaseDue: the first celestial event is over, so hosted payload requests now offer galaxy classification (where the
+// creature first shows itself) until it's been seen. krakenAwaitsTease: the creature came due before that, and waits.
 export const state = {
   selected: null,
   highlighted: [],
@@ -18,4 +20,16 @@ export const state = {
   eventsAfter: 0,
   sudoScience: false,
   krakenDue: false,
+  teaseDue: false,
+  krakenAwaitsTease: false,
 };
+// The creature's first appearance is a glimpse inside a galaxy classification request, and the attack never comes
+// before it. Seen once in this browser, it's done (the science window, on the same origin, records it). With no
+// storage there's no record to wait on, so the creature isn't held back.
+export function teaseSeen() {
+  try {
+    return !!localStorage.getItem('sixhundred.thingSeen');
+  } catch {
+    return true;
+  }
+}
