@@ -2,7 +2,7 @@ import { satellites } from './constellation.js';
 import { COIN, earn, payFor } from './credits.js';
 import { dive, diving } from './dive.js';
 import { releaseHeldEvent, windowsBlocked } from './events/core.js';
-import { state, teaseSeen } from './state.js';
+import { spectraSeen, state, teaseSeen } from './state.js';
 import { fadeCloseModal, launcher, preload, reveal } from './launcher.js';
 import { touchScroll } from '../shared/touchscroll.js';
 
@@ -90,12 +90,15 @@ const REQUESTS = {
   }, // off the Galápagos
   supernova: { what: 'Supernova Search', uni: 'University of Surrey', to: 'space' },
   exoplanet: { what: 'Exoplanet Transit Search', uni: 'University of Hawaiʻi', to: 'space' },
+  // a follow-up on a planet the transit search found: offered only once there is one
+  atmosphere: { what: 'Exoplanet Atmosphere', uni: 'University of Hawaiʻi', to: 'space' },
   galaxies: { what: 'Galaxy Classification', uni: 'Instituto de Astrofísica de Canarias', to: 'space' },
 };
 const MAX_WAITING = 4;
 const el = document.getElementById('science'),
   L = launcher('scienceFrame', 'scienceModal');
 let waiting = [],
+  planet = null, // the last planet the transit search found, still to have its atmosphere read: { name, depth }
   expanded = false,
   opened = null,
   note = null,
@@ -110,11 +113,16 @@ export function pushScience(kind, force = false) {
   if ((state.intro || state.sudoScience) && !force) return;
   // a new kind of request each time, while there's room; galaxy classification first, while the creature's glimpse in
   // it is still to be seen
-  const free = Object.keys(REQUESTS).filter(k => !waiting.some(r => r.kind === k));
+  const free = Object.keys(REQUESTS).filter(k => !waiting.some(r => r.kind === k) && (k !== 'atmosphere' || planet));
   if (!REQUESTS[kind] && state.teaseDue && !teaseSeen() && free.includes('galaxies')) kind = 'galaxies';
+  // a planet just found is followed up next: its atmosphere
+  else if (!REQUESTS[kind] && free.includes('atmosphere')) kind = 'atmosphere';
+  // between the first strange atmosphere and the second, the transit search leads, to find a planet to study
+  else if (!REQUESTS[kind] && state.teaseDue && spectraSeen() === 1 && free.includes('exoplanet')) kind = 'exoplanet';
   kind = REQUESTS[kind] ? kind : free[Math.floor(Math.random() * free.length)];
   if (!kind || waiting.length >= MAX_WAITING || waiting.some(r => r.kind === kind)) return;
-  waiting.push({ kind, ...REQUESTS[kind], sat: hostSat() });
+  if (kind === 'atmosphere' && !planet) return;
+  waiting.push({ kind, ...REQUESTS[kind], sat: hostSat(), planet: kind === 'atmosphere' ? planet : null });
   render(true);
 }
 // whether a request of this kind is in the stack, waiting to be opened
@@ -147,6 +155,8 @@ function openRequest(r) {
     where.lon = lon[0] + Math.random() * (lon[1] - lon[0]);
     place = `&lat=${where.lat.toFixed(2)}&lon=${where.lon.toFixed(2)}` + (biome ? `&biome=${biome}` : '');
   }
+  // the atmosphere follow-up studies the planet that was found
+  if (r.planet) place += `&planet=${encodeURIComponent(r.planet.name)}&depth=${r.planet.depth}`;
   // the window loads hidden during the dive and opens once the screen is covered; ?dive tells it to start in the clouds
   preload(L, `react.html?type=${r.kind}&sat=${r.sat.id}&dive=1${place}`);
   dive(where, () => reveal(L));
@@ -167,6 +177,11 @@ export function scienceMessage(data) {
     const pay = payFor(data);
     earn(pay);
     note = { text: `DATA RECEIVED · ${opened.uni.toUpperCase()}`, pay };
+    // something strange in an exoplanet's spectrum: SUDO has a word about it once the window's closed
+    if (data.special) state.sudoSpectrum = data.special;
+    // a planet found is followed up with its atmosphere; once that's read, it's done with
+    if (data.planet) planet = data.planet;
+    if (opened.kind === 'atmosphere' && opened.planet === planet) planet = null;
     clearTimeout(noteTimer);
     noteTimer = setTimeout(() => {
       note = null;
@@ -178,6 +193,7 @@ export function scienceMessage(data) {
 }
 export function resetScience() {
   waiting = [];
+  planet = null;
   expanded = false;
   note = null;
   closeScience();

@@ -327,11 +327,17 @@ const hintPoll = setInterval(() => {
   };
 }, 500);
 
-// SUDO on the galaxy request: when the creature's turn has come but its glimpse in galaxy classification hasn't been
-// seen (it waits for that, see creature.js), SUDO points at the request in the science stack. Once a visit, never over
-// a window or another of SUDO's lines; gone once the request is opened, or on GOT IT.
+// SUDO beside the science stack, never over a window or another of SUDO's lines:
+// - on the galaxy request: when the creature's turn has come but its glimpse in galaxy classification hasn't been seen
+//   (it waits for that, see creature.js), SUDO points at the request. Once a visit; gone once the request is opened,
+//   or on GOT IT.
+// - on a strange exoplanet spectrum (Freon, then an unknown element): a word once the window's closed, until GOT IT.
 const TEASE_LINE =
-  'The IAC still wants a second opinion on some galaxies in their latest deep field. Their astronomers say one of them looks… wrong. Click their Galaxy Classification request.';
+    'The IAC still wants a second opinion on some galaxies in their latest deep field. Their astronomers say one of them looks… wrong. Click their Galaxy Classification request.',
+  SPECTRUM_LINES = {
+    freon: "That's Freon. Nature doesn't make Freon. Factories do.",
+    element: 'No element we know of absorbs there. I checked twice.',
+  };
 const scienceCard = document.getElementById('science');
 let nudge = null,
   teaseNudged = false;
@@ -351,24 +357,34 @@ function placeNudge() {
   b.style.left = Math.max(12, Math.min(innerWidth - b.offsetWidth - 12, x)) + 'px';
   b.style.top = Math.max(12, Math.min(innerHeight - b.offsetHeight - 12, y)) + 'px';
 }
+function openNudge(kind, line) {
+  nudge = { kind, el: asideBubble(true) };
+  nudge.el.querySelector('.sudo-next').onclick = closeNudge;
+  nudge.timer = typeInto(nudge.el.querySelector('.sudo-text'), say(line));
+  if (kind === 'tease') scienceCard.classList.add('sudo-spot');
+  placeNudge();
+}
 setInterval(() => {
   if (nudge) {
     // an emergency takes over SUDO; the line comes back once it's over
     if (activeEvent) {
+      if (nudge.kind === 'tease') teaseNudged = false;
+      else state.sudoSpectrum = nudge.kind;
       closeNudge();
-      teaseNudged = false;
-    } else if (scienceOpen() || !scienceWaiting('galaxies')) closeNudge();
+    } else if (nudge.kind === 'tease' && (scienceOpen() || !scienceWaiting('galaxies'))) closeNudge();
     else placeNudge();
     return;
   }
-  if (teaseNudged || !state.krakenAwaitsTease || !scienceWaiting('galaxies')) return;
   if (bubble || hint || aside || activeEvent || state.intro || document.querySelector('.repair-modal.show, .dive.on')) return;
+  if (state.sudoSpectrum) {
+    const kind = state.sudoSpectrum;
+    state.sudoSpectrum = null;
+    if (SPECTRUM_LINES[kind]) openNudge(kind, SPECTRUM_LINES[kind]);
+    return;
+  }
+  if (teaseNudged || !state.krakenAwaitsTease || !scienceWaiting('galaxies')) return;
   teaseNudged = true;
-  nudge = { el: asideBubble(true) };
-  nudge.el.querySelector('.sudo-next').onclick = closeNudge;
-  nudge.timer = typeInto(nudge.el.querySelector('.sudo-text'), say(TEASE_LINE));
-  scienceCard.classList.add('sudo-spot');
-  placeNudge();
+  openNudge('tease', TEASE_LINE);
 }, 500);
 
 // SUDO on celestial events: the first time each kind turns up in a visit, a line about it beside its EMERGENCY ticket,

@@ -7,7 +7,8 @@ import { BH, BW, rng } from './scenes.js';
 // fraction of the disc covered, depth = (Rp/R*)², for a duration set by the orbit (Kepler's third law gives the orbit
 // size from the period and the star's mass). The player taps each dip as it scrolls past; three pin down the period.
 // Starspots make the star wander slowly and flares spike it; neither is a transit. The result is worked out from the
-// player's own marks and the data, then the light curve is folded on that period.
+// player's own marks and the data, then the light curve is folded on that period. The planet found is handed back to
+// the main screen, which follows it up with an atmosphere request (atmosphere.jsx).
 const W = BW * 4,
   H = BH * 4,
   STAR_H = 150, // star-field strip at the top of the view
@@ -223,7 +224,8 @@ export function Transit() {
         drawDownlink(ctx, d);
         if (d >= DOWNLINK_TIME && !reported) {
           reported = true;
-          report({ type: 'science-complete', kind: 'exoplanet' });
+          // the planet found, for the main screen's follow-up: its atmosphere
+          report({ type: 'science-complete', kind: 'exoplanet', planet: { name: sys.name, depth: sys.depth } });
           setPhase('done');
         }
       }

@@ -148,6 +148,16 @@ export const SCIENCE = {
     ],
     uni: 'University of Hawaiʻi',
   },
+  atmosphere: {
+    title: 'EXOPLANET ATMOSPHERE',
+    signal: 'TRANSMISSION SPECTROSCOPY · READING ITS AIR',
+    brief: 'Combine transits until the bumps rise out of the noise. Then drag each molecule onto its bump.',
+    guide: [],
+    about:
+      "As the planet crosses its star, a sliver of starlight passes through its atmosphere. Each molecule there absorbs its own colours, so the planet looks slightly bigger at those wavelengths. One transit is too faint to show it, so astronomers combine many, and the noise shrinks with each one. It's how JWST and Hubble read the air of other worlds.",
+    facts: [],
+    uni: 'University of Hawaiʻi',
+  },
   galaxies: {
     title: 'GALAXY CLASSIFICATION',
     signal: 'DEEP FIELD · SORT BY SHAPE',

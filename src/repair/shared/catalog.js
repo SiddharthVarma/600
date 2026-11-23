@@ -20,6 +20,7 @@ export const games = [
   ['darkships', 'DARK SHIP TRACKING', 'Science · find the ships not broadcasting'],
   ['supernova', 'SUPERNOVA SEARCH', 'Science · blink for the new star'],
   ['exoplanet', 'EXOPLANET TRANSIT', 'Science · catch the dips'],
+  ['atmosphere', 'EXOPLANET ATMOSPHERE', 'Science · read its air'],
   ['galaxies', 'GALAXY CLASSIFICATION', 'Science · sort by shape'],
   ['launch', 'REPLACEMENT LAUNCH', 'Launch · throttle through max-Q, drop the fairing'],
 ];
@@ -35,5 +36,6 @@ export const SCIENCE_TYPES = new Set([
   'darkships',
   'supernova',
   'exoplanet',
+  'atmosphere',
   'galaxies',
 ]);

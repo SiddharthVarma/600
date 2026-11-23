@@ -37,7 +37,7 @@ const INCIDENTS = [
   [
     'GAZA',
     'MICROWAVE IN THE DATA',
-    'Someone keeps opening the staff microwave before it beeps, and the receiver picks it up.',
+    'Someone keeps opening the staff microwave before it beeps, and the receiver picks up its waves.',
     'Buy a new microwave',
   ],
   ['TENERIFE', 'SAHARAN DUST', 'A Calima dust storm has coated the dish in red sand.', 'Pressure wash'],
@@ -47,7 +47,7 @@ const INCIDENTS = [
   ['GOONHILLY', 'FORCED UPDATE', 'The control PC restarted to install updates mid-pass.', 'Buy the pro licence', 2],
   ['BEIJING', 'CERTIFICATE EXPIRED', "The link's security certificate lapsed at midnight and nobody renewed it.", 'Renew the certificate'],
   ['TIRANE', 'EARTHQUAKE', 'A tremor has knocked the dish off its pointing.', 'Recalibrate on a star', 2],
-  ['ADELAIDE', 'PASSWORD ON HOLIDAY', 'The only engineer who knows the admin password is on a beach in Bali.', 'Call them anyway'],
+  ['ADELAIDE', 'PASSWORD ON HOLIDAY', 'The only engineer who knows the admin password is on a beach in Bali.', 'Call them anyway', 3],
   ['SVALBARD', 'FOX IN THE CABLE DUCT', 'An Arctic fox has moved into the duct and is chewing through the coax.', 'Trap and release'],
 ];
 const cost = inc => inc[4] || 1,

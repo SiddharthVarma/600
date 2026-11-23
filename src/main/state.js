@@ -7,6 +7,7 @@
 // eventsAfter: likewise for celestial events: none before this time.
 // sudoScience: SUDO is introducing the first science request, so no other request arrives until it's been opened.
 // krakenDue: the creature is due but waiting for the open fault tickets to clear; no new faults meanwhile.
+// sudoSpectrum: an exoplanet spectrum just showed something strange ('freon' or 'element'); SUDO remarks on it.
 // teaseDue: the first celestial event is over, so hosted payload requests now offer galaxy classification (where the
 // creature first shows itself) until it's been seen. krakenAwaitsTease: the creature came due before that, and waits.
 export const state = {
@@ -22,10 +23,21 @@ export const state = {
   krakenDue: false,
   teaseDue: false,
   krakenAwaitsTease: false,
+  sudoSpectrum: null,
 };
 // The creature's first appearance is a glimpse inside a galaxy classification request, and the attack never comes
 // before it. Seen once in this browser, it's done (the science window, on the same origin, records it). With no
 // storage there's no record to wait on, so the creature isn't held back.
+// How many strange spectra the exoplanet atmosphere request has found in this browser: the first shows Freon, the
+// second an unknown element (the science window records them). The UFOs are to wait for both. With no storage, counted
+// as done.
+export function spectraSeen() {
+  try {
+    return Number(localStorage.getItem('sixhundred.spectraSeen')) || 0;
+  } catch {
+    return 2;
+  }
+}
 export function teaseSeen() {
   try {
     return !!localStorage.getItem('sixhundred.thingSeen');
