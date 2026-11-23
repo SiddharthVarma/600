@@ -151,7 +151,7 @@ export const SCIENCE = {
   atmosphere: {
     title: 'EXOPLANET ATMOSPHERE',
     signal: 'TRANSMISSION SPECTROSCOPY · READING ITS AIR',
-    brief: 'Combine transits until the bumps rise out of the noise. Then drag each molecule onto its bump.',
+    brief: 'Combine transits until the peaks rise out of the noise. Then drag each molecule onto its peak.',
     guide: [],
     about:
       "The planet's air blocks the colours its molecules absorb. One transit is too weak to show it, so astronomers combine many. It's how JWST and Hubble read other worlds.",

@@ -156,7 +156,7 @@ function openRequest(r) {
     place = `&lat=${where.lat.toFixed(2)}&lon=${where.lon.toFixed(2)}` + (biome ? `&biome=${biome}` : '');
   }
   // the atmosphere follow-up studies the planet that was found
-  if (r.planet) place += `&planet=${encodeURIComponent(r.planet.name)}&depth=${r.planet.depth}`;
+  if (r.planet) place += `&planet=${encodeURIComponent(r.planet.name)}&depth=${r.planet.depth}&teq=${r.planet.teq}`;
   // the window loads hidden during the dive and opens once the screen is covered; ?dive tells it to start in the clouds
   preload(L, `react.html?type=${r.kind}&sat=${r.sat.id}&dive=1${place}`);
   dive(where, () => reveal(L));

@@ -225,7 +225,11 @@ export function Transit() {
         if (d >= DOWNLINK_TIME && !reported) {
           reported = true;
           // the planet found, for the main screen's follow-up: its atmosphere
-          report({ type: 'science-complete', kind: 'exoplanet', planet: { name: sys.name, depth: sys.depth } });
+          report({
+            type: 'science-complete',
+            kind: 'exoplanet',
+            planet: { name: sys.name, depth: sys.depth, teq: Math.round(result.teq) },
+          });
           setPhase('done');
         }
       }
