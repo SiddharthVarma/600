@@ -12,7 +12,8 @@ import { BH, BW, rng } from './scenes.js';
 // Band centres are real (Na 0.589 um, H2O 1.15/1.4/1.9/2.7, CH4 3.3, CO2 4.3); the wavelength axis is log-scaled,
 // 0.4-12 um (visible light to JWST's mid-infrared).
 // The first two spectra in a browser are special: the first has an extra band at 11.8 um, CFC-11 (Freon), which
-// nothing natural makes; the second, one sharp line at 523 nm that no known element absorbs. Both foreshadow the UFOs.
+// nothing natural makes; the second, one sharp line at 450 nm (blue, clear of sodium's 589) that no known element
+// absorbs. Both foreshadow the UFOs.
 const W = BW * 4,
   H = BH * 4;
 const SPEC = { L0: Math.log(0.4), L1: Math.log(12), bins: 64, sigma1: 380, maxN: 20 },
@@ -32,11 +33,13 @@ const SPEC = { L0: Math.log(0.4), L1: Math.log(12), bins: 64, sigma1: 380, maxN:
     ['CO2', [[4.3, 0.05, 620]]],
   ],
   CHIP_TEXT = { Na: '0.59 µm', H2O: '1.4–2.7 µm', CH4: '3.3 µm', CO2: '4.3 µm' },
-  ODD = { freon: { at: 11.8, w: 0.05, amp: 560 }, element: { at: 0.523, amp: 680 } },
+  ODD = { freon: { at: 11.8, w: 0.05, amp: 560 }, element: { at: 0.45, amp: 680 } },
   ODD_RESULT = {
     freon: 'Unidentified absorption at 11.8 µm · consistent with CFC-11 (Freon) · no known natural source',
-    element: 'Unidentified line at 523 nm · matches no known element',
+    element: 'Unidentified line at 450 nm · present in every transit · matches no known element',
   },
+  // what the red question mark says when it's clicked
+  ODD_NOTE = { element: 'No match in the NIST atomic line database' },
   SPEC_SEEN = 'sixhundred.spectraSeen'; // how many special spectra this browser has found (0, 1 or 2)
 const PARAMS = new URLSearchParams(location.search);
 function specialsSeen() {
@@ -101,7 +104,7 @@ function label(ctx, text, cx, cy, color, filled) {
   ctx.textBaseline = 'middle';
   ctx.fillText(text, cx, cy + 1);
 }
-function drawSpectrum(ctx, sp, { N, placed, drag, wrong, special, now }) {
+function drawSpectrum(ctx, sp, { N, placed, drag, wrong, special, now, note }) {
   const lo = sp.base - 500,
     hi = sp.base + 950,
     yOf = d => SP.t + ((hi - d) / (hi - lo)) * (H - SP.t - SP.b),
@@ -157,9 +160,26 @@ function drawSpectrum(ctx, sp, { N, placed, drag, wrong, special, now }) {
     ctx.stroke();
     ctx.setLineDash([]);
     label(ctx, text, spX(l), cy, color, filled);
+    return { x: spX(l), y: cy };
   };
   Object.entries(placed).forEach(([m, l]) => pin(m, l, '#c9ff4d', true));
-  if (special && MOLECULES.every(([m]) => placed[m])) pin('?', ODD[special].at, '#ff5964', false);
+  // the question mark, where a click can find it, and what it says once clicked
+  sp.question = special && MOLECULES.every(([m]) => placed[m]) ? pin('?', ODD[special].at, '#ff5964', false) : null;
+  if (note && sp.question && ODD_NOTE[special]) {
+    ctx.font = pixelFont(22);
+    const text = ODD_NOTE[special],
+      w = ctx.measureText(text).width + 24,
+      x = Math.min(W - SP.r - w, sp.question.x + 30);
+    ctx.fillStyle = 'rgba(2,4,6,.95)';
+    ctx.fillRect(x, sp.question.y - 18, w, 36);
+    ctx.strokeStyle = '#ff5964';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, sp.question.y - 18, w, 36);
+    ctx.fillStyle = '#ff5964';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x + 12, sp.question.y + 1);
+  }
   // the tray: each label not yet placed, with where that molecule absorbs
   if (MOLECULES.some(([m]) => !placed[m] && drag?.m !== m)) {
     ctx.font = pixelFont(22);
@@ -200,7 +220,7 @@ export function Atmosphere() {
   const [placed, setPlaced] = useState({}); // molecule → the band (um) its label was dropped on
   const live = useRef({});
   live.current = { phase, combined, placed };
-  const hold = useRef({ drag: null, wrong: null });
+  const hold = useRef({ drag: null, wrong: null, note: false });
   // the true depth in each bin, and each bin's noise summed over the transits combined so far
   const spec = useRef(null);
   if (!spec.current) {
@@ -223,7 +243,7 @@ export function Atmosphere() {
       const now = performance.now() / 1000,
         { phase, combined, placed } = live.current,
         H0 = hold.current;
-      drawSpectrum(ctx, spec.current, { N: combined, placed, drag: H0.drag, wrong: H0.wrong, special, now });
+      drawSpectrum(ctx, spec.current, { N: combined, placed, drag: H0.drag, wrong: H0.wrong, special, now, note: H0.note });
       brackets(ctx);
       if (phase === 'downlink') {
         sentAt ||= now;
@@ -254,9 +274,13 @@ export function Atmosphere() {
     return [((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H];
   };
   const down = e => {
-    if (phase !== 'spectrum') return;
     const [x, y] = toCanvas(e),
-      k = MOLECULES.findIndex(([m], k) => !placed[m] && Math.abs(x - chipX(k)) < CHIP_W / 2 && y > CHIP_Y && y < CHIP_Y + CHIP_H);
+      q = spec.current.question,
+      onQuestion = q && Math.abs(x - q.x) < 26 && Math.abs(y - q.y) < 20;
+    // the question mark says what it is; a click anywhere else puts that away
+    hold.current.note = onQuestion && !hold.current.note;
+    if (onQuestion || phase !== 'spectrum') return;
+    const k = MOLECULES.findIndex(([m], k) => !placed[m] && Math.abs(x - chipX(k)) < CHIP_W / 2 && y > CHIP_Y && y < CHIP_Y + CHIP_H);
     if (k < 0) return;
     hold.current.drag = { m: MOLECULES[k][0], x, y };
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -298,7 +322,7 @@ export function Atmosphere() {
         phase === 'spectrum' &&
         combined < SPEC.maxN && (
           <button className="action" onClick={combine}>
-            + COMBINE TRANSIT
+            STACK TRANSITS
           </button>
         )
       }
